@@ -13,6 +13,7 @@ import {
   CARD_WIDTH,
   LABEL_WIDTH,
   SEPARATOR_WIDTH,
+  TIER_COUNT,
   TIER_HEIGHT,
   dropTarget,
   layoutCards,
@@ -35,6 +36,8 @@ type Props = {
   // A card was clicked without dragging; x, y are in the stage's on-screen pixels
   onCardMenu: (id: string, x: number, y: number) => void;
   onEditTier: (index: number) => void;
+  // A tier's row was clicked outside its cards
+  onPickTier: (index: number) => void;
   onStage: (stage: Konva.Stage | null) => void;
 };
 
@@ -47,9 +50,18 @@ export default function Board({
   onSelect,
   onCardMenu,
   onEditTier,
+  onPickTier,
   onStage,
 }: Props) {
   const placements = layoutCards(doc);
+
+  // Clicks on a card are the card's own (they open its menu)
+  const pickTier = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    const stage = e.target.getStage();
+    const pointer = stage?.getPointerPosition();
+    if (!pointer || e.target.findAncestor('.card')) return;
+    onPickTier(Math.max(0, Math.min(TIER_COUNT - 1, Math.floor(pointer.y / scale / TIER_HEIGHT))));
+  };
 
   return (
     <Stage
@@ -61,6 +73,10 @@ export default function Board({
       onMouseDown={(e) => {
         if (e.target === e.target.getStage() || e.target.name() === 'background') onSelect(null);
       }}
+      onClick={(e) => {
+        if (e.evt.button === 0) pickTier(e);
+      }}
+      onTap={pickTier}
     >
       <Layer>
         <Rect name="background" width={BOARD_WIDTH} height={BOARD_HEIGHT} fill={doc.background} />
@@ -296,6 +312,7 @@ function Card({
 
   return (
     <Group
+      name="card"
       x={x}
       y={y}
       // Rounded like the card images; a split card's bottom half (the middle of a card)

@@ -8,12 +8,15 @@ import { fetchCard, loadImage, mapLimit, proxied, searchCards, type CardResult }
 import { parseImport, type ImportCard, type ImportLine } from './importText';
 import {
   BOARD_WIDTH,
+  CARD_HEIGHT,
+  CARD_WIDTH,
   EXPORT_SCALE,
   MAX_CARDS_PER_TIER,
   defaultDoc,
   dropTarget,
   faceOf,
   insertCard,
+  layoutCards,
   newId,
   parseDoc,
   type CardFace,
@@ -89,8 +92,15 @@ export default function TierStack() {
   const [results, setResults] = React.useState<CardResult[]>([]);
   const [targetTier, setTargetTier] = React.useState(0);
   const [confirmingNew, setConfirmingNew] = React.useState(false);
-  // Menu for a clicked card, positioned in the board's on-screen pixels
-  const [cardMenu, setCardMenu] = React.useState<{ id: string; x: number; y: number } | null>(null);
+  // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
+  // result, and where it goes if added to the tier), positioned in the board's on-screen
+  // pixels
+  const [cardMenu, setCardMenu] = React.useState<{
+    id: string;
+    x: number;
+    y: number;
+    dropped?: { card: CardResult; tierIndex: number; index: number };
+  } | null>(null);
   const cardMenuRef = React.useRef<HTMLDivElement>(null);
   // Card face being picked from search: the next result clicked replaces the card (or a
   // split card's top half), or becomes its bottom half, making it a split card
@@ -101,8 +111,22 @@ export default function TierStack() {
   const boardBoxRef = React.useRef<HTMLDivElement>(null);
   const tierNameRefs = React.useRef<(HTMLInputElement | null)[]>([]);
   const tiersPanelRef = React.useRef<HTMLDetailsElement>(null);
-  // Search result being dragged onto the board
-  const draggedResult = React.useRef<CardResult | null>(null);
+  // Search result pressed with a mouse or pen: where the press started, and whether it
+  // has moved far enough to be a drag. A drag shows the card under the pointer
+  // (dragGhost) and drops it on the board when released.
+  const resultPress = React.useRef<{
+    card: CardResult;
+    x: number;
+    y: number;
+    dragging: boolean;
+  } | null>(null);
+  const [dragGhost, setDragGhost] = React.useState<{
+    card: CardResult;
+    x: number;
+    y: number;
+  } | null>(null);
+  // Set from a drag's release until the click that follows it, so the drag doesn't also add the card
+  const justDragged = React.useRef(false);
 
   // Autosave
   React.useEffect(() => {
@@ -261,8 +285,21 @@ export default function TierStack() {
 
   const pickingCard = findCard(picking?.id);
 
-  const cardMenuItems = (id: string) =>
-    findCard(id)?.split
+  // A search result as one half of a card, named after the search
+  const resultFace = (card: CardResult) =>
+    toFace(card, query.trim() || `${card.set} ${card.number}`);
+
+  type CardMenu = NonNullable<typeof cardMenu>;
+
+  // The card menu's items: for a clicked card, or for a search result dropped on it
+  const cardMenuItems = ({ id, dropped }: CardMenu) => {
+    const split = findCard(id)?.split;
+    if (dropped) {
+      return split
+        ? (['Replace top half', 'Replace bottom half', 'Add to tier'] as const)
+        : (['Add as split card', 'Add to tier'] as const);
+    }
+    return split
       ? ([
           'Remove card',
           'Replace top half',
@@ -271,8 +308,22 @@ export default function TierStack() {
           'Unsplit',
         ] as const)
       : (['Remove card', 'Replace card', 'Make split card'] as const);
+  };
 
-  function runCardMenuItem(id: string, label: ReturnType<typeof cardMenuItems>[number]) {
+  function runCardMenuItem(
+    { id, dropped }: CardMenu,
+    label: ReturnType<typeof cardMenuItems>[number]
+  ) {
+    // A dropped result replaces a half, becomes the bottom half, or is added to the tier
+    if (dropped) {
+      const face = resultFace(dropped.card);
+      if (label === 'Replace top half') updateCard(id, (i) => ({ ...i, ...face }));
+      if (label === 'Replace bottom half' || label === 'Add as split card') {
+        updateCard(id, (i) => ({ ...i, split: face }));
+      }
+      if (label === 'Add to tier') addResult(dropped.card, dropped.tierIndex, dropped.index);
+      return;
+    }
     if (label === 'Remove card') removeCard(id);
     if (label === 'Replace card' || label === 'Replace top half') startPicking(id, 'top');
     if (label === 'Make split card' || label === 'Replace bottom half') startPicking(id, 'bottom');
@@ -283,14 +334,18 @@ export default function TierStack() {
     if (label === 'Unsplit') updateCard(id, (i) => ({ ...i, split: undefined }));
   }
 
+  function addResult(card: CardResult, tierIndex: number, index: number) {
+    const next = insertCard(doc, toItem(card, query.trim()), tierIndex, index);
+    if (!next) {
+      setStatus(`That tier is full (${MAX_CARDS_PER_TIER} cards).`);
+      return;
+    }
+    setDoc(next);
+  }
+
   function pickResult(card: CardResult) {
     if (picking && pickingCard) {
-      const face = {
-        name: query.trim() || `${card.set} ${card.number}`,
-        set: card.set,
-        number: card.number,
-        image: card.image,
-      };
+      const face = resultFace(card);
       updateCard(picking.id, (i) =>
         picking.part === 'top' ? { ...i, ...face } : { ...i, split: face }
       );
@@ -305,25 +360,74 @@ export default function TierStack() {
     updateTier(targetTier, { items: [...doc.tiers[targetTier].items, item] });
   }
 
-  // A search result dropped on the board lands in the tier and position under the pointer
-  function dropResult(e: React.DragEvent) {
-    const card = draggedResult.current;
+  // A search result dropped on the board lands in the tier and position under the
+  // pointer. Dropped on a card, it opens the card menu to choose between making a split
+  // card and adding it to the tier.
+  const dropResult = React.useEffectEvent((card: CardResult, clientX: number, clientY: number) => {
     const stage = stageRef.current;
-    draggedResult.current = null;
-    if (!card || !stage) return;
-    e.preventDefault();
+    if (!stage) return;
     const box = stage.container().getBoundingClientRect();
-    const x = (e.clientX - box.left) / scale;
-    const y = (e.clientY - box.top) / scale;
-    const target = dropTarget(doc, '', x, y);
-    const item = toItem(card, query.trim());
-    const next = insertCard(doc, item, target.tierIndex, target.index);
-    if (!next) {
-      setStatus(`That tier is full (${MAX_CARDS_PER_TIER} cards).`);
+    if (clientX < box.left || clientX > box.right || clientY < box.top || clientY > box.bottom) {
       return;
     }
-    setDoc(next);
-  }
+    const x = (clientX - box.left) / scale;
+    const y = (clientY - box.top) / scale;
+    const target = dropTarget(doc, '', x, y);
+    // Later cards overlap earlier ones, so the last card under the pointer is the top one
+    const under = layoutCards(doc).findLast(
+      (p) => x >= p.x && x <= p.x + CARD_WIDTH && y >= p.y && y <= p.y + CARD_HEIGHT
+    );
+    if (under) {
+      setSelectedId(under.item.id);
+      setCardMenu({
+        id: under.item.id,
+        x: clientX - box.left,
+        y: clientY - box.top,
+        dropped: { card, ...target },
+      });
+      return;
+    }
+    addResult(card, target.tierIndex, target.index);
+  });
+
+  // Dragging a search result: follows the pointer once it has moved a few pixels;
+  // Escape cancels
+  React.useEffect(() => {
+    const end = () => {
+      resultPress.current = null;
+      setDragGhost(null);
+    };
+    const onMove = (e: PointerEvent) => {
+      const press = resultPress.current;
+      if (!press) return;
+      if (!press.dragging && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 5) return;
+      press.dragging = true;
+      setDragGhost({ card: press.card, x: e.clientX, y: e.clientY });
+    };
+    const onUp = (e: PointerEvent) => {
+      const press = resultPress.current;
+      if (!press) return;
+      if (press.dragging) {
+        justDragged.current = true;
+        setTimeout(() => (justDragged.current = false));
+        dropResult(press.card, e.clientX, e.clientY);
+      }
+      end();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') end();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', end);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', end);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
 
   // Waits for card images, then draws the board at export size without editor marks
   async function renderBlob() {
@@ -371,14 +475,7 @@ export default function TierStack() {
 
   return (
     <div className="tier-stack-page w-full max-w-[1240px] p-[20px] flex flex-col gap-[16px] text-[14px] text-black">
-      <div
-        ref={boardBoxRef}
-        className="w-full relative"
-        onDragOver={(e) => {
-          if (draggedResult.current) e.preventDefault();
-        }}
-        onDrop={dropResult}
-      >
+      <div ref={boardBoxRef} className="w-full relative">
         <Board
           doc={doc}
           scale={scale}
@@ -391,6 +488,7 @@ export default function TierStack() {
             if (tiersPanelRef.current) tiersPanelRef.current.open = true;
             tierNameRefs.current[i]?.focus();
           }}
+          onPickTier={setTargetTier}
           onStage={(stage) => {
             stageRef.current = stage;
           }}
@@ -407,13 +505,13 @@ export default function TierStack() {
               top: cardMenu.y,
             }}
           >
-            {cardMenuItems(cardMenu.id).map((label) => (
+            {cardMenuItems(cardMenu).map((label) => (
               <button
                 key={label}
                 role="menuitem"
                 className="px-[8px] py-[4px] text-left hover:bg-black/10"
                 onClick={() => {
-                  runCardMenuItem(cardMenu.id, label);
+                  runCardMenuItem(cardMenu, label);
                   setCardMenu(null);
                 }}
               >
@@ -516,23 +614,21 @@ export default function TierStack() {
               box is 3 rows tall (3 x 125 + 2 x 4) and scrolls down */}
           <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[125px] gap-[4px] max-h-[383px] overflow-y-auto overflow-x-hidden empty:hidden">
             {results.map((card) => (
-              // A div, not a button: Firefox won't start a drag from a button
               <div
                 key={`${card.set}-${card.number}`}
                 role="button"
                 tabIndex={0}
                 title={`${card.set} ${card.number}`}
-                className="cursor-grab flex flex-col items-center text-[11px] leading-[14px]"
-                draggable
-                onDragStart={(e) => {
-                  draggedResult.current = card;
-                  e.dataTransfer.effectAllowed = 'copy';
-                  e.dataTransfer.setData('text/plain', `${card.set} ${card.number}`);
+                className="cursor-grab select-none flex flex-col items-center text-[11px] leading-[14px]"
+                // Mouse and pen only: on touch, a press-and-move scrolls the results
+                onPointerDown={(e) => {
+                  if (e.pointerType === 'touch' || e.button !== 0) return;
+                  e.preventDefault();
+                  resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
                 }}
-                onDragEnd={() => {
-                  draggedResult.current = null;
+                onClick={() => {
+                  if (!justDragged.current) pickResult(card);
                 }}
-                onClick={() => pickResult(card)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -624,6 +720,16 @@ export default function TierStack() {
           </div>
         </details>
       </div>
+
+      {dragGhost && (
+        // eslint-disable-next-line @next/next/no-img-element -- remote thumbnail, as in the results
+        <img
+          src={dragGhost.card.thumb}
+          alt=""
+          className="fixed z-20 w-[80px] h-[111px] object-contain pointer-events-none opacity-80"
+          style={{ left: dragGhost.x - 40, top: dragGhost.y - 55 }}
+        />
+      )}
     </div>
   );
 }
