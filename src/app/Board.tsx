@@ -90,12 +90,12 @@ export default function Board({
             item={item}
             x={x}
             y={y}
-            // Split cards always have a border: the tier's color if that's on, else the
-            // board's border color
+            // Split cards always have a border and divider: the tier's color if tier
+            // borders are on, else the board's border color
             borderColor={
               doc.tierCardBorders ? doc.tiers[tierIndex].color : item.split ? doc.border : null
             }
-            dividerColor={doc.border}
+            dividerColor={doc.tierCardBorders ? doc.tiers[tierIndex].color : doc.border}
             onSelect={() => onSelect(item.id)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
             onDrop={(centerX, centerY) => {
@@ -305,9 +305,19 @@ function Card({
       }
       draggable
       onMouseDown={onSelect}
-      // Konva fires click/tap only when the card wasn't dragged
-      onClick={(e) => openMenu(e.target.getStage())}
+      // Konva fires click/tap only when the card wasn't dragged. It also fires click for
+      // the right button; that opens the menu through contextmenu instead, or the menu
+      // would open under the pointer before contextmenu and take that event.
+      onClick={(e) => {
+        if (e.evt.button === 0) openMenu(e.target.getStage());
+      }}
       onTap={(e) => {
+        onSelect();
+        openMenu(e.target.getStage());
+      }}
+      // Right-click opens the same menu in place of the browser's
+      onContextMenu={(e) => {
+        e.evt.preventDefault();
         onSelect();
         openMenu(e.target.getStage());
       }}

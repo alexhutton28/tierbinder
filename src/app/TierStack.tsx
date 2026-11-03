@@ -399,6 +399,7 @@ export default function TierStack() {
           <div
             ref={cardMenuRef}
             role="menu"
+            onContextMenu={(e) => e.preventDefault()}
             className="absolute z-10 flex flex-col min-w-[160px] border border-black bg-white shadow-md"
             // Kept inside the board's right edge
             style={{

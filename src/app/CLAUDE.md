@@ -28,12 +28,12 @@ page.
 
 ## Split cards
 
-- A `CardItem` with `split` (its bottom `CardFace`). Drawn as the top halves of both cards (each image's top 50%, 70px tall) over a border-colored backing, with a 3px divider in `border` and a 3px inner stroke in `border` (or the tier's color when tier borders are on).
+- A `CardItem` with `split` (its bottom `CardFace`). Drawn as the top halves of both cards (each image's top 50%, 70px tall) over a border-colored backing, with a 3px divider and a 3px inner stroke, both in `border` (or the tier's color when tier borders are on).
 - Made from the card menu or imported as `Top card / Bottom card`; both halves must be found.
 
 ## Editing
 
-- Drag a card to move or reorder it. Clicking a card without dragging (Konva's `click`/`tap` don't fire after a drag) opens the card menu, HTML over the board:
+- Drag a card to move or reorder it. Clicking a card without dragging (Konva's `click`/`tap` don't fire after a drag) opens the card menu, HTML over the board; so does right-clicking a card (the browser's own menu is prevented on cards only). Konva also fires `click` for the right button, so only a left `click` opens the menu; right-click opens it from `contextmenu`, which would otherwise land on the already-open menu:
   - Card: Remove card, Replace card, Make split card.
   - Split card: Remove card, Replace top half, Replace bottom half, Swap halves, Unsplit (keeps the top).
   - Replace and Make split card put Add a card in picking mode (`picking`: `{ id, part: 'top' | 'bottom' }`): replacing searches that card's name, and the next result clicked takes its place (or becomes the bottom half), until Cancel or Escape.
