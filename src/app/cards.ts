@@ -1,5 +1,33 @@
-// Client side of card sourcing: lookups and search through our API routes, and image
-// loading through the same-origin proxy so canvas export works.
+// Cards, shared by every graphic: the card types saved in documents, and the client side
+// of card sourcing (lookups and search through our API routes, and image loading through
+// the same-origin proxy so canvas export works).
+
+import type { ImportCard, ImportLine } from './importText';
+
+// One printed card
+export type CardFace = {
+  name: string;
+  set?: string;
+  number?: string;
+  // Full-size image on its source host; loaded through the image proxy
+  image: string;
+};
+
+export type CardItem = CardFace & {
+  id: string;
+  kind: 'card';
+  // A split card: the top halves of this card (top) and `split` (bottom)
+  split?: CardFace;
+};
+
+export function faceOf({ name, set, number, image }: CardFace): CardFace {
+  return { name, set, number, image };
+}
+
+// Ids for cards and the other parts of a document
+export function newId() {
+  return Math.random().toString(36).slice(2, 10);
+}
 
 export type CardResult = {
   set: string;
@@ -8,6 +36,47 @@ export type CardResult = {
   thumb: string;
   name?: string;
 };
+
+export function toFace(card: CardResult, name: string): CardFace {
+  return { name, set: card.set, number: card.number, image: card.image };
+}
+
+export function toItem(card: CardResult, name: string): CardItem {
+  return { id: newId(), kind: 'card', ...toFace(card, name) };
+}
+
+async function resolveFace(card: ImportCard): Promise<CardFace | null> {
+  if (card.set && card.number) {
+    const found = await fetchCard(card.set, card.number);
+    if (found) return toFace(found, found.name ?? card.name);
+  }
+  const pick = defaultPrint(await searchCards(card.name));
+  return pick ? toFace(pick, card.name) : null;
+}
+
+// Looks up a bulk import line. A split card needs both halves found.
+export async function resolveCard(line: ImportLine): Promise<CardItem | null> {
+  const [top, bottom] = await Promise.all([
+    resolveFace(line),
+    line.split ? resolveFace(line.split) : null,
+  ]);
+  if (!top || (line.split && !bottom)) return null;
+  return { id: newId(), kind: 'card', ...top, ...(bottom ? { split: bottom } : {}) };
+}
+
+// Special sets of reprints, listed before regular sets in Limitless search results
+const SPECIAL_SETS = new Set(['30C', 'CEL']);
+
+// Search results come newest set first. Within a set, alt arts are numbered after the
+// regular card, so the lowest number in the newest set is its usual print. Special
+// sets and subset numbers (CC21, TG05, SV103) are skipped while a regular print exists.
+function defaultPrint(all: CardResult[]) {
+  const regular = all.filter((r) => !SPECIAL_SETS.has(r.set) && /^\d+$/.test(r.number));
+  const results = regular.length ? regular : all;
+  const newest = results.filter((r) => r.set === results[0]?.set);
+  const number = (r: CardResult) => parseInt(r.number, 10) || Infinity;
+  return newest.sort((a, b) => number(a) - number(b))[0];
+}
 
 export async function fetchCard(set: string, number: string): Promise<CardResult | null> {
   const params = new URLSearchParams({ set, number });

@@ -2,86 +2,45 @@
 
 import type Konva from 'konva';
 import React from 'react';
-import Board from './Board';
-import ColorField from './ColorField';
-import { fetchCard, loadImage, mapLimit, proxied, searchCards, type CardResult } from './cards';
-import { parseImport, type ImportCard, type ImportLine } from './importText';
+import { Layer, Rect, Stage } from 'react-konva';
+import { BOARD_HEIGHT, BOARD_WIDTH, EXPORT_SCALE } from './canvas/size';
 import {
-  BOARD_WIDTH,
-  CARD_HEIGHT,
-  CARD_WIDTH,
-  EXPORT_SCALE,
-  MAX_CARDS_PER_TIER,
-  defaultDoc,
-  dropTarget,
   faceOf,
-  insertCard,
-  layoutCards,
-  newId,
-  parseDoc,
-  type CardFace,
+  loadImage,
+  mapLimit,
+  proxied,
+  resolveCard,
+  searchCards,
+  toFace,
+  toItem,
   type CardItem,
-  type TierListDoc,
-} from './tierList';
+  type CardResult,
+} from './cards';
+import { currentGraphic, newDoc, parseSaved, type TierStackDoc } from './document';
+import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
+import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
+import { parseImport } from './importText';
 
-// The tier list editor: the board plus a plain control panel. Kept deliberately
-// unstyled; it's a tool for making images, not a page people visit.
+// The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
+// a plain control panel shared by every graphic. Kept deliberately unstyled; it's a tool
+// for making images, not a page people visit.
 
 const STORAGE_KEY = 'tcg-tier-stack-doc';
 
 function loadSaved() {
   try {
-    return parseDoc(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')) ?? defaultDoc();
+    return parseSaved(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')) ?? newDoc();
   } catch {
-    return defaultDoc();
+    return newDoc();
   }
-}
-
-async function resolveFace(card: ImportCard): Promise<CardFace | null> {
-  if (card.set && card.number) {
-    const found = await fetchCard(card.set, card.number);
-    if (found) return toFace(found, found.name ?? card.name);
-  }
-  const pick = defaultPrint(await searchCards(card.name));
-  return pick ? toFace(pick, card.name) : null;
-}
-
-// A split card needs both halves found
-async function resolveCard(line: ImportLine): Promise<CardItem | null> {
-  const [top, bottom] = await Promise.all([
-    resolveFace(line),
-    line.split ? resolveFace(line.split) : null,
-  ]);
-  if (!top || (line.split && !bottom)) return null;
-  return { id: newId(), kind: 'card', ...top, ...(bottom ? { split: bottom } : {}) };
-}
-
-// Special sets of reprints, listed before regular sets in Limitless search results
-const SPECIAL_SETS = new Set(['30C', 'CEL']);
-
-// Search results come newest set first. Within a set, alt arts are numbered after the
-// regular card, so the lowest number in the newest set is its usual print. Special
-// sets and subset numbers (CC21, TG05, SV103) are skipped while a regular print exists.
-function defaultPrint(all: CardResult[]) {
-  const regular = all.filter((r) => !SPECIAL_SETS.has(r.set) && /^\d+$/.test(r.number));
-  const results = regular.length ? regular : all;
-  const newest = results.filter((r) => r.set === results[0]?.set);
-  const number = (r: CardResult) => parseInt(r.number, 10) || Infinity;
-  return newest.sort((a, b) => number(a) - number(b))[0];
-}
-
-function toFace(card: CardResult, name: string): CardFace {
-  return { name, set: card.set, number: card.number, image: card.image };
-}
-
-function toItem(card: CardResult, name: string): CardItem {
-  return { id: newId(), kind: 'card', ...toFace(card, name) };
 }
 
 const button = 'border border-black px-[8px] py-[2px] bg-white disabled:opacity-50';
 
-export default function TierStack() {
-  const [doc, setDoc] = React.useState<TierListDoc>(loadSaved);
+export default function Editor() {
+  const [doc, setDoc] = React.useState<TierStackDoc>(loadSaved);
+  const graphic = currentGraphic(doc);
+  const type = typeOf(graphic.kind);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [scale, setScale] = React.useState(1);
   const [fontFamily, setFontFamily] = React.useState('sans-serif');
@@ -90,27 +49,31 @@ export default function TierStack() {
   const [importText, setImportText] = React.useState('');
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<CardResult[]>([]);
-  const [targetTier, setTargetTier] = React.useState(0);
-  const [confirmingNew, setConfirmingNew] = React.useState(false);
+  // Where the next search result goes: one of the graphic's targets
+  const [target, setTarget] = React.useState(0);
+  // The active tool: moving cards, or one from the graphic's toolbar
+  const [tool, setTool] = React.useState(DEFAULT_TOOL);
+  // Board button whose choices are showing: confirming Clear board, or picking a type
+  const [boardChoice, setBoardChoice] = React.useState<'clear' | 'type' | null>(null);
   // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
-  // result, and where it goes if added to the tier), positioned in the board's on-screen
-  // pixels
+  // result, and the point it was dropped at), positioned in the board's on-screen pixels
   const [cardMenu, setCardMenu] = React.useState<{
     id: string;
     x: number;
     y: number;
-    dropped?: { card: CardResult; tierIndex: number; index: number };
+    dropped?: { card: CardResult; point: Point };
   } | null>(null);
   const cardMenuRef = React.useRef<HTMLDivElement>(null);
   // Card face being picked from search: the next result clicked replaces the card (or a
   // split card's top half), or becomes its bottom half, making it a split card
   const [picking, setPicking] = React.useState<{ id: string; part: 'top' | 'bottom' } | null>(null);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
+  // A setting the board asked Customize Board to focus (e.g. a tier name)
+  const [settingsFocus, setSettingsFocus] = React.useState<{ key: string; n: number } | null>(null);
 
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const boardBoxRef = React.useRef<HTMLDivElement>(null);
-  const tierNameRefs = React.useRef<(HTMLInputElement | null)[]>([]);
-  const tiersPanelRef = React.useRef<HTMLDetailsElement>(null);
+  const settingsPanelRef = React.useRef<HTMLDetailsElement>(null);
   // Search result pressed with a mouse or pen: where the press started, and whether it
   // has moved far enough to be a drag. A drag shows the card under the pointer
   // (dragGhost) and drops it on the board when released.
@@ -127,6 +90,45 @@ export default function TierStack() {
   } | null>(null);
   // Set from a drag's release until the click that follows it, so the drag doesn't also add the card
   const justDragged = React.useRef(false);
+
+  const placements = type.layout(graphic);
+  const targets = type.targets(graphic);
+  const targetIndex = Math.min(target, targets.length - 1);
+
+  // Changes the board showing
+  const setGraphic = React.useCallback(
+    (change: (graphic: Graphic) => Graphic) =>
+      setDoc((d) => ({ ...d, graphics: { ...d.graphics, [d.kind]: change(currentGraphic(d)) } })),
+    []
+  );
+
+  // Shows another board type's board (kept from when it was last used, or new), or
+  // replaces the board showing with a new one
+  function showBoard(kind: GraphicKind, clear = false) {
+    setDoc((d) => ({
+      ...d,
+      kind,
+      graphics:
+        clear || !d.graphics[kind] ? { ...d.graphics, [kind]: typeOf(kind).create() } : d.graphics,
+    }));
+    setSelectedId(null);
+    setCardMenu(null);
+    setPicking(null);
+    if (kind !== doc.kind) {
+      setTarget(0);
+      setTool(DEFAULT_TOOL);
+    }
+    setBoardChoice(null);
+  }
+
+  // Applies a placed card, or shows why it couldn't be placed
+  const applyPlaced = (placed: Placed<Graphic>) => {
+    if ('error' in placed) {
+      setStatus(placed.error);
+      return;
+    }
+    setGraphic(() => placed);
+  };
 
   // Autosave
   React.useEffect(() => {
@@ -155,13 +157,13 @@ export default function TierStack() {
     document.fonts.load(`900 30px ${family}`).then(() => setFontFamily(family));
   }, []);
 
-  const removeCard = React.useCallback((id: string) => {
-    setDoc((d) => ({
-      ...d,
-      tiers: d.tiers.map((t) => ({ ...t, items: t.items.filter((i) => i.id !== id) })),
-    }));
-    setSelectedId((selected) => (selected === id ? null : selected));
-  }, []);
+  const removeCard = React.useCallback(
+    (id: string) => {
+      setGraphic((g) => typeOf(g.kind).mapCards(g, (i) => (i.id === id ? null : i)));
+      setSelectedId((selected) => (selected === id ? null : selected));
+    },
+    [setGraphic]
+  );
 
   const removeSelected = React.useCallback(() => {
     if (!selectedId) return;
@@ -192,51 +194,29 @@ export default function TierStack() {
     return () => window.removeEventListener('pointerdown', onDown);
   }, [cardMenu]);
 
-  const updateTier = (index: number, change: Partial<TierListDoc['tiers'][number]>) =>
-    setDoc((d) => ({
-      ...d,
-      tiers: d.tiers.map((t, i) => (i === index ? { ...t, ...change } : t)),
-    }));
-
   async function runImport() {
-    const { tiers, errors } = parseImport(importText);
+    const groups = parseImport(importText);
     setBusy(true);
     setStatus('Importing…');
-    const lines = tiers.flatMap((t) => t.cards);
+    const lines = groups.flatMap((g) => g.cards);
     const resolved = await mapLimit(lines, 4, resolveCard);
     const found = new Map(lines.map((line, i) => [line, resolved[i]]));
+    const errors: string[] = [];
     for (const line of lines) {
       if (!found.get(line)) {
         const name = line.split ? `${line.name} / ${line.split.name}` : line.name;
         errors.push(`Line ${line.line}: couldn't find "${name}".`);
       }
     }
-    // Imported cards go after the ones already in each tier. Pure, so it can run on the
-    // latest board (it may have changed while cards were looking up)
-    const addImported = (d: TierListDoc) => {
-      const overflow: string[] = [];
-      const next = {
-        ...d,
-        tiers: d.tiers.map((tier, i) => {
-          const imported = tiers[i];
-          const items = [
-            ...tier.items,
-            ...(imported?.cards ?? []).flatMap((line) => found.get(line) ?? []),
-          ];
-          const name = imported?.name ?? tier.name;
-          if (items.length > MAX_CARDS_PER_TIER) {
-            overflow.push(
-              `${name}: ${items.length - MAX_CARDS_PER_TIER} cards didn't fit (${MAX_CARDS_PER_TIER} per tier).`
-            );
-          }
-          return { ...tier, name, items: items.slice(0, MAX_CARDS_PER_TIER) };
-        }),
-      };
-      return { next, overflow };
-    };
-    setDoc((d) => addImported(d).next);
+    const resolvedGroups = groups.map((g) => ({
+      name: g.name,
+      items: g.cards.flatMap((line) => found.get(line) ?? []),
+    }));
+    // Pure, so it runs on the latest board (it may have changed while cards were looking
+    // up); the messages come from the board as it was
+    setGraphic((g) => typeOf(g.kind).importCards(g, resolvedGroups).graphic);
     setBusy(false);
-    errors.push(...addImported(doc).overflow);
+    errors.push(...type.importCards(graphic, resolvedGroups).errors);
     const added = resolved.filter(Boolean).length;
     setStatus(
       errors.length ? errors.join('\n') : `Added ${added} ${added === 1 ? 'card' : 'cards'}.`
@@ -257,17 +237,10 @@ export default function TierStack() {
     setBusy(false);
   }
 
-  const findCard = (id: string | undefined) =>
-    doc.tiers.flatMap((t) => t.items).find((i) => i.id === id);
+  const findCard = (id: string | undefined) => placements.find((p) => p.item.id === id)?.item;
 
   const updateCard = (id: string, change: (item: CardItem) => CardItem) =>
-    setDoc((d) => ({
-      ...d,
-      tiers: d.tiers.map((t) => ({
-        ...t,
-        items: t.items.map((i) => (i.id === id ? change(i) : i)),
-      })),
-    }));
+    setGraphic((g) => typeOf(g.kind).mapCards(g, (i) => (i.id === id ? change(i) : i)));
 
   // Puts the search in picking mode for a card's top or bottom face. Replacing searches
   // that face's name (its other prints); a new split card starts with an empty search.
@@ -290,38 +263,33 @@ export default function TierStack() {
     toFace(card, query.trim() || `${card.set} ${card.number}`);
 
   type CardMenu = NonNullable<typeof cardMenu>;
+  const addToTarget = `Add to ${type.targetNoun}`;
 
   // The card menu's items: for a clicked card, or for a search result dropped on it
   const cardMenuItems = ({ id, dropped }: CardMenu) => {
     const split = findCard(id)?.split;
     if (dropped) {
       return split
-        ? (['Replace top half', 'Replace bottom half', 'Add to tier'] as const)
-        : (['Add as split card', 'Add to tier'] as const);
+        ? ['Replace top half', 'Replace bottom half', addToTarget]
+        : ['Add as split card', addToTarget];
     }
     return split
-      ? ([
-          'Remove card',
-          'Replace top half',
-          'Replace bottom half',
-          'Swap halves',
-          'Unsplit',
-        ] as const)
-      : (['Remove card', 'Replace card', 'Make split card'] as const);
+      ? ['Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
+      : ['Remove card', 'Replace card', 'Make split card'];
   };
 
-  function runCardMenuItem(
-    { id, dropped }: CardMenu,
-    label: ReturnType<typeof cardMenuItems>[number]
-  ) {
-    // A dropped result replaces a half, becomes the bottom half, or is added to the tier
+  function runCardMenuItem({ id, dropped }: CardMenu, label: string) {
+    // A dropped result replaces a half, becomes the bottom half, or is added where it was
+    // dropped
     if (dropped) {
       const face = resultFace(dropped.card);
       if (label === 'Replace top half') updateCard(id, (i) => ({ ...i, ...face }));
       if (label === 'Replace bottom half' || label === 'Add as split card') {
         updateCard(id, (i) => ({ ...i, split: face }));
       }
-      if (label === 'Add to tier') addResult(dropped.card, dropped.tierIndex, dropped.index);
+      if (label === addToTarget) {
+        applyPlaced(type.dropCard(graphic, toItem(dropped.card, query.trim()), dropped.point));
+      }
       return;
     }
     if (label === 'Remove card') removeCard(id);
@@ -334,15 +302,6 @@ export default function TierStack() {
     if (label === 'Unsplit') updateCard(id, (i) => ({ ...i, split: undefined }));
   }
 
-  function addResult(card: CardResult, tierIndex: number, index: number) {
-    const next = insertCard(doc, toItem(card, query.trim()), tierIndex, index);
-    if (!next) {
-      setStatus(`That tier is full (${MAX_CARDS_PER_TIER} cards).`);
-      return;
-    }
-    setDoc(next);
-  }
-
   function pickResult(card: CardResult) {
     if (picking && pickingCard) {
       const face = resultFace(card);
@@ -352,17 +311,11 @@ export default function TierStack() {
       setPicking(null);
       return;
     }
-    if (doc.tiers[targetTier].items.length >= MAX_CARDS_PER_TIER) {
-      setStatus(`That tier is full (${MAX_CARDS_PER_TIER} cards).`);
-      return;
-    }
-    const item = toItem(card, query.trim());
-    updateTier(targetTier, { items: [...doc.tiers[targetTier].items, item] });
+    applyPlaced(type.addCard(graphic, toItem(card, query.trim()), targetIndex));
   }
 
-  // A search result dropped on the board lands in the tier and position under the
-  // pointer. Dropped on a card, it opens the card menu to choose between making a split
-  // card and adding it to the tier.
+  // A search result dropped on the board goes where the graphic puts it. Dropped on a
+  // card, it opens the card menu to choose between making a split card and adding it.
   const dropResult = React.useEffectEvent((card: CardResult, clientX: number, clientY: number) => {
     const stage = stageRef.current;
     if (!stage) return;
@@ -370,12 +323,11 @@ export default function TierStack() {
     if (clientX < box.left || clientX > box.right || clientY < box.top || clientY > box.bottom) {
       return;
     }
-    const x = (clientX - box.left) / scale;
-    const y = (clientY - box.top) / scale;
-    const target = dropTarget(doc, '', x, y);
+    const point = { x: (clientX - box.left) / scale, y: (clientY - box.top) / scale };
     // Later cards overlap earlier ones, so the last card under the pointer is the top one
-    const under = layoutCards(doc).findLast(
-      (p) => x >= p.x && x <= p.x + CARD_WIDTH && y >= p.y && y <= p.y + CARD_HEIGHT
+    const under = placements.findLast(
+      (p) =>
+        point.x >= p.x && point.x <= p.x + p.width && point.y >= p.y && point.y <= p.y + p.height
     );
     if (under) {
       setSelectedId(under.item.id);
@@ -383,11 +335,11 @@ export default function TierStack() {
         id: under.item.id,
         x: clientX - box.left,
         y: clientY - box.top,
-        dropped: { card, ...target },
+        dropped: { card, point },
       });
       return;
     }
-    addResult(card, target.tierIndex, target.index);
+    applyPlaced(type.dropCard(graphic, toItem(card, query.trim()), point));
   });
 
   // Dragging a search result: follows the pointer once it has moved a few pixels;
@@ -435,19 +387,20 @@ export default function TierStack() {
     if (!stage) return null;
     setSelectedId(null);
     await Promise.allSettled(
-      doc.tiers.flatMap((t) =>
-        t.items.flatMap((i) => [i.image, ...(i.split ? [i.split.image] : [])]).map(loadImage)
-      )
+      placements
+        .flatMap(({ item }) => [item.image, ...(item.split ? [item.split.image] : [])])
+        .map(loadImage)
     );
     await document.fonts.ready;
     // Let React draw the cards whose images just finished loading
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const editor = stage.findOne('.editor');
-    editor?.hide();
+    // The editor's own layer, and any a graphic adds (e.g. the eraser's circle)
+    const editorOnly = stage.find('.editor');
+    editorOnly.forEach((node) => node.hide());
     try {
       return (await stage.toBlob({ pixelRatio: EXPORT_SCALE / scale })) as Blob;
     } finally {
-      editor?.show();
+      editorOnly.forEach((node) => node.show());
     }
   }
 
@@ -457,7 +410,7 @@ export default function TierStack() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'tier-list.png';
+    a.download = `${graphic.kind}.png`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -476,24 +429,52 @@ export default function TierStack() {
   return (
     <div className="tier-stack-page w-full max-w-[1240px] p-[20px] flex flex-col gap-[16px] text-[14px] text-black">
       <div ref={boardBoxRef} className="w-full relative">
-        <Board
-          doc={doc}
-          scale={scale}
-          fontFamily={fontFamily}
-          selectedId={selectedId}
-          onChange={setDoc}
-          onSelect={setSelectedId}
-          onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-          onEditTier={(i) => {
-            if (tiersPanelRef.current) tiersPanelRef.current.open = true;
-            tierNameRefs.current[i]?.focus();
-          }}
-          onPickTier={setTargetTier}
-          onStage={(stage) => {
+        <Stage
+          ref={(stage) => {
             stageRef.current = stage;
           }}
-        />
-        {cardMenu && doc.tiers.some((t) => t.items.some((i) => i.id === cardMenu.id)) && (
+          width={BOARD_WIDTH * scale}
+          height={BOARD_HEIGHT * scale}
+          scaleX={scale}
+          scaleY={scale}
+          onMouseDown={(e) => {
+            if (e.target === e.target.getStage() || e.target.name() === 'background') {
+              setSelectedId(null);
+            }
+          }}
+        >
+          <type.Canvas
+            graphic={graphic}
+            fontFamily={fontFamily}
+            onChange={(next) => setGraphic(() => next)}
+            onSelect={setSelectedId}
+            onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+            onPickTarget={setTarget}
+            onEditSetting={(key) => {
+              if (settingsPanelRef.current) settingsPanelRef.current.open = true;
+              setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+            }}
+            tool={tool}
+          />
+          {/* Editor-only layer: hidden while exporting */}
+          <Layer name="editor" listening={false}>
+            {placements
+              .filter((p) => p.item.id === selectedId)
+              .map((p) => (
+                <Rect
+                  key={p.item.id}
+                  x={p.x - 3}
+                  y={p.y - 3}
+                  width={p.width + 6}
+                  height={p.height + 6}
+                  stroke="#ffffff"
+                  strokeWidth={3}
+                  cornerRadius={8}
+                />
+              ))}
+          </Layer>
+        </Stage>
+        {cardMenu && findCard(cardMenu.id) && (
           <div
             ref={cardMenuRef}
             role="menu"
@@ -522,6 +503,10 @@ export default function TierStack() {
         )}
       </div>
 
+      {type.Toolbar && (
+        <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
+      )}
+
       <div className="flex flex-wrap gap-[8px] items-center">
         <button className={button} onClick={exportPng} disabled={busy}>
           Export PNG ({BOARD_WIDTH * EXPORT_SCALE}px)
@@ -529,31 +514,39 @@ export default function TierStack() {
         <button className={button} onClick={copyPng} disabled={busy}>
           Copy PNG
         </button>
-        <button className={button} onClick={removeSelected} disabled={!selectedId}>
-          Remove selected card
-        </button>
         {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
-        {confirmingNew ? (
+        {boardChoice === 'clear' ? (
           <span className="flex items-center gap-[8px]">
             Clear the board?
-            <button
-              className={button}
-              onClick={() => {
-                setDoc(defaultDoc());
-                setSelectedId(null);
-                setConfirmingNew(false);
-              }}
-            >
+            <button className={button} onClick={() => showBoard(doc.kind, true)}>
               Yes
             </button>
-            <button className={button} onClick={() => setConfirmingNew(false)}>
+            <button className={button} onClick={() => setBoardChoice(null)}>
+              Cancel
+            </button>
+          </span>
+        ) : boardChoice === 'type' ? (
+          // Each type keeps its own board, so switching loses nothing
+          <span className="flex items-center gap-[8px]">
+            Switch to
+            {GRAPHIC_TYPES.filter((t) => t.kind !== doc.kind).map((t) => (
+              <button key={t.kind} className={button} onClick={() => showBoard(t.kind)}>
+                {t.label}
+              </button>
+            ))}
+            <button className={button} onClick={() => setBoardChoice(null)}>
               Cancel
             </button>
           </span>
         ) : (
-          <button className={button} onClick={() => setConfirmingNew(true)}>
-            New board
-          </button>
+          <>
+            <button className={button} onClick={() => setBoardChoice('clear')}>
+              Clear board
+            </button>
+            <button className={button} onClick={() => setBoardChoice('type')}>
+              Change board type
+            </button>
+          </>
         )}
       </div>
 
@@ -595,20 +588,23 @@ export default function TierStack() {
               </button>
             </p>
           ) : (
-            <label className="flex gap-[8px] items-center">
-              Add to
-              <select
-                className="border border-black"
-                value={targetTier}
-                onChange={(e) => setTargetTier(Number(e.target.value))}
-              >
-                {doc.tiers.map((t, i) => (
-                  <option key={t.id} value={i}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            // Only when there's a choice (a blank canvas has one place for cards)
+            targets.length > 1 && (
+              <label className="flex gap-[8px] items-center">
+                Add to
+                <select
+                  className="border border-black"
+                  value={targetIndex}
+                  onChange={(e) => setTarget(Number(e.target.value))}
+                >
+                  {targets.map((name, i) => (
+                    <option key={i} value={i}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )
           )}
           {/* Fixed-size tiles (80x111 card + 14px caption), as many per row as fit; the
               box is 3 rows tall (3 x 125 + 2 x 4) and scrolls down */}
@@ -658,49 +654,10 @@ export default function TierStack() {
         </section>
 
         {/* Collapsed by default; the content is wrapped since <details> doesn't lay out as flex everywhere */}
-        <details ref={tiersPanelRef}>
+        <details ref={settingsPanelRef}>
           <summary className="font-bold cursor-pointer">Customize Board</summary>
           <div className="flex flex-col gap-[8px] mt-[8px]">
-            <h3 className="font-bold">Tiers</h3>
-            {doc.tiers.map((tier, i) => (
-              <div key={tier.id} className="flex gap-[8px] items-center">
-                <ColorField
-                  label={`${tier.name} color`}
-                  value={tier.color}
-                  onChange={(color) => updateTier(i, { color })}
-                />
-                {/* One line, so line breaks are typed as \n (as in bulk import) */}
-                <input
-                  ref={(el) => {
-                    tierNameRefs.current[i] = el;
-                  }}
-                  aria-label={`Tier ${i + 1} name`}
-                  className="border border-black px-[4px] flex-1"
-                  value={tier.name.replaceAll('\n', '\\n')}
-                  onChange={(e) => updateTier(i, { name: e.target.value.replaceAll('\\n', '\n') })}
-                />
-              </div>
-            ))}
-            <label className="flex gap-[8px] items-center">
-              <input
-                type="checkbox"
-                checked={doc.tierCardBorders}
-                onChange={(e) => setDoc((d) => ({ ...d, tierCardBorders: e.target.checked }))}
-              />
-              Add tier colored border to cards
-            </label>
-            <h3 className="font-bold">Background</h3>
-            <ColorField
-              label="Background color"
-              value={doc.background}
-              onChange={(background) => setDoc((d) => ({ ...d, background }))}
-            />
-            <h3 className="font-bold">Border</h3>
-            <ColorField
-              label="Border color"
-              value={doc.border}
-              onChange={(border) => setDoc((d) => ({ ...d, border }))}
-            />
+            <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
           </div>
         </details>
 
