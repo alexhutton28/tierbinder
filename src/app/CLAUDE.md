@@ -29,7 +29,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - `create`, `parse` (a saved graphic of its kind, with later settings filled in), `label` (in Change board type), `targetNoun` (as in "Add to tier").
 - `Canvas`: Konva layers drawn inside the editor's stage, with a `Rect` named `background` (pressing it deselects) and cards drawn with `CardNode`. It gets callbacks to change the graphic, select cards, open the card menu, pick a target and open a setting.
 - `Toolbar` (optional): tools beyond moving cards, shown under the board. The editor keeps the active tool (`DEFAULT_TOOL`, `move`, until the toolbar picks another; reset when the board type changes) and passes it to the canvas as `tool`.
-- `Settings`: its part of Customize Board. `onEditSetting(key)` from the canvas opens the panel and passes `focus` to it (the tier list uses `tier:<index>`).
+- `Settings`: its part of Customize Board. `onEditSetting(key)` from the canvas switches to the Customize Board tab and passes `focus` to it (the tier list uses `tier:<index>`).
 - Cards: `layout` (every card with its top-left corner and box, drawing order; the editor uses it for selection, hit-testing drops and export), `mapCards` (change or remove), `targets` (the Add to choices; hidden when there's only one), `addCard` (to a target), `dropCard` (at a point), `importCards` (bulk import's `#` groups). Adding returns the new graphic or `{ error }`, shown as the status.
 
 ### Adding a graphic type
@@ -88,7 +88,8 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## Look and motion
 
 - Styling is still minimal. Colors for the coming dark theme are tokens in `globals.css`: `petrel-50`…`petrel-950` (grays for surfaces, borders and text) and `storm-100`…`storm-800` (the accent); nothing uses them yet.
-- Motion, chosen from demos: a spring that goes 1.5% past (3% looked like too much live), `--ease-spring` on `.tier-stack-page` (a plain CSS variable, since `@theme inline` tokens are only emitted once used). 450ms for things that move; plain `ease-out` fades of about 120ms alongside. Use it for new TierStack animations.
+- Planned look, from Alex's mood board: dark (petrel/storm), Figtree as a stand-in for Google Sans Rounded, everything a bit rounded, the four default tier colors (red, orange, yellow, green) as accents, and smooth motion throughout. Not built yet; new visuals start as a side-by-side demo.
+- Motion, chosen from demos: a spring that goes 1.5% past (3% looked like too much live), `--ease-spring`, a plain CSS variable on `.tier-stack-page` since only TierStack uses it. 450ms for things that move; plain `ease-out` fades of about 120ms alongside. Use it for new TierStack animations.
 - Popups (the card menu, dropdowns) share `.tier-stack-menu`: stretch open, fold closed; the card menu left to right, dropdowns (`.dropdown`) top to bottom. Reduced motion: fades only.
 
 ## Cards from Limitless
