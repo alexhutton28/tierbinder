@@ -135,6 +135,8 @@ export default function CardNode({
   return (
     <Group
       name="card"
+      // Lets the editor tell which card is being dragged (to move its selection outline)
+      id={item.id}
       x={x}
       y={y}
       scaleX={scale}

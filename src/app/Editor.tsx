@@ -2,6 +2,7 @@
 
 import type Konva from 'konva';
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { Layer, Rect, Stage } from 'react-konva';
 import { BOARD_HEIGHT, BOARD_WIDTH, EXPORT_SCALE } from './canvas/size';
 import {
@@ -20,6 +21,7 @@ import { currentGraphic, newDoc, parseSaved, type TierStackDoc } from './documen
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
+import Dropdown from './ui/Dropdown';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // a plain control panel shared by every graphic. Kept deliberately unstyled; it's a tool
@@ -36,6 +38,14 @@ function loadSaved() {
 }
 
 const button = 'border border-black px-[8px] py-[2px] bg-white disabled:opacity-50';
+
+// The sidebar's tabs
+const TABS = [
+  ['add', 'Add a card'],
+  ['customize', 'Customize Board'],
+  ['import', 'Bulk import'],
+] as const;
+type Tab = (typeof TABS)[number][0];
 
 export default function Editor() {
   const [doc, setDoc] = React.useState<TierStackDoc>(loadSaved);
@@ -55,6 +65,7 @@ export default function Editor() {
   const [tool, setTool] = React.useState(DEFAULT_TOOL);
   // Board button whose choices are showing: confirming Clear board, or picking a type
   const [boardChoice, setBoardChoice] = React.useState<'clear' | 'type' | null>(null);
+  const [tab, setTab] = React.useState<Tab>('add');
   // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
   // result, and the point it was dropped at), positioned in the board's on-screen pixels
   const [cardMenu, setCardMenu] = React.useState<{
@@ -64,6 +75,17 @@ export default function Editor() {
     dropped?: { card: CardResult; point: Point };
   } | null>(null);
   const cardMenuRef = React.useRef<HTMLDivElement>(null);
+  // The menu on screen: the open one, or the last one while it folds closed
+  const [shownMenu, setShownMenu] = React.useState(cardMenu);
+  if (cardMenu && cardMenu !== shownMenu) setShownMenu(cardMenu);
+  const menuClosing = !cardMenu && shownMenu !== null;
+  // Removed on a timer just after its 180ms fold (globals.css) rather than on
+  // animationend, which doesn't fire in a tab that isn't painting
+  React.useEffect(() => {
+    if (!menuClosing) return;
+    const timer = setTimeout(() => setShownMenu(null), 220);
+    return () => clearTimeout(timer);
+  }, [menuClosing]);
   // Card face being picked from search: the next result clicked replaces the card (or a
   // split card's top half), or becomes its bottom half, making it a split card
   const [picking, setPicking] = React.useState<{ id: string; part: 'top' | 'bottom' } | null>(null);
@@ -73,7 +95,14 @@ export default function Editor() {
 
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const boardBoxRef = React.useRef<HTMLDivElement>(null);
-  const settingsPanelRef = React.useRef<HTMLDetailsElement>(null);
+  // The selection outline. Konva moves a dragged card itself, without React, so the
+  // outline is moved the same way to stay on it (cards carry their item's id).
+  const outlineRef = React.useRef<Konva.Rect>(null);
+  const moveOutline = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const card = e.target;
+    if (card.name() !== 'card' || card.id() !== selectedId) return;
+    outlineRef.current?.position({ x: card.x() - 3, y: card.y() - 3 });
+  };
   // Search result pressed with a mouse or pen: where the press started, and whether it
   // has moved far enough to be a drag. A drag shows the card under the pointer
   // (dragGhost) and drops it on the board when released.
@@ -248,6 +277,8 @@ export default function Editor() {
     const item = findCard(id);
     if (!item) return;
     const name = part === 'top' ? item.name : (item.split?.name ?? '');
+    // Shown now, so the search box can be focused
+    flushSync(() => setTab('add'));
     setPicking({ id, part });
     setQuery(name);
     setResults([]);
@@ -427,135 +458,165 @@ export default function Editor() {
   }
 
   return (
-    <div className="tier-stack-page w-full max-w-[1240px] p-[20px] flex flex-col gap-[16px] text-[14px] text-black">
-      <div ref={boardBoxRef} className="w-full relative">
-        <Stage
-          ref={(stage) => {
-            stageRef.current = stage;
-          }}
-          width={BOARD_WIDTH * scale}
-          height={BOARD_HEIGHT * scale}
-          scaleX={scale}
-          scaleY={scale}
-          onMouseDown={(e) => {
-            if (e.target === e.target.getStage() || e.target.name() === 'background') {
-              setSelectedId(null);
-            }
-          }}
-        >
-          <type.Canvas
-            graphic={graphic}
-            fontFamily={fontFamily}
-            onChange={(next) => setGraphic(() => next)}
-            onSelect={setSelectedId}
-            onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-            onPickTarget={setTarget}
-            onEditSetting={(key) => {
-              if (settingsPanelRef.current) settingsPanelRef.current.open = true;
-              setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+    // The board, with the sidebar on its left (below it on narrow screens). On wide
+    // screens each scrolls on its own, so the search results stay beside the board.
+    <div className="tier-stack-page w-full md:h-full flex flex-col md:flex-row-reverse text-[14px] text-black">
+      <div className="flex-1 min-w-0 md:overflow-y-auto p-[20px] flex flex-col gap-[16px]">
+        <div ref={boardBoxRef} className="w-full relative">
+          <Stage
+            ref={(stage) => {
+              stageRef.current = stage;
             }}
-            tool={tool}
-          />
-          {/* Editor-only layer: hidden while exporting */}
-          <Layer name="editor" listening={false}>
-            {placements
-              .filter((p) => p.item.id === selectedId)
-              .map((p) => (
-                <Rect
-                  key={p.item.id}
-                  x={p.x - 3}
-                  y={p.y - 3}
-                  width={p.width + 6}
-                  height={p.height + 6}
-                  stroke="#ffffff"
-                  strokeWidth={3}
-                  cornerRadius={8}
-                />
-              ))}
-          </Layer>
-        </Stage>
-        {cardMenu && findCard(cardMenu.id) && (
-          <div
-            ref={cardMenuRef}
-            role="menu"
-            onContextMenu={(e) => e.preventDefault()}
-            className="absolute z-10 flex flex-col min-w-[160px] border border-black bg-white shadow-md"
-            // Kept inside the board's right edge
-            style={{
-              left: Math.min(cardMenu.x, BOARD_WIDTH * scale - 160),
-              top: cardMenu.y,
+            width={BOARD_WIDTH * scale}
+            height={BOARD_HEIGHT * scale}
+            scaleX={scale}
+            scaleY={scale}
+            onMouseDown={(e) => {
+              if (e.target === e.target.getStage() || e.target.name() === 'background') {
+                setSelectedId(null);
+              }
             }}
+            onDragMove={moveOutline}
+            // After the card's own dragend has put it back at its laid-out spot; React only
+            // moves the outline when that spot changes
+            onDragEnd={moveOutline}
           >
-            {cardMenuItems(cardMenu).map((label) => (
-              <button
-                key={label}
-                role="menuitem"
-                className="px-[8px] py-[4px] text-left hover:bg-black/10"
-                onClick={() => {
-                  runCardMenuItem(cardMenu, label);
-                  setCardMenu(null);
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+            <type.Canvas
+              graphic={graphic}
+              fontFamily={fontFamily}
+              onChange={(next) => setGraphic(() => next)}
+              onSelect={setSelectedId}
+              onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+              onPickTarget={setTarget}
+              onEditSetting={(key) => {
+                setTab('customize');
+                setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+              }}
+              tool={tool}
+            />
+            {/* Editor-only layer: hidden while exporting */}
+            <Layer name="editor" listening={false}>
+              {placements
+                .filter((p) => p.item.id === selectedId)
+                .map((p) => (
+                  <Rect
+                    key={p.item.id}
+                    ref={outlineRef}
+                    x={p.x - 3}
+                    y={p.y - 3}
+                    width={p.width + 6}
+                    height={p.height + 6}
+                    stroke="#ffffff"
+                    strokeWidth={3}
+                    cornerRadius={8}
+                  />
+                ))}
+            </Layer>
+          </Stage>
+          {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
+            <div
+              // A new element for each menu, so each one plays the opening animation
+              key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
+              ref={cardMenuRef}
+              role="menu"
+              onContextMenu={(e) => e.preventDefault()}
+              className={`tier-stack-menu absolute z-10 flex flex-col min-w-[160px] border border-black bg-white shadow-md ${menuClosing ? 'closing pointer-events-none' : ''}`}
+              // Kept inside the board's right edge
+              style={{
+                left: Math.min(shownMenu.x, BOARD_WIDTH * scale - 160),
+                top: shownMenu.y,
+              }}
+            >
+              {cardMenuItems(shownMenu).map((label) => (
+                <button
+                  key={label}
+                  role="menuitem"
+                  className="px-[8px] py-[4px] text-left hover:bg-black/10"
+                  onClick={() => {
+                    runCardMenuItem(shownMenu, label);
+                    setCardMenu(null);
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {type.Toolbar && (
+          <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
         )}
+
+        <div className="flex flex-wrap gap-[8px] items-center">
+          <button className={button} onClick={exportPng} disabled={busy}>
+            Export PNG ({BOARD_WIDTH * EXPORT_SCALE}px)
+          </button>
+          <button className={button} onClick={copyPng} disabled={busy}>
+            Copy PNG
+          </button>
+          {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
+          {boardChoice === 'clear' ? (
+            <span className="flex items-center gap-[8px]">
+              Clear the board?
+              <button className={button} onClick={() => showBoard(doc.kind, true)}>
+                Yes
+              </button>
+              <button className={button} onClick={() => setBoardChoice(null)}>
+                Cancel
+              </button>
+            </span>
+          ) : boardChoice === 'type' ? (
+            // Each type keeps its own board, so switching loses nothing
+            <span className="flex items-center gap-[8px]">
+              Switch to
+              {GRAPHIC_TYPES.filter((t) => t.kind !== doc.kind).map((t) => (
+                <button key={t.kind} className={button} onClick={() => showBoard(t.kind)}>
+                  {t.label}
+                </button>
+              ))}
+              <button className={button} onClick={() => setBoardChoice(null)}>
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <>
+              <button className={button} onClick={() => setBoardChoice('clear')}>
+                Clear board
+              </button>
+              <button className={button} onClick={() => setBoardChoice('type')}>
+                Change board type
+              </button>
+            </>
+          )}
+        </div>
+
+        {status && <p className="whitespace-pre-line">{status}</p>}
       </div>
 
-      {type.Toolbar && (
-        <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
-      )}
+      <aside className="md:w-[360px] md:flex-none md:overflow-y-auto p-[20px] pt-0 md:pt-[20px] flex flex-col gap-[16px] min-w-0">
+        <div role="tablist" className="flex flex-wrap gap-[4px]">
+          {TABS.map(([id, label]) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={tab === id}
+              className={`${button} aria-selected:bg-black aria-selected:text-white`}
+              onClick={() => setTab(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-      <div className="flex flex-wrap gap-[8px] items-center">
-        <button className={button} onClick={exportPng} disabled={busy}>
-          Export PNG ({BOARD_WIDTH * EXPORT_SCALE}px)
-        </button>
-        <button className={button} onClick={copyPng} disabled={busy}>
-          Copy PNG
-        </button>
-        {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
-        {boardChoice === 'clear' ? (
-          <span className="flex items-center gap-[8px]">
-            Clear the board?
-            <button className={button} onClick={() => showBoard(doc.kind, true)}>
-              Yes
-            </button>
-            <button className={button} onClick={() => setBoardChoice(null)}>
-              Cancel
-            </button>
-          </span>
-        ) : boardChoice === 'type' ? (
-          // Each type keeps its own board, so switching loses nothing
-          <span className="flex items-center gap-[8px]">
-            Switch to
-            {GRAPHIC_TYPES.filter((t) => t.kind !== doc.kind).map((t) => (
-              <button key={t.kind} className={button} onClick={() => showBoard(t.kind)}>
-                {t.label}
-              </button>
-            ))}
-            <button className={button} onClick={() => setBoardChoice(null)}>
-              Cancel
-            </button>
-          </span>
-        ) : (
-          <>
-            <button className={button} onClick={() => setBoardChoice('clear')}>
-              Clear board
-            </button>
-            <button className={button} onClick={() => setBoardChoice('type')}>
-              Change board type
-            </button>
-          </>
-        )}
-      </div>
-
-      {status && <p className="whitespace-pre-line">{status}</p>}
-
-      <div className="grid gap-[16px] md:grid-cols-3">
-        {/* min-w-0 so the results scroll instead of widening the column */}
-        <section className="flex flex-col gap-[8px] min-w-0">
-          <h2 className="font-bold">Add a card</h2>
+        {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
+            so the results scroll instead of widening the sidebar; on wide screens they
+            fill the sidebar's height */}
+        <section
+          role="tabpanel"
+          hidden={tab !== 'add'}
+          className="flex flex-col gap-[8px] min-w-0 md:flex-1 md:min-h-0"
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -590,25 +651,21 @@ export default function Editor() {
           ) : (
             // Only when there's a choice (a blank canvas has one place for cards)
             targets.length > 1 && (
-              <label className="flex gap-[8px] items-center">
-                Add to
-                <select
-                  className="border border-black"
-                  value={targetIndex}
-                  onChange={(e) => setTarget(Number(e.target.value))}
-                >
-                  {targets.map((name, i) => (
-                    <option key={i} value={i}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Dropdown
+                label="Add to"
+                value={targetIndex}
+                options={targets.map((name, i) => ({
+                  value: i,
+                  label: name.replaceAll('\n', ' '),
+                }))}
+                onChange={setTarget}
+              />
             )
           )}
           {/* Fixed-size tiles (80x111 card + 14px caption), as many per row as fit; the
-              box is 3 rows tall (3 x 125 + 2 x 4) and scrolls down */}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[125px] gap-[4px] max-h-[383px] overflow-y-auto overflow-x-hidden empty:hidden">
+              box is 3 rows tall (3 x 125 + 2 x 4), or the rest of the sidebar on wide
+              screens, and scrolls down */}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[125px] gap-[4px] max-h-[383px] md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden">
             {results.map((card) => (
               <div
                 key={`${card.set}-${card.number}`}
@@ -653,30 +710,23 @@ export default function Editor() {
           </div>
         </section>
 
-        {/* Collapsed by default; the content is wrapped since <details> doesn't lay out as flex everywhere */}
-        <details ref={settingsPanelRef}>
-          <summary className="font-bold cursor-pointer">Customize Board</summary>
-          <div className="flex flex-col gap-[8px] mt-[8px]">
-            <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-          </div>
-        </details>
+        <section role="tabpanel" hidden={tab !== 'customize'} className="flex flex-col gap-[8px]">
+          <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+        </section>
 
-        <details>
-          <summary className="font-bold cursor-pointer">Bulk import</summary>
-          <div className="flex flex-col gap-[8px] mt-[8px]">
-            <textarea
-              rows={10}
-              className="border border-black px-[4px] font-mono text-[12px]"
-              placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-            />
-            <button className={button} onClick={runImport} disabled={busy || !importText.trim()}>
-              Import (adds to the board)
-            </button>
-          </div>
-        </details>
-      </div>
+        <section role="tabpanel" hidden={tab !== 'import'} className="flex flex-col gap-[8px]">
+          <textarea
+            rows={10}
+            className="border border-black px-[4px] font-mono text-[12px]"
+            placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+          />
+          <button className={button} onClick={runImport} disabled={busy || !importText.trim()}>
+            Import (adds to the board)
+          </button>
+        </section>
+      </aside>
 
       {dragGhost && (
         // eslint-disable-next-line @next/next/no-img-element -- remote thumbnail, as in the results

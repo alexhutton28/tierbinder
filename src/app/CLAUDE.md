@@ -17,6 +17,7 @@ deliberately minimal for now, and there's no help text on the page.
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
+- `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
 - `TierStackLoader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
 - `layout.tsx`: the page's scroll container, and Inter Black for the tier labels.
 - `../api/tcg-tier-stack/`: `card` (by set + number), `search` (by name), `image` (proxy), and `limitless.ts`, which reads limitlesstcg.com pages.
@@ -42,6 +43,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - 1200×675 for every graphic; export is 2× (2400×1350 PNG), downloaded (named after the graphic's kind) or copied.
 - Cards are 100×140, clipped to the card images' rounded corners (`CARD_CORNER_RADIUS`, ~4.5px).
 - Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline), and any a graphic adds (the eraser's circle).
+- The selection outline follows a dragged card: Konva moves the card without React, so the stage's `dragmove` and `dragend` move the outline too. Cards carry their item's id (`CardNode` sets the group's `id`), which is how the editor knows the dragged card is the selected one.
 - Canvas text uses Inter Black (900), loaded with `next/font` in `layout.tsx` (`--font-inter`); it needs `document.fonts.load` before it draws, so the editor passes `fontFamily` once it's loaded.
 
 ## Tier list
@@ -53,7 +55,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - Dragging a card moves or reorders it (`dropTarget`, `moveCard`). A search result dropped on the board goes in the tier under the pointer, before the first card whose center is to its right.
 - Clicking a tier's row anywhere but on a card (its label, the empty space) makes it the Add to tier. Cards are Konva groups named `card`, which is how the canvas tells them apart.
 - Bulk import adds each `#` group to the next tier, after the cards already there, and renames the tier if the group has a name. Cards past 12 and groups past the fourth are left out and reported; it never clears the board.
-- Double-clicking a tier label opens Customize Board and focuses that name.
+- Double-clicking a tier label switches to Customize Board and focuses that name.
 
 ## Blank canvas
 
@@ -72,15 +74,22 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## Editing
 
 - Clicking a card without dragging (Konva's `click`/`tap` don't fire after a drag) opens the card menu, HTML over the board; so does right-clicking a card (the browser's own menu is prevented on cards only). Konva also fires `click` for the right button, so only a left `click` opens the menu; right-click opens it from `contextmenu`, which would otherwise land on the already-open menu:
+  - The menu stretches out to the right from its left edge (`.tier-stack-menu` in `globals.css`) on `--ease-spring`, and on close folds back to its left edge in 180ms, fading over the last part (`shownMenu` keeps the last menu on screen for 220ms, on a timer since `animationend` doesn't fire in a tab that isn't painting). It's keyed by card and position, so each opening replays the animation.
   - Card: Remove card, Replace card, Make split card.
   - Split card: Remove card, Replace top half, Replace bottom half, Swap halves, Unsplit (keeps the top).
   - A search result dropped on a card opens the menu with the result's choices (`cardMenu.dropped`): Add as split card (the result is the bottom half) or Add to tier/canvas (the graphic's `dropCard` at the drop point); on a split card, Replace top half, Replace bottom half or Add to tier/canvas.
-  - Replace and Make split card put Add a card in picking mode (`picking`: `{ id, part: 'top' | 'bottom' }`): replacing searches that card's name, and the next result clicked takes its place (or becomes the bottom half), until Cancel or Escape.
-- Add a card: results show 3 rows and scroll. Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
+  - Replace and Make split card switch to Add a card and put it in picking mode (`picking`: `{ id, part: 'top' | 'bottom' }`): replacing searches that card's name, and the next result clicked takes its place (or becomes the bottom half), until Cancel or Escape.
+- Add a card: results scroll (3 rows tall on narrow screens). Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
 - Change board type lists the other types; each keeps its own board, so switching loses nothing (a type not used yet starts new).
-- Customize Board and Bulk import are `<details>`, collapsed by default.
+- The controls are tabs in a sidebar left of the board (below it on narrow screens): Add a card, Customize Board and Bulk import. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the board column each scroll on their own, and the search results fill the sidebar's height. The board's toolbar, export and board buttons, and status stay under the board.
+
+## Look and motion
+
+- Styling is still minimal. Colors for the coming dark theme are tokens in `globals.css`: `petrel-50`…`petrel-950` (grays for surfaces, borders and text) and `storm-100`…`storm-800` (the accent); nothing uses them yet.
+- Motion, chosen from demos: a spring that goes 1.5% past (3% looked like too much live), `--ease-spring` on `.tier-stack-page` (a plain CSS variable, since `@theme inline` tokens are only emitted once used). 450ms for things that move; plain `ease-out` fades of about 120ms alongside. Use it for new TierStack animations.
+- Popups (the card menu, dropdowns) share `.tier-stack-menu`: stretch open, fold closed; the card menu left to right, dropdowns (`.dropdown`) top to bottom. Reduced motion: fades only.
 
 ## Cards from Limitless
 
@@ -100,7 +109,8 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 
 - It doesn't paint: screenshots time out and Konva's hit canvas goes stale. Call `stage.draw()` before simulating clicks on the board, and read results from `localStorage` or the Konva tree (`Konva.stages[0]`). Pixels can be checked with `stage.toCanvas()`; hashing them before and after a refactor checks nothing changed.
 - Simulated mouse drags don't start Konva drags; to test a card drop, set the card node's position and `fire('dragend')`.
-- `confirm()` returns false at once and `alert()` never shows, so confirm on the page instead (see New board).
+- CSS animations start but don't advance, and `animationend` never fires; check where one ends with `el.getAnimations().forEach((a) => a.finish())`.
+- `confirm()` returns false at once and `alert()` never shows, so confirm on the page instead (see Clear board).
 - Every tab shares the saved board: back up `tcg-tier-stack-doc` before a test that edits it, restore it after, and test in a background tab rather than the one being used.
 
 ## Not done yet
