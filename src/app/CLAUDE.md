@@ -87,10 +87,8 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 
 ## Look and motion
 
-- Styling is still minimal. Colors for the coming dark theme are tokens in `globals.css`: `petrel-50`…`petrel-950` (grays for surfaces, borders and text) and `storm-100`…`storm-800` (the accent); nothing uses them yet.
-- Planned look, from Alex's mood board: dark (petrel/storm), Figtree as a stand-in for Google Sans Rounded, everything a bit rounded, the four default tier colors (red, orange, yellow, green) as accents, and smooth motion throughout. Not built yet; new visuals start as a side-by-side demo.
-- Motion, chosen from demos: a spring that goes 1.5% past (3% looked like too much live), `--ease-spring`, a plain CSS variable on `.tier-stack-page` since only TierStack uses it. 450ms for things that move; plain `ease-out` fades of about 120ms alongside. Use it for new TierStack animations.
-- Popups (the card menu, dropdowns) share `.tier-stack-menu`: stretch open, fold closed; the card menu left to right, dropdowns (`.dropdown`) top to bottom. Reduced motion: fades only.
+- Styling is still minimal. The palette, planned look and motion are in `design/pages/tcg-tier-stack.md`, including `--ease-spring`, `--duration-move` and `--duration-fade`.
+- Popups (the card menu, dropdowns) share `.tier-stack-menu` in `globals.css`.
 
 ## Cards from Limitless
 

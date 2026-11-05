@@ -1,0 +1,31 @@
+/* Generated from the HuttonDesign System by gen-tokens.py. Do not edit by hand.
+   Import right after @import 'tailwindcss'. */
+@theme static {
+  --color-petrel-50: #F2F5F6;
+  --color-petrel-100: #E3E8EB;
+  --color-petrel-200: #CCD4D8;
+  --color-petrel-300: #B3BEC4;
+  --color-petrel-400: #94A2AA;
+  --color-petrel-500: #6C7D88;
+  --color-petrel-600: #546470;
+  --color-petrel-700: #3E4B53;
+  --color-petrel-800: #2D373D;
+  --color-petrel-850: #232B30;
+  --color-petrel-900: #1B2125;
+  --color-petrel-950: #12171A;
+  --color-storm-100: #DCEAF1;
+  --color-storm-200: #BFD7E4;
+  --color-storm-300: #9CC0D4;
+  --color-storm-400: #78A5BD;
+  --color-storm-600: #466E85;
+  --color-storm-800: #2A4352;
+  --ease-spring: linear(0, 0.032, 0.109, 0.212, 0.326, 0.439, 0.545, 0.641, 0.725, 0.795, 0.853, 0.899, 0.935, 0.962, 0.982, 0.996, 1.005, 1.011, 1.014, 1.015, 1.015, 1.014, 1.012, 1.011, 1.009, 1.007, 1.006, 1.005, 1.003, 1.002, 1);
+  --ease-fold: cubic-bezier(0.4, 0, 1, 1);
+}
+
+.tier-stack-page {
+  --duration-move: 450ms;
+  --duration-fade: 120ms;
+  --duration-fold: 180ms;
+  --duration-fold-fade: 110ms;
+}
