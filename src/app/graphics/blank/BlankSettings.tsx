@@ -16,7 +16,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
         value={canvas.cardWidth}
         onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
       />
-      <label className="flex gap-[8px] items-center">
+      <label className="flex gap-3 items-center">
         <input
           type="checkbox"
           checked={canvas.topHalf}
@@ -52,13 +52,13 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
   }
 
   return (
-    <label className="flex gap-[8px] items-center">
+    <label className="flex gap-3 items-center">
       Card size
       <input
         type="number"
         min={MIN_CARD_WIDTH}
         max={MAX_CARD_WIDTH}
-        className="border border-black px-[4px] w-[64px]"
+        className="border border-black px-2 w-[64px]"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);

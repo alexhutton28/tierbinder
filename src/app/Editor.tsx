@@ -37,7 +37,7 @@ function loadSaved() {
   }
 }
 
-const button = 'border border-black px-[8px] py-[2px] bg-white disabled:opacity-50';
+const button = 'border border-black px-3 py-1 bg-white disabled:opacity-50';
 
 // The sidebar's tabs
 const TABS = [
@@ -461,7 +461,7 @@ export default function Editor() {
     // The board, with the sidebar on its left (below it on narrow screens). On wide
     // screens each scrolls on its own, so the search results stay beside the board.
     <div className="tier-stack-page w-full md:h-full flex flex-col md:flex-row-reverse text-[14px] text-black">
-      <div className="flex-1 min-w-0 md:overflow-y-auto p-[20px] flex flex-col gap-[16px]">
+      <div className="flex-1 min-w-0 md:overflow-y-auto p-4 flex flex-col gap-4">
         <div ref={boardBoxRef} className="w-full relative">
           <Stage
             ref={(stage) => {
@@ -531,7 +531,7 @@ export default function Editor() {
                 <button
                   key={label}
                   role="menuitem"
-                  className="px-[8px] py-[4px] text-left hover:bg-black/10"
+                  className="px-3 py-2 text-left hover:bg-black/10"
                   onClick={() => {
                     runCardMenuItem(shownMenu, label);
                     setCardMenu(null);
@@ -548,7 +548,7 @@ export default function Editor() {
           <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
         )}
 
-        <div className="flex flex-wrap gap-[8px] items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           <button className={button} onClick={exportPng} disabled={busy}>
             Export PNG ({BOARD_WIDTH * EXPORT_SCALE}px)
           </button>
@@ -557,7 +557,7 @@ export default function Editor() {
           </button>
           {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
           {boardChoice === 'clear' ? (
-            <span className="flex items-center gap-[8px]">
+            <span className="flex items-center gap-3">
               Clear the board?
               <button className={button} onClick={() => showBoard(doc.kind, true)}>
                 Yes
@@ -568,7 +568,7 @@ export default function Editor() {
             </span>
           ) : boardChoice === 'type' ? (
             // Each type keeps its own board, so switching loses nothing
-            <span className="flex items-center gap-[8px]">
+            <span className="flex items-center gap-3">
               Switch to
               {GRAPHIC_TYPES.filter((t) => t.kind !== doc.kind).map((t) => (
                 <button key={t.kind} className={button} onClick={() => showBoard(t.kind)}>
@@ -594,8 +594,8 @@ export default function Editor() {
         {status && <p className="whitespace-pre-line">{status}</p>}
       </div>
 
-      <aside className="md:w-[360px] md:flex-none md:overflow-y-auto p-[20px] pt-0 md:pt-[20px] flex flex-col gap-[16px] min-w-0">
-        <div role="tablist" className="flex flex-wrap gap-[4px]">
+      <aside className="md:w-[360px] md:flex-none md:overflow-y-auto p-4 pt-0 md:pt-4 flex flex-col gap-4 min-w-0">
+        <div role="tablist" className="flex flex-wrap gap-2">
           {TABS.map(([id, label]) => (
             <button
               key={id}
@@ -615,18 +615,18 @@ export default function Editor() {
         <section
           role="tabpanel"
           hidden={tab !== 'add'}
-          className="flex flex-col gap-[8px] min-w-0 md:flex-1 md:min-h-0"
+          className="flex flex-col gap-3 min-w-0 md:flex-1 md:min-h-0"
         >
           <form
             onSubmit={(e) => {
               e.preventDefault();
               search(query);
             }}
-            className="flex gap-[8px]"
+            className="flex gap-3"
           >
             <input
               ref={searchInputRef}
-              className="border border-black px-[4px] flex-1"
+              className="border border-black px-2 flex-1"
               placeholder="Card name"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -636,7 +636,7 @@ export default function Editor() {
             </button>
           </form>
           {picking && pickingCard ? (
-            <p className="flex gap-[8px] items-center">
+            <p className="flex gap-3 items-center">
               {picking.part === 'top'
                 ? pickingCard.split
                   ? `Replacing the top half (${pickingCard.name})`
@@ -665,7 +665,7 @@ export default function Editor() {
           {/* Fixed-size tiles (80x111 card + 14px caption), as many per row as fit; the
               box is 3 rows tall (3 x 125 + 2 x 4), or the rest of the sidebar on wide
               screens, and scrolls down */}
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[125px] gap-[4px] max-h-[383px] md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[125px] gap-2 max-h-[383px] md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden">
             {results.map((card) => (
               <div
                 key={`${card.set}-${card.number}`}
@@ -710,14 +710,14 @@ export default function Editor() {
           </div>
         </section>
 
-        <section role="tabpanel" hidden={tab !== 'customize'} className="flex flex-col gap-[8px]">
+        <section role="tabpanel" hidden={tab !== 'customize'} className="flex flex-col gap-3">
           <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
         </section>
 
-        <section role="tabpanel" hidden={tab !== 'import'} className="flex flex-col gap-[8px]">
+        <section role="tabpanel" hidden={tab !== 'import'} className="flex flex-col gap-3">
           <textarea
             rows={10}
-            className="border border-black px-[4px] font-mono text-[12px]"
+            className="border border-black px-2 font-mono text-[12px]"
             placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}

@@ -15,7 +15,7 @@ const TOOLS = [
 ] as const;
 
 const toolButton =
-  'border border-black px-[8px] py-[2px] bg-white aria-pressed:bg-black aria-pressed:text-white';
+  'border border-black px-3 py-1 bg-white aria-pressed:bg-black aria-pressed:text-white';
 
 export default function BlankToolbar({
   graphic: canvas,
@@ -24,7 +24,7 @@ export default function BlankToolbar({
   onTool,
 }: ToolbarProps<BlankCanvas>) {
   return (
-    <div className="flex flex-wrap gap-[8px] items-center">
+    <div className="flex flex-wrap gap-3 items-center">
       {TOOLS.map(([id, label]) => (
         <button
           key={id}
@@ -80,14 +80,14 @@ function SizeField({
   }
 
   return (
-    <label className="flex gap-[4px] items-center">
+    <label className="flex gap-2 items-center">
       Size
       <input
         type="number"
         aria-label={label}
         min={MIN_STROKE_WIDTH}
         max={MAX_STROKE_WIDTH}
-        className="border border-black px-[4px] w-[56px]"
+        className="border border-black px-2 w-[56px]"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);

@@ -32,7 +32,7 @@ export default function ColorField({
   }
 
   return (
-    <span className="inline-flex items-center gap-[4px]">
+    <span className="inline-flex items-center gap-2">
       <input
         type="color"
         aria-label={`${label} picker`}
@@ -41,7 +41,7 @@ export default function ColorField({
       />
       <input
         aria-label={label}
-        className="border border-black px-[4px] w-[80px] font-mono"
+        className="border border-black px-2 w-[80px] font-mono"
         spellCheck={false}
         value={draft}
         onChange={(e) => {

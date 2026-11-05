@@ -75,7 +75,7 @@ export default function Dropdown<T extends string | number>({
   };
 
   return (
-    <div className="flex gap-[8px] items-center">
+    <div className="flex gap-3 items-center">
       <span id={`${id}-label`}>{label}</span>
       <div ref={boxRef} className="relative">
         <button
@@ -85,7 +85,7 @@ export default function Dropdown<T extends string | number>({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-labelledby={`${id}-label ${id}-button`}
-          className="border border-black bg-white px-[4px] flex gap-[4px] items-center"
+          className="border border-black bg-white px-2 flex gap-2 items-center"
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -102,7 +102,7 @@ export default function Dropdown<T extends string | number>({
             role="listbox"
             aria-labelledby={`${id}-label`}
             onKeyDown={onListKey}
-            className={`tier-stack-menu dropdown absolute left-0 top-full mt-[2px] z-10 flex flex-col min-w-full border border-black bg-white shadow-md ${closing ? 'closing pointer-events-none' : ''}`}
+            className={`tier-stack-menu dropdown absolute left-0 top-full mt-1 z-10 flex flex-col min-w-full border border-black bg-white shadow-md ${closing ? 'closing pointer-events-none' : ''}`}
           >
             {options.map((option, i) => (
               <button
@@ -114,7 +114,7 @@ export default function Dropdown<T extends string | number>({
                 role="option"
                 aria-selected={i === selected}
                 tabIndex={-1}
-                className="px-[8px] py-[4px] text-left whitespace-nowrap hover:bg-black/10 aria-selected:font-bold"
+                className="px-3 py-2 text-left whitespace-nowrap hover:bg-black/10 aria-selected:font-bold"
                 onClick={() => {
                   onChange(option.value);
                   close();

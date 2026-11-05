@@ -30,7 +30,7 @@ export default function TierListSettings({
     <>
       <h3 className="font-bold">Tiers</h3>
       {list.tiers.map((tier, i) => (
-        <div key={tier.id} className="flex gap-[8px] items-center">
+        <div key={tier.id} className="flex gap-3 items-center">
           <ColorField
             label={`${tier.name} color`}
             value={tier.color}
@@ -42,13 +42,13 @@ export default function TierListSettings({
               tierNameRefs.current[i] = el;
             }}
             aria-label={`Tier ${i + 1} name`}
-            className="border border-black px-[4px] flex-1"
+            className="border border-black px-2 flex-1"
             value={tier.name.replaceAll('\n', '\\n')}
             onChange={(e) => updateTier(i, { name: e.target.value.replaceAll('\\n', '\n') })}
           />
         </div>
       ))}
-      <label className="flex gap-[8px] items-center">
+      <label className="flex gap-3 items-center">
         <input
           type="checkbox"
           checked={list.tierCardBorders}
