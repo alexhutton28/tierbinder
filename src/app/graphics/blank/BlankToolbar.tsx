@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Button from '../../ui/Button';
 import ColorField from '../../ui/ColorField';
 import { DEFAULT_TOOL, type ToolbarProps } from '../types';
 import { MAX_STROKE_WIDTH, MIN_STROKE_WIDTH, type BlankCanvas } from './model';
@@ -14,9 +15,6 @@ const TOOLS = [
   ['eraser', 'Eraser'],
 ] as const;
 
-const toolButton =
-  'border border-black px-3 py-1 bg-white aria-pressed:bg-black aria-pressed:text-white';
-
 export default function BlankToolbar({
   graphic: canvas,
   onChange,
@@ -26,14 +24,9 @@ export default function BlankToolbar({
   return (
     <div className="flex flex-wrap gap-3 items-center">
       {TOOLS.map(([id, label]) => (
-        <button
-          key={id}
-          className={toolButton}
-          aria-pressed={tool === id}
-          onClick={() => onTool(id)}
-        >
+        <Button key={id} variant="tool" aria-pressed={tool === id} onClick={() => onTool(id)}>
           {label}
-        </button>
+        </Button>
       ))}
       {tool === 'pen' && (
         <>
@@ -87,7 +80,7 @@ function SizeField({
         aria-label={label}
         min={MIN_STROKE_WIDTH}
         max={MAX_STROKE_WIDTH}
-        className="border border-black px-2 w-[56px]"
+        className="tier-stack-field w-[64px]"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);

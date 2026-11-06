@@ -5,13 +5,13 @@ import ColorField from '../../ui/ColorField';
 import type { SettingsProps } from '../types';
 import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from './model';
 
-// The blank canvas's part of Customize Board: card size and top halves, background, and
+// The blank canvas's part of the Customize tab: card size and top halves, background, and
 // split cards' border
 
 export default function BlankSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
     <>
-      <h3 className="font-bold">Cards</h3>
+      <h3 className="tier-stack-heading">Cards</h3>
       <CardSizeField
         value={canvas.cardWidth}
         onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
@@ -24,18 +24,23 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
         />
         Show only top half of cards
       </label>
-      <h3 className="font-bold">Background</h3>
-      <ColorField
-        label="Background color"
-        value={canvas.background}
-        onChange={(background) => onChange((c) => ({ ...c, background }))}
-      />
-      <h3 className="font-bold">Split card border</h3>
-      <ColorField
-        label="Split card border color"
-        value={canvas.border}
-        onChange={(border) => onChange((c) => ({ ...c, border }))}
-      />
+      <h3 className="tier-stack-heading">Board</h3>
+      <div className="tier-stack-prop">
+        Background
+        <ColorField
+          label="Background color"
+          value={canvas.background}
+          onChange={(background) => onChange((c) => ({ ...c, background }))}
+        />
+      </div>
+      <div className="tier-stack-prop">
+        Split card border
+        <ColorField
+          label="Split card border color"
+          value={canvas.border}
+          onChange={(border) => onChange((c) => ({ ...c, border }))}
+        />
+      </div>
     </>
   );
 }
@@ -58,7 +63,7 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
         type="number"
         min={MIN_CARD_WIDTH}
         max={MAX_CARD_WIDTH}
-        className="border border-black px-2 w-[64px]"
+        className="tier-stack-field w-[64px]"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);

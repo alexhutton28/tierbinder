@@ -19,12 +19,18 @@
   --color-storm-400: #78A5BD;
   --color-storm-600: #466E85;
   --color-storm-800: #2A4352;
+  --color-tier-goated: #D9532B;
+  --color-tier-solid: #F0912F;
+  --color-tier-mid: #F5C95B;
+  --color-tier-fraud: #7CC05A;
   --ease-spring: linear(0, 0.032, 0.109, 0.212, 0.326, 0.439, 0.545, 0.641, 0.725, 0.795, 0.853, 0.899, 0.935, 0.962, 0.982, 0.996, 1.005, 1.011, 1.014, 1.015, 1.015, 1.014, 1.012, 1.011, 1.009, 1.007, 1.006, 1.005, 1.003, 1.002, 1);
   --ease-fold: cubic-bezier(0.4, 0, 1, 1);
 }
 
 .tier-stack-page {
   --duration-move: 450ms;
+  --duration-drop: 300ms;
+  --duration-hover: 200ms;
   --duration-fade: 120ms;
   --duration-fold: 180ms;
   --duration-fold-fade: 110ms;

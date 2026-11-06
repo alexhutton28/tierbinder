@@ -28,7 +28,7 @@ export type CanvasProps<G> = {
   onCardMenu: (id: string, x: number, y: number) => void;
   // One of `targets` was clicked, making it where the next search result goes
   onPickTarget: (index: number) => void;
-  // Opens Customize Board and focuses one of the graphic's settings (its own key)
+  // Opens the Customize tab and focuses one of the graphic's settings (its own key)
   onEditSetting: (key: string) => void;
   // The active tool, one of the graphic's own (see Toolbar); DEFAULT_TOOL moves cards
   tool: string;
@@ -63,7 +63,7 @@ export type GraphicType<G extends { kind: string }> = {
   parse: (value: unknown) => G | null;
   // Konva layers, drawn inside the editor's stage. Cards should use canvas/CardNode.
   Canvas: React.ComponentType<CanvasProps<G>>;
-  // The graphic's part of Customize Board
+  // The graphic's part of the Customize tab
   Settings: React.ComponentType<SettingsProps<G>>;
   // Tools beyond moving cards (e.g. a pen), shown under the board; the Canvas gets the
   // active one as `tool`

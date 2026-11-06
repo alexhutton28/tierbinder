@@ -3,12 +3,12 @@
 A hidden tool (not linked from the home page, `noindex`) for laying out Pokémon TCG
 graphics, tier lists first, and exporting them as images for X. It's growing into a small
 design tool, so the editor is a shared shell and each kind of graphic (tier list, blank
-canvas; later charts, Venn diagrams) is a pluggable **graphic type**. Styling is
-deliberately minimal for now, and there's no help text on the page.
+canvas; later charts, Venn diagrams) is a pluggable **graphic type**. There's no help
+text on the page.
 
 ## Files
 
-- `Editor.tsx`: the shell, shared by every graphic: the stage and its scaling, selection and its outline, the card menu, Add a card (search, picking, dragging results), Customize Board (around the graphic's own settings), Bulk import (lookups), export, Clear board, Change board type, autosave. It only talks to graphics through `GraphicType`.
+- `Editor.tsx`: the shell, shared by every graphic: the stage and its scaling, selection and its outline, the card menu, the Add Cards tab (search, picking, dragging results, bulk import), the Customize tab (the graphic's own settings, Clear board), the Save & Share tab (export), autosave. It only talks to graphics through `GraphicType`.
 - `document.ts`: the saved document (`{ version: 3, kind, graphics }`), `currentGraphic`, and `parseSaved`, which converts older saves.
 - `graphics/types.ts`: the `GraphicType` interface; `graphics/index.ts`: the list of types (`GRAPHIC_TYPES`), the `Graphic` union, and `typeOf(kind)`.
 - `graphics/tier-list/`: `model.ts` (document, layout, edits, import, parse), `TierListCanvas.tsx`, `TierListSettings.tsx`, and `index.ts` (its `GraphicType`).
@@ -16,26 +16,29 @@ deliberately minimal for now, and there's no help text on the page.
 - `canvas/CardNode.tsx`: a card on the board for every graphic (image or split card, rounded clip, placeholder, dragging, menu clicks). `canvas/size.ts`: board, export and card sizes.
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
+- `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `ghost`, `tool`).
+- `ui/RadioBar.tsx`: the main nav. A block in each option's color hugs the selected word, measured from the word, and springs to the next; left and right arrow keys move it.
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
 - `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
 - `TierStackLoader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
-- `layout.tsx`: the page's scroll container, and Inter Black for the tier labels.
+- `layout.tsx`: the page's scroll container, Inter Black for the tier labels, and Figtree for the controls.
+- Interface styles: the `.tier-stack-*` rules in `globals.css`. Change the look through the `--ts-*` roles at the top of them.
 - `../api/tcg-tier-stack/`: `card` (by set + number), `search` (by name), `image` (proxy), and `limitless.ts`, which reads limitlesstcg.com pages.
 
 ## Graphic types
 
 A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, its settings and where cards go; the editor owns everything else. What the editor asks of a type:
 
-- `create`, `parse` (a saved graphic of its kind, with later settings filled in), `label` (in Change board type), `targetNoun` (as in "Add to tier").
+- `create`, `parse` (a saved graphic of its kind, with later settings filled in), `label` (in the board type dropdown), `targetNoun` (as in "Add to tier").
 - `Canvas`: Konva layers drawn inside the editor's stage, with a `Rect` named `background` (pressing it deselects) and cards drawn with `CardNode`. It gets callbacks to change the graphic, select cards, open the card menu, pick a target and open a setting.
 - `Toolbar` (optional): tools beyond moving cards, shown under the board. The editor keeps the active tool (`DEFAULT_TOOL`, `move`, until the toolbar picks another; reset when the board type changes) and passes it to the canvas as `tool`.
-- `Settings`: its part of Customize Board. `onEditSetting(key)` from the canvas switches to the Customize Board tab and passes `focus` to it (the tier list uses `tier:<index>`).
+- `Settings`: its part of the Customize tab. `onEditSetting(key)` from the canvas switches to the Customize tab and passes `focus` to it (the tier list uses `tier:<index>`).
 - Cards: `layout` (every card with its top-left corner and box, drawing order; the editor uses it for selection, hit-testing drops and export), `mapCards` (change or remove), `targets` (the Add to choices; hidden when there's only one), `addCard` (to a target), `dropCard` (at a point), `importCards` (bulk import's `#` groups). Adding returns the new graphic or `{ error }`, shown as the status.
 
 ### Adding a graphic type
 
 1. Add `graphics/<kind>/` with a model (document type with a unique `kind`, defaults, parse, layout and edits), a canvas, settings, and an `index.ts` exporting its `GraphicType`.
-2. Add it to `GRAPHIC_TYPES` and to the `Graphic` union in `graphics/index.ts`. Change board type lists it, and saves of it load with no other changes.
+2. Add it to `GRAPHIC_TYPES` and to the `Graphic` union in `graphics/index.ts`. The board type dropdown lists it, and saves of it load with no other changes.
 3. Add its notes below.
 
 ## The board
@@ -55,7 +58,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - Dragging a card moves or reorders it (`dropTarget`, `moveCard`). A search result dropped on the board goes in the tier under the pointer, before the first card whose center is to its right.
 - Clicking a tier's row anywhere but on a card (its label, the empty space) makes it the Add to tier. Cards are Konva groups named `card`, which is how the canvas tells them apart.
 - Bulk import adds each `#` group to the next tier, after the cards already there, and renames the tier if the group has a name. Cards past 12 and groups past the fourth are left out and reported; it never clears the board.
-- Double-clicking a tier label switches to Customize Board and focuses that name.
+- Double-clicking a tier label switches to the Customize tab and focuses that name.
 
 ## Blank canvas
 
@@ -78,16 +81,16 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
   - Card: Remove card, Replace card, Make split card.
   - Split card: Remove card, Replace top half, Replace bottom half, Swap halves, Unsplit (keeps the top).
   - A search result dropped on a card opens the menu with the result's choices (`cardMenu.dropped`): Add as split card (the result is the bottom half) or Add to tier/canvas (the graphic's `dropCard` at the drop point); on a split card, Replace top half, Replace bottom half or Add to tier/canvas.
-  - Replace and Make split card switch to Add a card and put it in picking mode (`picking`: `{ id, part: 'top' | 'bottom' }`): replacing searches that card's name, and the next result clicked takes its place (or becomes the bottom half), until Cancel or Escape.
-- Add a card: results scroll (3 rows tall on narrow screens). Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
+  - Replace and Make split card switch to the Add Cards tab and put it in picking mode (`picking`: `{ id, part: 'top' | 'bottom' }`): replacing searches that card's name, and the next result clicked takes its place (or becomes the bottom half), until Cancel or Escape.
+- The Add Cards tab: results scroll (3 rows tall on narrow screens). Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
-- Change board type lists the other types; each keeps its own board, so switching loses nothing (a type not used yet starts new).
-- The controls are tabs in a sidebar left of the board (below it on narrow screens): Add a card, Customize Board and Bulk import. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the board column each scroll on their own, and the search results fill the sidebar's height. The board's toolbar, export and board buttons, and status stay under the board.
+- The board type dropdown in the top bar lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
+- The window: a top bar (`.tier-stack-top`) with the tool's name, the board type, Copy PNG and Export PNG, replacing the site header; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
 
 ## Look and motion
 
-- Styling is still minimal. The palette, planned look and motion are in `design/pages/tcg-tier-stack.md`, including `--ease-spring`, `--duration-move` and `--duration-fade`.
+- The palette, look and motion are in `design/pages/tcg-tier-stack.md`, including `--ease-spring`, `--duration-move`, `--duration-drop` and `--duration-fade`.
 - Popups (the card menu, dropdowns) share `.tier-stack-menu` in `globals.css`.
 
 ## Cards from Limitless

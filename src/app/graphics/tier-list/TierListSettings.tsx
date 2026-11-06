@@ -5,7 +5,7 @@ import ColorField from '../../ui/ColorField';
 import type { SettingsProps } from '../types';
 import type { Tier, TierList } from './model';
 
-// The tier list's part of Customize Board: tier colors and names, tier card borders,
+// The tier list's part of the Customize tab: tier colors and names, tier card borders,
 // background and border. Double-clicking a tier label focuses its name (`tier:<index>`).
 
 export default function TierListSettings({
@@ -28,7 +28,7 @@ export default function TierListSettings({
 
   return (
     <>
-      <h3 className="font-bold">Tiers</h3>
+      <h3 className="tier-stack-heading">Tiers</h3>
       {list.tiers.map((tier, i) => (
         <div key={tier.id} className="flex gap-3 items-center">
           <ColorField
@@ -42,7 +42,7 @@ export default function TierListSettings({
               tierNameRefs.current[i] = el;
             }}
             aria-label={`Tier ${i + 1} name`}
-            className="border border-black px-2 flex-1"
+            className="tier-stack-field flex-1 min-w-0"
             value={tier.name.replaceAll('\n', '\\n')}
             onChange={(e) => updateTier(i, { name: e.target.value.replaceAll('\\n', '\n') })}
           />
@@ -56,18 +56,23 @@ export default function TierListSettings({
         />
         Add tier colored border to cards
       </label>
-      <h3 className="font-bold">Background</h3>
-      <ColorField
-        label="Background color"
-        value={list.background}
-        onChange={(background) => onChange((l) => ({ ...l, background }))}
-      />
-      <h3 className="font-bold">Border</h3>
-      <ColorField
-        label="Border color"
-        value={list.border}
-        onChange={(border) => onChange((l) => ({ ...l, border }))}
-      />
+      <h3 className="tier-stack-heading">Board</h3>
+      <div className="tier-stack-prop">
+        Background
+        <ColorField
+          label="Background color"
+          value={list.background}
+          onChange={(background) => onChange((l) => ({ ...l, background }))}
+        />
+      </div>
+      <div className="tier-stack-prop">
+        Border
+        <ColorField
+          label="Border color"
+          value={list.border}
+          onChange={(border) => onChange((l) => ({ ...l, border }))}
+        />
+      </div>
     </>
   );
 }

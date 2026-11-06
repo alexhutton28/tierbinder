@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Button from './Button';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
 // bottom (.tier-stack-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
@@ -8,11 +9,13 @@ import React from 'react';
 
 export default function Dropdown<T extends string | number>({
   label,
+  hideLabel = false,
   value,
   options,
   onChange,
 }: {
   label: string;
+  hideLabel?: boolean;
   value: T;
   options: { value: T; label: string }[];
   onChange: (value: T) => void;
@@ -76,16 +79,18 @@ export default function Dropdown<T extends string | number>({
 
   return (
     <div className="flex gap-3 items-center">
-      <span id={`${id}-label`}>{label}</span>
+      <span id={`${id}-label`} className={hideLabel ? 'sr-only' : undefined}>
+        {label}
+      </span>
       <div ref={boxRef} className="relative">
-        <button
+        <Button
           ref={buttonRef}
           id={`${id}-button`}
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-labelledby={`${id}-label ${id}-button`}
-          className="border border-black bg-white px-2 flex gap-2 items-center"
+          className="flex gap-2 items-center"
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -95,14 +100,14 @@ export default function Dropdown<T extends string | number>({
           }}
         >
           {options[selected]?.label}
-          <span aria-hidden>▾</span>
-        </button>
+          <span aria-hidden className="tier-stack-chevron" />
+        </Button>
         {shown && (
           <div
             role="listbox"
             aria-labelledby={`${id}-label`}
             onKeyDown={onListKey}
-            className={`tier-stack-menu dropdown absolute left-0 top-full mt-1 z-10 flex flex-col min-w-full border border-black bg-white shadow-md ${closing ? 'closing pointer-events-none' : ''}`}
+            className={`tier-stack-menu dropdown absolute left-0 top-full mt-1 z-10 tier-stack-popup flex flex-col min-w-full ${closing ? 'closing pointer-events-none' : ''}`}
           >
             {options.map((option, i) => (
               <button
@@ -114,7 +119,7 @@ export default function Dropdown<T extends string | number>({
                 role="option"
                 aria-selected={i === selected}
                 tabIndex={-1}
-                className="px-3 py-2 text-left whitespace-nowrap hover:bg-black/10 aria-selected:font-bold"
+                className="tier-stack-option whitespace-nowrap aria-selected:font-bold"
                 onClick={() => {
                   onChange(option.value);
                   close();
