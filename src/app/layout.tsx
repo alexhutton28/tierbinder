@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 // Lets the page draw under the iOS status bar. Browser bar color matches the top bar.
 export const viewport: Viewport = {
   viewportFit: 'cover',
-  themeColor: '#466E85', // storm-600
+  themeColor: '#78A5BD', // storm-400
 };
 
 // Own scroll container (html and body don't scroll)

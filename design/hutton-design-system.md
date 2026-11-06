@@ -40,7 +40,7 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 
 | Name        | Hex       | Semantic roles | Used for                                         |
 | ----------- | --------- | -------------- | ------------------------------------------------ |
-| Petrel 50   | `#F2F5F6` |                | The name in the combined logo                    |
+| Petrel 50   | `#F2F5F6` |                | Not used yet                                     |
 | Petrel 100  | `#E3E8EB` |                | Text, selected tool                              |
 | Petrel 200  | `#CCD4D8` |                | Not used yet                                     |
 | Petrel 300  | `#B3BEC4` |                | Not used yet                                     |
@@ -55,8 +55,8 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 | Storm 100   | `#DCEAF1` |                | Not used yet                                     |
 | Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                 |
 | Storm 300   | `#9CC0D4` |                | Main buttons                                     |
-| Storm 400   | `#78A5BD` |                | Not used yet                                     |
-| Storm 600   | `#466E85` |                | Top bar                                          |
+| Storm 400   | `#78A5BD` |                | Top bar                                          |
+| Storm 600   | `#466E85` |                | Not used yet                                     |
 | Storm 800   | `#2A4352` |                | Not used yet                                     |
 | Tier Goated | `#F0392B` |                | Default tier color. Board only                   |
 | Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav |
@@ -111,8 +111,8 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ## 8. Logo
 
-- The logo is `public/tierbinder-combined.svg`: a spiral-bound stack of sheets in the four tier colors, with a Petrel 900 outline, and the name set in Fraunces (weight 600, softness 50, -3.5% letter spacing) as outlines, so the font isn't loaded. Its name is Petrel 50, so it only works on dark colors.
-- It sits directly on the Storm 600 top bar at its full size, 114 × 25. Its outline disappears on Petrel 900, so don't place it there.
+- The logo is `public/tierbinder-combined-dark.svg`: a spiral-bound stack of sheets in the four tier colors, with a Petrel 900 outline, and the name set in Fraunces (weight 600, softness 50, -3.5% letter spacing) as outlines, so the font isn't loaded. Its name and outline are Petrel 900, so it needs a light background.
+- It sits directly on the Storm 400 top bar at its full size, 114 × 25. Don't place it on dark surfaces like Petrel 900, where the outline and name disappear.
 
 ## 9. Imagery and visuals
 
@@ -204,5 +204,5 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
-- **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 600 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
+- **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).

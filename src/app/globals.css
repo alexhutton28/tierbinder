@@ -26,7 +26,7 @@ canvas,
    there). */
 body {
   --tb-page: var(--color-petrel-950);
-  --tb-top: var(--color-storm-600);
+  --tb-top: var(--color-storm-400);
   --tb-bar: var(--color-petrel-900);
   --tb-line: var(--color-petrel-800);
   --tb-text: var(--color-petrel-100);

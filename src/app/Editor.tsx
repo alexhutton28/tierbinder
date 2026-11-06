@@ -468,7 +468,7 @@ export default function Editor() {
     <div className="tierbinder-page w-full md:h-full flex flex-col text-[13px]">
       <header className="tierbinder-top">
         <Link href="/" className="tierbinder-brand">
-          <Image src="/tierbinder-combined.svg" alt="TierBinder" width={114} height={25} />
+          <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
         </Link>
       </header>
       <div className="flex-1 min-h-0 flex flex-col md:flex-row-reverse">
