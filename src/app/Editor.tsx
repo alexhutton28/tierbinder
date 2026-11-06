@@ -1,6 +1,7 @@
 'use client';
 
 import type Konva from 'konva';
+import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
 import { flushSync } from 'react-dom';
@@ -467,28 +468,23 @@ export default function Editor() {
     <div className="tierbinder-page w-full md:h-full flex flex-col text-[13px]">
       <header className="tierbinder-top">
         <Link href="/" className="tierbinder-brand">
-          TierBinder
+          <Image src="/tierbinder-combined.svg" alt="TierBinder" width={114} height={25} />
         </Link>
-        <Dropdown
-          hideLabel
-          label="Board type"
-          value={doc.kind}
-          options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-          onChange={(kind) => {
-            if (kind !== doc.kind) showBoard(kind);
-          }}
-        />
-        <span className="flex-1" />
-        <Button className="hidden md:block" variant="ghost" onClick={copyPng} disabled={busy}>
-          Copy PNG
-        </Button>
-        <Button variant="primary" onClick={exportPng} disabled={busy}>
-          Export PNG
-        </Button>
       </header>
       <div className="flex-1 min-h-0 flex flex-col md:flex-row-reverse">
         <div className="tierbinder-canvas flex-1 min-w-0 md:overflow-y-auto p-4 flex flex-col">
           <div className="tierbinder-board flex flex-col gap-4">
+            <div className="flex">
+              <Dropdown
+                hideLabel
+                label="Board type"
+                value={doc.kind}
+                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+                onChange={(kind) => {
+                  if (kind !== doc.kind) showBoard(kind);
+                }}
+              />
+            </div>
             <div ref={boardBoxRef} className="w-full relative">
               <Stage
                 ref={(stage) => {

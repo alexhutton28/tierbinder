@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.0 · November 6, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.1 · November 6, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -40,7 +40,7 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 
 | Name        | Hex       | Semantic roles | Used for                                         |
 | ----------- | --------- | -------------- | ------------------------------------------------ |
-| Petrel 50   | `#F2F5F6` |                | Not used yet                                     |
+| Petrel 50   | `#F2F5F6` |                | The name in the combined logo                    |
 | Petrel 100  | `#E3E8EB` |                | Text, selected tool                              |
 | Petrel 200  | `#CCD4D8` |                | Not used yet                                     |
 | Petrel 300  | `#B3BEC4` |                | Not used yet                                     |
@@ -50,18 +50,18 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 | Petrel 700  | `#3E4B53` |                | Button and popup borders                         |
 | Petrel 800  | `#2D373D` |                | Dividing lines, hover                            |
 | Petrel 850  | `#232B30` |                | Popups                                           |
-| Petrel 900  | `#1B2125` |                | Top bar, sidebar                                 |
+| Petrel 900  | `#1B2125` |                | Sidebar                                          |
 | Petrel 950  | `#12171A` |                | Workspace, fields, text on main actions          |
 | Storm 100   | `#DCEAF1` |                | Not used yet                                     |
 | Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                 |
 | Storm 300   | `#9CC0D4` |                | Main buttons                                     |
 | Storm 400   | `#78A5BD` |                | Not used yet                                     |
-| Storm 600   | `#466E85` |                | Not used yet                                     |
+| Storm 600   | `#466E85` |                | Top bar                                          |
 | Storm 800   | `#2A4352` |                | Not used yet                                     |
-| Tier Goated | `#D9532B` |                | Default tier color. Board only                   |
-| Tier Solid  | `#F0912F` |                | Default tier color. Save & Share in the main nav |
-| Tier Mid    | `#F5C95B` |                | Default tier color. Customize in the main nav    |
-| Tier Fraud  | `#7CC05A` |                | Default tier color. Add Cards in the main nav    |
+| Tier Goated | `#F0392B` |                | Default tier color. Board only                   |
+| Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav |
+| Tier Mid    | `#FFCB2E` |                | Default tier color. Customize in the main nav    |
+| Tier Fraud  | `#3CC65A` |                | Default tier color. Add Cards in the main nav    |
 
 Board colors (tier colors, backgrounds, borders) are canvas colors that users can change. See Exceptions.
 
@@ -111,7 +111,8 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ## 8. Logo
 
-- The top bar shows the name as text until Alex's logo is ready.
+- The logo is `public/tierbinder-combined.svg`: a spiral-bound stack of sheets in the four tier colors, with a Petrel 900 outline, and the name set in Fraunces (weight 600, softness 50, -3.5% letter spacing) as outlines, so the font isn't loaded. Its name is Petrel 50, so it only works on dark colors.
+- It sits directly on the Storm 600 top bar at its full size, 114 × 25. Its outline disappears on Petrel 900, so don't place it there.
 
 ## 9. Imagery and visuals
 
@@ -177,7 +178,7 @@ Code uses Tailwind's `sm` and `md`, which are the same widths as `b6` and `b7`. 
 
 ### Top bar
 
-- Sticky with the same status bar padding. It holds the tool's name (a link home), the board type, Copy PNG and Export PNG. Copy PNG hides on phones, and stays in the Save & Share tab.
+- Sticky with the same status bar padding. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
 
 ### Settings
 
@@ -203,4 +204,5 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 600 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).
