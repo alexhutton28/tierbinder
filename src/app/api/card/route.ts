@@ -1,6 +1,6 @@
 import { isCardRef, lookupCard } from '../limitless';
 
-// One card by set code and number: /api/tcg-tier-stack/card?set=TWM&number=130
+// One card by set code and number: /api/card?set=TWM&number=130
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const set = params.get('set');
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
       headers: { 'Cache-Control': 'public, max-age=86400, s-maxage=604800' },
     });
   } catch (e) {
-    console.error('API /api/tcg-tier-stack/card error:', e);
+    console.error('API /api/card error:', e);
     return Response.json({ error: 'Lookup failed.' }, { status: 502 });
   }
 }

@@ -11,7 +11,7 @@ import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from '
 export default function BlankSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
     <>
-      <h3 className="tier-stack-heading">Cards</h3>
+      <h3 className="tierbinder-heading">Cards</h3>
       <CardSizeField
         value={canvas.cardWidth}
         onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
@@ -24,8 +24,8 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
         />
         Show only top half of cards
       </label>
-      <h3 className="tier-stack-heading">Board</h3>
-      <div className="tier-stack-prop">
+      <h3 className="tierbinder-heading">Board</h3>
+      <div className="tierbinder-prop">
         Background
         <ColorField
           label="Background color"
@@ -33,7 +33,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
           onChange={(background) => onChange((c) => ({ ...c, background }))}
         />
       </div>
-      <div className="tier-stack-prop">
+      <div className="tierbinder-prop">
         Split card border
         <ColorField
           label="Split card border color"
@@ -63,7 +63,7 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
         type="number"
         min={MIN_CARD_WIDTH}
         max={MAX_CARD_WIDTH}
-        className="tier-stack-field w-[64px]"
+        className="tierbinder-field w-[64px]"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);

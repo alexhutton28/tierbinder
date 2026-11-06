@@ -4,7 +4,7 @@ import React from 'react';
 import Button from './Button';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
-// bottom (.tier-stack-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
+// bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
 // through the options, Enter or Space picks one, Escape closes.
 
 export default function Dropdown<T extends string | number>({
@@ -100,14 +100,14 @@ export default function Dropdown<T extends string | number>({
           }}
         >
           {options[selected]?.label}
-          <span aria-hidden className="tier-stack-chevron" />
+          <span aria-hidden className="tierbinder-chevron" />
         </Button>
         {shown && (
           <div
             role="listbox"
             aria-labelledby={`${id}-label`}
             onKeyDown={onListKey}
-            className={`tier-stack-menu dropdown absolute left-0 top-full mt-1 z-10 tier-stack-popup flex flex-col min-w-full ${closing ? 'closing pointer-events-none' : ''}`}
+            className={`tierbinder-menu dropdown absolute left-0 top-full mt-1 z-10 tierbinder-popup flex flex-col min-w-full ${closing ? 'closing pointer-events-none' : ''}`}
           >
             {options.map((option, i) => (
               <button
@@ -119,7 +119,7 @@ export default function Dropdown<T extends string | number>({
                 role="option"
                 aria-selected={i === selected}
                 tabIndex={-1}
-                className="tier-stack-option whitespace-nowrap aria-selected:font-bold"
+                className="tierbinder-option whitespace-nowrap aria-selected:font-bold"
                 onClick={() => {
                   onChange(option.value);
                   close();

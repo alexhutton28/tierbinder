@@ -1,4 +1,4 @@
-// Card lookups for tcgTierStack, read from limitlesstcg.com pages (it has no public
+// Card lookups for TierBinder, read from limitlesstcg.com pages (it has no public
 // card API). Card image numbers aren't predictable (MEG pads to three digits, TWM
 // doesn't), so image URLs always come from Limitless's own pages.
 
@@ -26,7 +26,7 @@ function sizes(url: string) {
 }
 
 async function getPage(url: string) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'big-a.fun tcg-tier-stack' } });
+  const res = await fetch(url, { headers: { 'User-Agent': 'TierBinder' } });
   if (!res.ok) return null;
   return { html: await res.text(), url: new URL(res.url) };
 }

@@ -1,5 +1,5 @@
 // Serves card and sprite images from our own origin. Canvas export refuses to read
-// images from hosts that don't send CORS headers (Limitless doesn't), so tcgTierStack
+// images from hosts that don't send CORS headers (Limitless doesn't), so TierBinder
 // loads every image through here. Only known image hosts are allowed, so this can't
 // be used as an open proxy.
 const ALLOWED_HOSTS = new Set([
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e) {
-    console.error('API /api/tcg-tier-stack/image error:', e);
+    console.error('API /api/image error:', e);
     return Response.json({ error: 'Image fetch failed.' }, { status: 502 });
   }
 }

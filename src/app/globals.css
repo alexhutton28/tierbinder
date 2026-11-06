@@ -1,0 +1,371 @@
+@import 'tailwindcss';
+
+/* Generated from design/hutton-design-system.md by `npm run design:tokens`. Don't edit by
+   hand. */
+@import '../../design/theme.css';
+
+html,
+body {
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
+/* Buttons, links and images are things to press, not text to select: no selection
+   highlight from a double-click, drag or select-all, and images can't be dragged off */
+button,
+a,
+img,
+canvas,
+[role='button'] {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* TierBinder's interface: the look is in design/hutton-design-system.md. Set on the body
+   so the page background can use it too. The board keeps its own colors (see Exceptions
+   there). */
+body {
+  --tb-page: var(--color-petrel-950);
+  --tb-bar: var(--color-petrel-900);
+  --tb-line: var(--color-petrel-800);
+  --tb-text: var(--color-petrel-100);
+  --tb-muted: var(--color-petrel-400);
+  --tb-control-hover: var(--color-petrel-800);
+  --tb-control-text: var(--color-petrel-100);
+  --tb-control-border: var(--color-petrel-700);
+  --tb-field: var(--color-petrel-950);
+  --tb-primary: var(--color-storm-300);
+  --tb-primary-hover: var(--color-storm-200);
+  --tb-primary-text: var(--color-petrel-950);
+  --tb-selected: var(--color-petrel-100);
+  --tb-selected-text: var(--color-petrel-950);
+  --tb-popup: var(--color-petrel-850);
+  --tb-focus: var(--color-storm-200);
+  --tb-radius: var(--radius-small);
+
+  background: var(--tb-page);
+}
+
+.tierbinder-page {
+  color: var(--tb-text);
+  font-family: var(--font-figtree), system-ui, sans-serif;
+  accent-color: var(--tb-primary);
+  color-scheme: dark;
+}
+
+.tierbinder-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--spacing-3);
+  height: calc(48px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-inline: var(--spacing-4);
+  border-bottom: 1px solid var(--tb-line);
+  background: var(--tb-bar);
+}
+
+@media (width >= 24rem) {
+  .tierbinder-top {
+    gap: var(--spacing-4);
+  }
+}
+
+.tierbinder-brand {
+  color: var(--tb-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Beside the sidebar, the board takes the height it can and stays centered */
+@media (width >= 48rem) {
+  .tierbinder-canvas {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tierbinder-board {
+    width: min(100%, 1200px, calc((100dvh - 144px) * 16 / 9));
+  }
+}
+
+.tierbinder-side {
+  border-top: 1px solid var(--tb-line);
+  background: var(--tb-bar);
+}
+
+@media (width >= 48rem) {
+  .tierbinder-side {
+    border-top: 0;
+    border-right: 1px solid var(--tb-line);
+  }
+}
+
+.tierbinder-side-head {
+  padding: var(--spacing-3);
+  border-bottom: 1px solid var(--tb-line);
+}
+
+.tierbinder-panel {
+  padding: var(--spacing-4);
+}
+
+.tierbinder-heading {
+  color: var(--tb-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tierbinder-prop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  min-height: 32px;
+  color: var(--tb-muted);
+}
+
+.tierbinder-button {
+  height: 32px;
+  padding-inline: var(--spacing-button);
+  border: 1px solid var(--tb-control-border);
+  border-radius: var(--tb-radius);
+  white-space: nowrap;
+  color: var(--tb-control-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform var(--duration-move) var(--ease-spring),
+    background-color var(--duration-hover) ease-out,
+    color var(--duration-hover) ease-out;
+}
+
+.tierbinder-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.tierbinder-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.tierbinder-button.primary {
+  border-color: transparent;
+  background: var(--tb-primary);
+  color: var(--tb-primary-text);
+}
+
+.tierbinder-button.ghost {
+  border-color: transparent;
+}
+
+.tierbinder-tool[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--tb-selected);
+  color: var(--tb-selected-text);
+}
+
+/* The main nav (ui/RadioBar.tsx): a colored block that hugs the selected word */
+.tierbinder-radio {
+  position: relative;
+  display: grid;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
+  padding: var(--spacing-2);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+}
+
+.tierbinder-radio-block {
+  position: absolute;
+  border-radius: var(--tb-radius);
+  transition:
+    top var(--duration-move) var(--ease-spring),
+    left var(--duration-move) var(--ease-spring),
+    width var(--duration-move) var(--ease-spring),
+    background-color var(--duration-hover) ease-out;
+}
+
+.tierbinder-radio-option {
+  position: relative;
+  padding-block: var(--spacing-2);
+  color: var(--tb-control-text);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--duration-hover) ease-out;
+}
+
+.tierbinder-radio-option span {
+  display: inline-block;
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+.tierbinder-radio-option[aria-selected='true'] {
+  color: var(--tb-primary-text);
+}
+
+.tierbinder-field {
+  height: 32px;
+  padding-inline: var(--spacing-3);
+  border: 1px solid var(--tb-field);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+  color: var(--tb-text);
+}
+
+.tierbinder-field::placeholder {
+  color: var(--tb-muted);
+}
+
+textarea.tierbinder-field {
+  height: auto;
+  padding-block: var(--spacing-3);
+}
+
+/* The color picker, as a plain swatch */
+.tierbinder-page input[type='color'] {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--tb-radius);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.tierbinder-page input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.tierbinder-page input[type='color']::-webkit-color-swatch {
+  border: 0;
+}
+
+.tierbinder-page input[type='color']::-moz-color-swatch {
+  border: 0;
+}
+
+.tierbinder-popup {
+  overflow: hidden;
+  border: 1px solid var(--tb-control-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-popup);
+  box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
+}
+
+/* Feather's chevron-down, colored by the text around it */
+.tierbinder-chevron {
+  width: 16px;
+  height: 16px;
+  background: currentcolor;
+  mask: url('/chevron-down.svg') center / contain no-repeat;
+}
+
+.tierbinder-option {
+  padding: var(--spacing-3) var(--spacing-4);
+  color: var(--tb-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .tierbinder-button:hover:not(:disabled),
+  .tierbinder-option:hover {
+    background: var(--tb-control-hover);
+  }
+
+  .tierbinder-button.primary:hover:not(:disabled) {
+    background: var(--tb-primary-hover);
+  }
+
+  .tierbinder-tool[aria-pressed='true']:hover {
+    background: var(--tb-selected);
+  }
+}
+
+.tierbinder-page :focus-visible {
+  outline: 2px solid var(--tb-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tierbinder-button:active:not(:disabled) {
+    transform: none;
+  }
+
+  .tierbinder-radio-block {
+    transition: background-color var(--duration-hover) ease-out;
+  }
+}
+
+/* Card menu and dropdowns (ui/Dropdown.tsx): stretches out from its edge
+   on a spring that goes 1.5% past (chosen from a demo of four openings and three bounce
+   amounts, then eased down from 3% after seeing it live), fading in over the first
+   120ms. Closing folds it back in (picked from a demo of three closings). --ease-spring
+   is a damped spring (damping ratio 0.801) sampled into linear(), which settles by the
+   end; it and the durations are in design/hutton-design-system.md. */
+.tierbinder-menu {
+  --menu-folded: scaleX(0.2);
+  --menu-open: var(--duration-move);
+
+  transform-origin: left center;
+  animation:
+    tierbinder-menu-stretch var(--menu-open) var(--ease-spring),
+    tierbinder-menu-fade var(--duration-fade) ease-out;
+}
+
+/* Dropdowns open below their button, so they stretch and fold from the top edge */
+.tierbinder-menu.dropdown {
+  --menu-folded: scaleY(0.2);
+  --menu-open: var(--duration-drop);
+
+  transform-origin: center top;
+}
+
+/* Closing folds it back to its edge, speeding up, and fades over the last 60% */
+.tierbinder-menu.closing {
+  animation:
+    tierbinder-menu-fold var(--duration-fold) var(--ease-fold) forwards,
+    tierbinder-menu-fold-fade var(--duration-fold) linear forwards;
+}
+
+@keyframes tierbinder-menu-stretch {
+  from {
+    transform: var(--menu-folded);
+  }
+}
+
+@keyframes tierbinder-menu-fold {
+  to {
+    transform: var(--menu-folded);
+  }
+}
+
+@keyframes tierbinder-menu-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes tierbinder-menu-fold-fade {
+  40% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tierbinder-menu {
+    animation: tierbinder-menu-fade var(--duration-fade) ease-out;
+  }
+
+  .tierbinder-menu.closing {
+    animation: tierbinder-menu-fade var(--duration-fold-fade) ease-in reverse forwards;
+  }
+}

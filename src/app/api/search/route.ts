@@ -1,6 +1,6 @@
 import { searchCards } from '../limitless';
 
-// Card search by name: /api/tcg-tier-stack/search?q=dragapult+ex
+// Card search by name: /api/search?q=dragapult+ex
 export async function GET(req: Request) {
   const query = new URL(req.url).searchParams.get('q')?.trim() ?? '';
   if (!query || query.length > 100) {
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       { headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400' } }
     );
   } catch (e) {
-    console.error('API /api/tcg-tier-stack/search error:', e);
+    console.error('API /api/search error:', e);
     return Response.json({ error: 'Search failed.' }, { status: 502 });
   }
 }

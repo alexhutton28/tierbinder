@@ -1,12 +1,37 @@
-# tcgTierStack
+# TierBinder
 
-A hidden tool (not linked from the home page, `noindex`) for laying out Pokémon TCG
-graphics, tier lists first, and exporting them as images for X. It's growing into a small
-design tool, so the editor is a shared shell and each kind of graphic (tier list, blank
-canvas; later charts, Venn diagrams) is a pluggable **graphic type**. There's no help
-text on the page.
+Alex Hutton's TCG graphics tool, live at tierbinder.big-a.fun and kept out of search with
+`noindex` until it has its real domain. The goal is to be the best TCG tier list maker;
+other graphics are a bonus. It moved here from big-a-website, whose issues and PRs old
+commits link to. Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS v4, Konva,
+deployed on Vercel's Hobby plan.
+
+## Workflow
+
+- `main` is protected: changes go through a PR and must pass the `build` check. What it runs is in `.github/workflows/ci.yml`; run the same checks locally before committing, plus `npx prettier --write` on changed files and `npx tsc --noEmit`.
+- Squash-merge and delete the branch.
+- Don't stack PRs.
+- Run tools from the repo folder.
+- Dependabot opens weekly grouped minor/patch PRs; merge them once green.
+- When a PR changes a convention described here, update the notes in the same PR.
+- After changing `design/hutton-design-system.md`, run `npm run design:tokens` and commit `design/theme.css`. It needs the `hutton-design` skill installed. Never edit that file by hand.
+- Stay on free plans until the tool is solid. Move to Vercel Pro before any ads or payments go live, since Hobby is non-commercial only.
+
+## Gotchas
+
+- **Custom spacing scale** (`design/hutton-design-system.md`): Tailwind's numbered spacing doesn't mean the default sizes here, e.g. `p-4` is 16px, but `px-6` (64px) and `gap-5` (32px) are much bigger than usual. Round to the nearest step rather than writing arbitrary spacing like `mt-[12px]`. Widths and heights stay raw (`w-[260px]`).
+- **`html` and `body` don't scroll** (`overflow: hidden` in `globals.css`). The page has its own scroll container.
+- **Tailwind's `hover:` variant only applies on devices that can hover.** For hover effects that must work everywhere use plain `:hover` in CSS.
+- **Tailwind's `shadow-[...]` stacks the shadow with four empty layers**, so animating `box-shadow` from it fades instead of moving. Set shadows that animate in plain CSS.
+- **`@theme inline` tokens aren't real CSS variables** at runtime. Generated tokens are, but fonts use the `next/font` variables from `src/app/layout.tsx` directly.
+
+## Design
+
+Follow `design/hutton-design-system.md` using the `hutton-design` skill. Use the tokens, not raw hex.
 
 ## Files
+
+All paths are in `src/app/`.
 
 - `Editor.tsx`: the shell, shared by every graphic: the stage and its scaling, selection and its outline, the card menu, the Add Cards tab (search, picking, dragging results, bulk import), the Customize tab (the graphic's own settings, Clear board), the Save & Share tab (export), autosave. It only talks to graphics through `GraphicType`.
 - `document.ts`: the saved document (`{ version: 3, kind, graphics }`), `currentGraphic`, and `parseSaved`, which converts older saves.
@@ -20,10 +45,10 @@ text on the page.
 - `ui/RadioBar.tsx`: the main nav. A block in each option's color hugs the selected word, measured from the word, and springs to the next; left and right arrow keys move it.
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
 - `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
-- `TierStackLoader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
-- `layout.tsx`: the page's scroll container, Inter Black for the tier labels, and Figtree for the controls.
-- Interface styles: the `.tier-stack-*` rules in `globals.css`. Change the look through the `--ts-*` roles at the top of them.
-- `../api/tcg-tier-stack/`: `card` (by set + number), `search` (by name), `image` (proxy), and `limitless.ts`, which reads limitlesstcg.com pages.
+- `Loader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
+- `layout.tsx`: the root layout: fonts (Inter Black for tier labels, Figtree for the controls), metadata, analytics and the scroll container.
+- Interface styles: the `.tierbinder-*` rules in `globals.css`. Change the look through the `--tb-*` roles at the top of them.
+- `api/`: `card` (by set + number), `search` (by name), `image` (proxy), and `limitless.ts`, which reads limitlesstcg.com pages.
 
 ## Graphic types
 
@@ -77,7 +102,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## Editing
 
 - Clicking a card without dragging (Konva's `click`/`tap` don't fire after a drag) opens the card menu, HTML over the board; so does right-clicking a card (the browser's own menu is prevented on cards only). Konva also fires `click` for the right button, so only a left `click` opens the menu; right-click opens it from `contextmenu`, which would otherwise land on the already-open menu:
-  - The menu stretches out to the right from its left edge (`.tier-stack-menu` in `globals.css`) on `--ease-spring`, and on close folds back to its left edge in 180ms, fading over the last part (`shownMenu` keeps the last menu on screen for 220ms, on a timer since `animationend` doesn't fire in a tab that isn't painting). It's keyed by card and position, so each opening replays the animation.
+  - The menu stretches out to the right from its left edge (`.tierbinder-menu` in `globals.css`) on `--ease-spring`, and on close folds back to its left edge in 180ms, fading over the last part (`shownMenu` keeps the last menu on screen for 220ms, on a timer since `animationend` doesn't fire in a tab that isn't painting). It's keyed by card and position, so each opening replays the animation.
   - Card: Remove card, Replace card, Make split card.
   - Split card: Remove card, Replace top half, Replace bottom half, Swap halves, Unsplit (keeps the top).
   - A search result dropped on a card opens the menu with the result's choices (`cardMenu.dropped`): Add as split card (the result is the bottom half) or Add to tier/canvas (the graphic's `dropCard` at the drop point); on a split card, Replace top half, Replace bottom half or Add to tier/canvas.
@@ -86,23 +111,23 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
 - The board type dropdown in the top bar lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
-- The window: a top bar (`.tier-stack-top`) with the tool's name, the board type, Copy PNG and Export PNG, replacing the site header; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
+- The window: a top bar (`.tierbinder-top`) with the tool's name, the board type, Copy PNG and Export PNG, ; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
 
 ## Look and motion
 
-- The palette, look and motion are in `design/pages/tcg-tier-stack.md`, including `--ease-spring`, `--duration-move`, `--duration-drop` and `--duration-fade`.
-- Popups (the card menu, dropdowns) share `.tier-stack-menu` in `globals.css`.
+- The palette, look and motion are in `design/hutton-design-system.md`, including `--ease-spring`, `--duration-move`, `--duration-drop` and `--duration-fade`.
+- Popups (the card menu, dropdowns) share `.tierbinder-menu` in `globals.css`.
 
 ## Cards from Limitless
 
-- Every image is loaded through `/api/tcg-tier-stack/image`: Limitless sends no CORS headers, and a canvas with cross-origin images can't be exported. The proxy only allows the hosts listed in its route; add a host there to use a new image source (e.g. Pokémon HOME sprites). Search thumbnails load from the CDN directly and retry once through the proxy if they fail.
+- Every image is loaded through `/api/image`: Limitless sends no CORS headers, and a canvas with cross-origin images can't be exported. The proxy only allows the hosts listed in its route; add a host there to use a new image source (e.g. Pokémon HOME sprites). Search thumbnails load from the CDN directly and retry once through the proxy if they fail.
 - Limitless has no card API, so lookups read its pages. Image numbers aren't predictable (MEG pads to 3 digits, TWM doesn't), so image URLs always come from the page.
 - Search uses `show=all` to get every match on one page (the default is 50 per page); results whose images aren't on the Limitless CDN (older cards on pokemontcg.io) are skipped.
 - Results are newest set first. A name-only import picks the lowest number in the newest set, skipping special reprint sets (`SPECIAL_SETS` in `cards.ts`: 30th Celebration and Celebrations, which Limitless lists first) and subset numbers like CC21 or TG05 while a regular print exists.
 
 ## Saving
 
-- The document autosaves to `localStorage` (`tcg-tier-stack-doc`) and is read back with `parseSaved`; there's no file save/load. It holds one board per type (`graphics`, keyed by kind) and which one is showing (`kind`, whose board is always present). Cards are saved as names and image URLs, so even full boards are a few KB.
+- The document autosaves to `localStorage` (`tierbinder-doc`) and is read back with `parseSaved`; there's no file save/load. It holds one board per type (`graphics`, keyed by kind) and which one is showing (`kind`, whose board is always present). Cards are saved as names and image URLs, so even full boards are a few KB.
 - Version 1 was a tier list on its own (`{ version: 1, kind: 'tier-list', ... }`) and version 2 one graphic (`{ version: 2, graphic }`); `parseSaved` converts both. A saved board that doesn't parse is dropped and starts new, keeping the others.
 - Changing the document's shape means bumping `version` and converting in `parseSaved`; a graphic's new setting with a default can instead be filled in by its `parse` (as the tier list's `border` and `tierCardBorders` are).
 - In `next dev`, a tab left open while the document shape changes keeps its old in-memory board (without the new fields) until it's reloaded.
@@ -113,7 +138,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - Simulated mouse drags don't start Konva drags; to test a card drop, set the card node's position and `fire('dragend')`.
 - CSS animations start but don't advance, and `animationend` never fires; check where one ends with `el.getAnimations().forEach((a) => a.finish())`.
 - `confirm()` returns false at once and `alert()` never shows, so confirm on the page instead (see Clear board).
-- Every tab shares the saved board: back up `tcg-tier-stack-doc` before a test that edits it, restore it after, and test in a background tab rather than the one being used.
+- Every tab shares the saved board: back up `tierbinder-doc` before a test that edits it, restore it after, and test in a background tab rather than the one being used.
 
 ## Not done yet
 

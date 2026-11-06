@@ -18,7 +18,7 @@ import {
   type CardItem,
   type CardResult,
 } from './cards';
-import { currentGraphic, newDoc, parseSaved, type TierStackDoc } from './document';
+import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './document';
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
@@ -29,7 +29,7 @@ import RadioBar from './ui/RadioBar';
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
 
-const STORAGE_KEY = 'tcg-tier-stack-doc';
+const STORAGE_KEY = 'tierbinder-doc';
 
 function loadSaved() {
   try {
@@ -48,7 +48,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]['value'];
 
 export default function Editor() {
-  const [doc, setDoc] = React.useState<TierStackDoc>(loadSaved);
+  const [doc, setDoc] = React.useState<TierBinderDoc>(loadSaved);
   const graphic = currentGraphic(doc);
   const type = typeOf(graphic.kind);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -464,10 +464,10 @@ export default function Editor() {
   return (
     // The board, with the sidebar on its left (below it on narrow screens). On wide
     // screens each scrolls on its own, so the search results stay beside the board.
-    <div className="tier-stack-page w-full md:h-full flex flex-col text-[13px]">
-      <header className="tier-stack-top">
-        <Link href="/" className="tier-stack-brand">
-          tcgTierStack
+    <div className="tierbinder-page w-full md:h-full flex flex-col text-[13px]">
+      <header className="tierbinder-top">
+        <Link href="/" className="tierbinder-brand">
+          TierBinder
         </Link>
         <Dropdown
           hideLabel
@@ -487,8 +487,8 @@ export default function Editor() {
         </Button>
       </header>
       <div className="flex-1 min-h-0 flex flex-col md:flex-row-reverse">
-        <div className="tier-stack-canvas flex-1 min-w-0 md:overflow-y-auto p-4 flex flex-col">
-          <div className="tier-stack-board flex flex-col gap-4">
+        <div className="tierbinder-canvas flex-1 min-w-0 md:overflow-y-auto p-4 flex flex-col">
+          <div className="tierbinder-board flex flex-col gap-4">
             <div ref={boardBoxRef} className="w-full relative">
               <Stage
                 ref={(stage) => {
@@ -547,7 +547,7 @@ export default function Editor() {
                   ref={cardMenuRef}
                   role="menu"
                   onContextMenu={(e) => e.preventDefault()}
-                  className={`tier-stack-menu absolute z-10 tier-stack-popup flex flex-col min-w-[160px] ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                  className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col min-w-[160px] ${menuClosing ? 'closing pointer-events-none' : ''}`}
                   // Kept inside the board's right edge
                   style={{
                     left: Math.min(shownMenu.x, BOARD_WIDTH * scale - 160),
@@ -558,7 +558,7 @@ export default function Editor() {
                     <button
                       key={label}
                       role="menuitem"
-                      className="tier-stack-option"
+                      className="tierbinder-option"
                       onClick={() => {
                         runCardMenuItem(shownMenu, label);
                         setCardMenu(null);
@@ -579,8 +579,8 @@ export default function Editor() {
           </div>
         </div>
 
-        <aside className="tier-stack-side md:w-[340px] md:flex-none flex flex-col min-w-0 md:min-h-0">
-          <div className="tier-stack-side-head">
+        <aside className="tierbinder-side md:w-[340px] md:flex-none flex flex-col min-w-0 md:min-h-0">
+          <div className="tierbinder-side-head">
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>
 
@@ -590,7 +590,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'add'}
-            className="tier-stack-panel flex flex-col gap-3 min-w-0 md:flex-1 md:min-h-0"
+            className="tierbinder-panel flex flex-col gap-3 min-w-0 md:flex-1 md:min-h-0"
           >
             <form
               onSubmit={(e) => {
@@ -601,7 +601,7 @@ export default function Editor() {
             >
               <input
                 ref={searchInputRef}
-                className="tier-stack-field flex-1 min-w-0"
+                className="tierbinder-field flex-1 min-w-0"
                 placeholder="Card name"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -643,7 +643,7 @@ export default function Editor() {
                 <textarea
                   rows={10}
                   aria-label="Cards to import"
-                  className="tier-stack-field font-mono text-[12px]"
+                  className="tierbinder-field font-mono text-[12px]"
                   placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
@@ -666,7 +666,7 @@ export default function Editor() {
                   role="button"
                   tabIndex={0}
                   title={`${card.set} ${card.number}`}
-                  className="cursor-grab select-none flex flex-col items-center text-[11px] leading-[14px] text-(--ts-muted)"
+                  className="cursor-grab select-none flex flex-col items-center text-[11px] leading-[14px] text-(--tb-muted)"
                   // Mouse and pen only: on touch, a press-and-move scrolls the results
                   onPointerDown={(e) => {
                     if (e.pointerType === 'touch' || e.button !== 0) return;
@@ -707,7 +707,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'customize'}
-            className="tier-stack-panel flex flex-col gap-3 md:flex-1 md:min-h-0 md:overflow-y-auto"
+            className="tierbinder-panel flex flex-col gap-3 md:flex-1 md:min-h-0 md:overflow-y-auto"
           >
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
@@ -727,18 +727,18 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'save'}
-            className="tier-stack-panel flex flex-col gap-3 md:flex-1 md:min-h-0"
+            className="tierbinder-panel flex flex-col gap-3 md:flex-1 md:min-h-0"
           >
-            <h3 className="tier-stack-heading">Image</h3>
-            <div className="tier-stack-prop">
+            <h3 className="tierbinder-heading">Image</h3>
+            <div className="tierbinder-prop">
               Size
-              <span className="text-(--ts-text)">
+              <span className="text-(--tb-text)">
                 {BOARD_WIDTH * EXPORT_SCALE} × {BOARD_HEIGHT * EXPORT_SCALE}
               </span>
             </div>
-            <div className="tier-stack-prop">
+            <div className="tierbinder-prop">
               Format
-              <span className="text-(--ts-text)">PNG</span>
+              <span className="text-(--tb-text)">PNG</span>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button variant="primary" onClick={exportPng} disabled={busy}>

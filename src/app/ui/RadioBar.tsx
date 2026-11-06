@@ -63,13 +63,13 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
       ref={barRef}
       role="tablist"
       aria-label={label}
-      className="tier-stack-radio"
+      className="tierbinder-radio"
       onKeyDown={onKeyDown}
     >
       {block && (
         <span
           aria-hidden
-          className="tier-stack-radio-block"
+          className="tierbinder-radio-block"
           style={{ ...block, background: selected?.color }}
         />
       )}
@@ -80,7 +80,7 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
           role="tab"
           aria-selected={option.value === value}
           tabIndex={option.value === value ? 0 : -1}
-          className="tier-stack-radio-option"
+          className="tierbinder-radio-option"
           onClick={() => onChange(option.value)}
         >
           <span

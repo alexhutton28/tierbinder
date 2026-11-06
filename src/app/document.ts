@@ -5,7 +5,7 @@
 
 import { typeOf, type Graphic, type GraphicKind } from './graphics';
 
-export type TierStackDoc = {
+export type TierBinderDoc = {
   version: 3;
   // The board showing; its board is always in `graphics`
   kind: GraphicKind;
@@ -13,12 +13,12 @@ export type TierStackDoc = {
   graphics: Partial<Record<GraphicKind, Graphic>>;
 };
 
-export function newDoc(): TierStackDoc {
+export function newDoc(): TierBinderDoc {
   return { version: 3, kind: 'tier-list', graphics: { 'tier-list': typeOf('tier-list').create() } };
 }
 
 // The board showing
-export function currentGraphic(doc: TierStackDoc): Graphic {
+export function currentGraphic(doc: TierBinderDoc): Graphic {
   return doc.graphics[doc.kind]!;
 }
 
@@ -28,7 +28,7 @@ function parseGraphic(value: unknown): Graphic | null {
   return type?.parse(value) ?? null;
 }
 
-export function parseSaved(value: unknown): TierStackDoc | null {
+export function parseSaved(value: unknown): TierBinderDoc | null {
   const saved = value as {
     version?: number;
     kind?: string;
@@ -43,7 +43,7 @@ export function parseSaved(value: unknown): TierStackDoc | null {
   }
   if (saved?.version !== 3 || !saved.graphics) return null;
   // Boards that don't parse are dropped (and start new), keeping the others
-  const graphics: TierStackDoc['graphics'] = {};
+  const graphics: TierBinderDoc['graphics'] = {};
   for (const value of Object.values(saved.graphics)) {
     const graphic = parseGraphic(value);
     if (graphic) graphics[graphic.kind] = graphic as never;

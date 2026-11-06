@@ -28,7 +28,7 @@ export default function TierListSettings({
 
   return (
     <>
-      <h3 className="tier-stack-heading">Tiers</h3>
+      <h3 className="tierbinder-heading">Tiers</h3>
       {list.tiers.map((tier, i) => (
         <div key={tier.id} className="flex gap-3 items-center">
           <ColorField
@@ -42,7 +42,7 @@ export default function TierListSettings({
               tierNameRefs.current[i] = el;
             }}
             aria-label={`Tier ${i + 1} name`}
-            className="tier-stack-field flex-1 min-w-0"
+            className="tierbinder-field flex-1 min-w-0"
             value={tier.name.replaceAll('\n', '\\n')}
             onChange={(e) => updateTier(i, { name: e.target.value.replaceAll('\\n', '\n') })}
           />
@@ -56,8 +56,8 @@ export default function TierListSettings({
         />
         Add tier colored border to cards
       </label>
-      <h3 className="tier-stack-heading">Board</h3>
-      <div className="tier-stack-prop">
+      <h3 className="tierbinder-heading">Board</h3>
+      <div className="tierbinder-prop">
         Background
         <ColorField
           label="Background color"
@@ -65,7 +65,7 @@ export default function TierListSettings({
           onChange={(background) => onChange((l) => ({ ...l, background }))}
         />
       </div>
-      <div className="tier-stack-prop">
+      <div className="tierbinder-prop">
         Border
         <ColorField
           label="Border color"
