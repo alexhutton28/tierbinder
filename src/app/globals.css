@@ -26,6 +26,7 @@ canvas,
    there). */
 body {
   --tb-page: var(--color-petrel-950);
+  --tb-top: var(--color-storm-400);
   --tb-bar: var(--color-petrel-900);
   --tb-line: var(--color-petrel-800);
   --tb-text: var(--color-petrel-100);
@@ -60,24 +61,16 @@ body {
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--spacing-3);
   height: calc(48px + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
   border-bottom: 1px solid var(--tb-line);
-  background: var(--tb-bar);
-}
-
-@media (width >= 24rem) {
-  .tierbinder-top {
-    gap: var(--spacing-4);
-  }
+  background: var(--tb-top);
 }
 
 .tierbinder-brand {
-  color: var(--tb-text);
-  font-size: 14px;
-  font-weight: 700;
+  display: flex;
+  flex: none;
 }
 
 /* Beside the sidebar, the board takes the height it can and stays centered */
@@ -88,7 +81,7 @@ body {
   }
 
   .tierbinder-board {
-    width: min(100%, 1200px, calc((100dvh - 144px) * 16 / 9));
+    width: min(100%, 1200px, calc((100dvh - 192px) * 16 / 9));
   }
 }
 
@@ -156,10 +149,6 @@ body {
   border-color: transparent;
   background: var(--tb-primary);
   color: var(--tb-primary-text);
-}
-
-.tierbinder-button.ghost {
-  border-color: transparent;
 }
 
 .tierbinder-tool[aria-pressed='true'] {

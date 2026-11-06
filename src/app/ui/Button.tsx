@@ -5,7 +5,6 @@ import type { ComponentProps } from 'react';
 const VARIANTS = {
   default: '',
   primary: 'primary',
-  ghost: 'ghost',
   tool: 'tierbinder-tool',
 };
 

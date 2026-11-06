@@ -41,7 +41,7 @@ All paths are in `src/app/`.
 - `canvas/CardNode.tsx`: a card on the board for every graphic (image or split card, rounded clip, placeholder, dragging, menu clicks). `canvas/size.ts`: board, export and card sizes.
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
-- `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `ghost`, `tool`).
+- `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `tool`).
 - `ui/RadioBar.tsx`: the main nav. A block in each option's color hugs the selected word, measured from the word, and springs to the next; left and right arrow keys move it.
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
 - `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
@@ -110,8 +110,8 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - The Add Cards tab: results scroll (3 rows tall on narrow screens). Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
-- The board type dropdown in the top bar lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
-- The window: a top bar (`.tierbinder-top`) with the tool's name, the board type, Copy PNG and Export PNG, ; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
+- The board type dropdown above the board lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
+- The window: a top bar (`.tierbinder-top`) with the logo; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
 
 ## Look and motion
 

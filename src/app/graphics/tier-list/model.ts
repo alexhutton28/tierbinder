@@ -37,10 +37,10 @@ export const SEPARATOR_WIDTH = 3;
 
 export function defaultTierList(): TierList {
   const tiers: [string, string][] = [
-    ['Goated', '#d9532b'],
-    ['Solid', '#f0912f'],
-    ['Mid', '#f5c95b'],
-    ['Fraud', '#7cc05a'],
+    ['Goated', '#f0392b'],
+    ['Solid', '#f78c1e'],
+    ['Mid', '#ffcb2e'],
+    ['Fraud', '#3cc65a'],
   ];
   return {
     kind: 'tier-list',
