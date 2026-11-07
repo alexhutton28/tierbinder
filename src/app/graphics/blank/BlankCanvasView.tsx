@@ -19,6 +19,7 @@ export default function BlankCanvasView({
   onSelect,
   onCardMenu,
   tool,
+  fontFamily,
 }: CanvasProps<BlankCanvas>) {
   const drawing = tool === 'pen' || tool === 'eraser';
   // The stroke being drawn, kept out of the document until the pointer is released
@@ -80,6 +81,7 @@ export default function BlankCanvasView({
             y={item.y}
             width={canvas.cardWidth}
             topHalf={canvas.topHalf}
+            fontFamily={fontFamily}
             borderColor={item.split ? canvas.border : null}
             dividerColor={canvas.border}
             onSelect={() => onSelect(item.id)}

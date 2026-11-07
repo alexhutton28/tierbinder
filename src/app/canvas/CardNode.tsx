@@ -28,11 +28,13 @@ function Face({
   y = 0,
   height,
   half = false,
+  fontFamily,
 }: {
   face: CardFace;
   y?: number;
   height: number;
   half?: boolean;
+  fontFamily: string;
 }) {
   const [image, setImage] = React.useState<HTMLImageElement | null>(null);
   const [failed, setFailed] = React.useState(false);
@@ -71,6 +73,8 @@ function Face({
         padding={6}
         align="center"
         verticalAlign="middle"
+        fontFamily={fontFamily}
+        fontStyle="900"
         fontSize={13}
         fill="#ffffff"
       />
@@ -99,6 +103,7 @@ export default function CardNode({
   y,
   width = CARD_WIDTH,
   topHalf = false,
+  fontFamily,
   borderColor,
   dividerColor,
   onSelect,
@@ -111,6 +116,8 @@ export default function CardNode({
   width?: number;
   // Show only the card's top half (not for split cards)
   topHalf?: boolean;
+  // For a card with no image yet
+  fontFamily: string;
   // Inside stroke, or none
   borderColor: string | null;
   // A split card's divider and backing
@@ -187,8 +194,14 @@ export default function CardNode({
             fill={dividerColor}
             cornerRadius={CARD_CORNER_RADIUS}
           />
-          <Face face={item} height={CARD_HEIGHT / 2} half />
-          <Face face={item.split} y={CARD_HEIGHT / 2} height={CARD_HEIGHT / 2} half />
+          <Face fontFamily={fontFamily} face={item} height={CARD_HEIGHT / 2} half />
+          <Face
+            fontFamily={fontFamily}
+            face={item.split}
+            y={CARD_HEIGHT / 2}
+            height={CARD_HEIGHT / 2}
+            half
+          />
           <Rect
             y={(CARD_HEIGHT - CARD_BORDER_WIDTH) / 2}
             width={CARD_WIDTH}
@@ -198,7 +211,7 @@ export default function CardNode({
           />
         </>
       ) : (
-        <Face face={item} height={height} half={half} />
+        <Face fontFamily={fontFamily} face={item} height={height} half={half} />
       )}
       {borderColor && (
         // Konva centers strokes on the path, so the path is inset by half the width

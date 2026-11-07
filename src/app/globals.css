@@ -4,6 +4,17 @@
    hand. */
 @import '../../design/theme.css';
 
+/* The type scale, from design/hutton-design-system.md. Written here because the token
+   generator has no type scale yet. */
+@theme static {
+  --text-nav: 1rem;
+  --text-body: 0.875rem;
+  --text-detail: 0.8125rem;
+  --text-caption: 0.75rem;
+  /* stylelint-disable-next-line custom-property-pattern -- Tailwind sets the name */
+  --text-caption--line-height: 1rem;
+}
+
 html,
 body {
   overscroll-behavior: none;
@@ -108,7 +119,7 @@ body {
 
 .tierbinder-heading {
   color: var(--tb-muted);
-  font-size: 12px;
+  font-size: var(--text-detail);
   font-weight: 600;
 }
 
@@ -128,7 +139,7 @@ body {
   border-radius: var(--tb-radius);
   white-space: nowrap;
   color: var(--tb-control-text);
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition:
     transform var(--duration-move) var(--ease-spring),
@@ -182,7 +193,7 @@ body {
   position: relative;
   padding-block: var(--spacing-2);
   color: var(--tb-control-text);
-  font-size: 16px;
+  font-size: var(--text-nav);
   font-weight: 600;
   cursor: pointer;
   transition: color var(--duration-hover) ease-out;
@@ -204,6 +215,9 @@ body {
   border-radius: var(--tb-radius);
   background: var(--tb-field);
   color: var(--tb-text);
+
+  /* iPhones zoom the page when a field under 16px is tapped */
+  font-size: var(--text-nav);
 }
 
 .tierbinder-field::placeholder {
@@ -213,6 +227,16 @@ body {
 textarea.tierbinder-field {
   height: auto;
   padding-block: var(--spacing-3);
+}
+
+@media (width >= 48rem) {
+  .tierbinder-field {
+    font-size: var(--text-body);
+  }
+
+  textarea.tierbinder-field {
+    font-size: var(--text-detail);
+  }
 }
 
 /* The color picker, as a plain swatch */

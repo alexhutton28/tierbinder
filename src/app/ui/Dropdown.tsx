@@ -119,7 +119,7 @@ export default function Dropdown<T extends string | number>({
                 role="option"
                 aria-selected={i === selected}
                 tabIndex={-1}
-                className="tierbinder-option whitespace-nowrap aria-selected:font-bold"
+                className="tierbinder-option whitespace-nowrap aria-selected:font-semibold"
                 onClick={() => {
                   onChange(option.value);
                   close();
