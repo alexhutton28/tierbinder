@@ -199,9 +199,29 @@ body {
   transition: color var(--duration-hover) ease-out;
 }
 
-.tierbinder-radio-option span {
-  display: inline-block;
-  padding: var(--spacing-2) var(--spacing-3);
+.tierbinder-radio-option > span {
+  display: inline-flex;
+  gap: var(--spacing-2);
+  align-items: center;
+  padding: var(--spacing-2);
+  white-space: nowrap;
+}
+
+@media (width >= 24rem) {
+  .tierbinder-radio-option > span {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+/* Set per option in ui/RadioBar.tsx with mask-image */
+.tierbinder-radio-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentcolor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
 }
 
 .tierbinder-radio-option[aria-selected='true'] {

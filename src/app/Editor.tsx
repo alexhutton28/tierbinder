@@ -42,9 +42,9 @@ function loadSaved() {
 
 // The sidebar's main nav, in the tier list's default colors
 const TABS = [
-  { value: 'add', label: 'Add Cards', color: 'var(--color-tier-fraud)' },
-  { value: 'customize', label: 'Customize', color: 'var(--color-tier-mid)' },
-  { value: 'save', label: 'Save & Share', color: 'var(--color-tier-solid)' },
+  { value: 'add', label: 'Add Cards', icon: 'plus', color: 'var(--color-tier-fraud)' },
+  { value: 'customize', label: 'Customize', icon: 'sliders', color: 'var(--color-tier-mid)' },
+  { value: 'save', label: 'Save & Share', icon: 'share', color: 'var(--color-tier-solid)' },
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
@@ -575,7 +575,7 @@ export default function Editor() {
           </div>
         </div>
 
-        <aside className="tierbinder-side md:w-[340px] md:flex-none flex flex-col min-w-0 md:min-h-0">
+        <aside className="tierbinder-side md:w-[352px] md:flex-none flex flex-col min-w-0 md:min-h-0">
           <div className="tierbinder-side-head">
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>

@@ -42,7 +42,7 @@ All paths are in `src/app/`.
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
 - `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `tool`).
-- `ui/RadioBar.tsx`: the main nav. A block in each option's color hugs the selected word, measured from the word, and springs to the next; left and right arrow keys move it.
+- `ui/RadioBar.tsx`: the main nav. Each option has an icon from `public/`, drawn in the text color. A block in each option's color hugs the selected icon and word, measured from them, and springs to the next; left and right arrow keys move it.
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
 - `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
 - `Loader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).

@@ -2,7 +2,8 @@
 
 import React from 'react';
 
-type Option<T extends string> = { value: T; label: string; color: string };
+// `icon` is an SVG's name in public/, drawn in the text color
+type Option<T extends string> = { value: T; label: string; icon: string; color: string };
 
 type BlockBox = { top: number; left: number; width: number; height: number; transition?: string };
 
@@ -89,6 +90,11 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
               else wordRefs.current.delete(option.value);
             }}
           >
+            <span
+              aria-hidden
+              className="tierbinder-radio-icon"
+              style={{ maskImage: `url('/${option.icon}.svg')` }}
+            />
             {option.label}
           </span>
         </button>
