@@ -598,6 +598,10 @@ export default function Editor() {
               <input
                 ref={searchInputRef}
                 className="tierbinder-field flex-1 min-w-0"
+                // Card names aren't real words: don't let phones "fix" them
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 placeholder="Card name"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -639,6 +643,9 @@ export default function Editor() {
                 <textarea
                   rows={10}
                   aria-label="Cards to import"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
                   className="tierbinder-field font-mono"
                   placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
                   value={importText}
