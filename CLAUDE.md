@@ -116,7 +116,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## Look and motion
 
 - The palette, look and motion are in `design/hutton-design-system.md`, including `--ease-spring`, `--duration-move`, `--duration-drop` and `--duration-fade`.
-- The type scale (`text-nav`, `text-body`, `text-detail`, `text-caption`) is in the `@theme` block at the top of `globals.css`, since the token generator has none. Fields are 16px on phones, because iPhones zoom the page on smaller ones.
+- The type scale (`text-field`, `text-body`, `text-detail`, `text-caption`) is in the `@theme` block at the top of `globals.css`, since the token generator has none. Fields are 16px on phones, because iPhones zoom the page on smaller ones.
 - Popups (the card menu, dropdowns) share `.tierbinder-menu` in `globals.css`.
 
 ## Cards from Limitless

@@ -69,12 +69,12 @@ Board colors (tier colors, backgrounds, borders) are canvas colors that users ca
 
 Fonts are loaded with `next/font` in `src/app/layout.tsx`. The controls use Figtree (`--font-figtree`), with `system-ui` and `sans-serif` as fallbacks. Canvas text uses Inter Black (900, `--font-inter`). Hex fields and bulk import use the device's monospace (`font-mono`). The next/font variables are not generated, because next/font sets them.
 
-| Token          | Size | Weight | Used for                                           |
-| -------------- | ---- | ------ | -------------------------------------------------- |
-| `text-nav`     | 16px | 600    | Main nav, and fields on phones                     |
-| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500 |
-| `text-detail`  | 13px | 600    | Section headings. Bulk import from `b7` up at 400  |
-| `text-caption` | 12px | 400    | Search result captions, on a 16px line             |
+| Token          | Size | Weight | Used for                                                            |
+| -------------- | ---- | ------ | ------------------------------------------------------------------- |
+| `text-field`   | 16px | 400    | Fields on phones                                                    |
+| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 600 |
+| `text-detail`  | 13px | 600    | Section headings. Bulk import from `b7` up at 400                   |
+| `text-caption` | 12px | 400    | Search result captions, on a 16px line                              |
 
 - Sizes are in `rem`, in the `@theme` block at the top of `globals.css`, because the token generator has no type scale yet. Tailwind utilities are `text-body` and so on.
 - Fields are 16px below `b7`, because iPhones zoom the page when a field under 16px is tapped.
@@ -198,7 +198,7 @@ Code uses Tailwind's `sm` and `md`, which are the same widths as `b6` and `b7`. 
 
 ### Main nav
 
-- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 16px at weight 600, and columns size to their labels.
+- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 600, and columns size to their labels.
 - A colored block hugs the selected word, with 4px of padding top and bottom and 8px at the sides. It springs to the next word over `duration-move` and changes color over `duration-hover`.
 - Reduced motion: the block moves straight away and only its color fades.
 
@@ -215,6 +215,6 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
-- **November 6, 2026 · v1.2:** Added a type scale: 16, 14, 13 and 12px, up from 13px page text. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
+- **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14, 13 and 12px, up from 13px page text. The main nav went from 16px to 14px. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).

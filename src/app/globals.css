@@ -7,7 +7,7 @@
 /* The type scale, from design/hutton-design-system.md. Written here because the token
    generator has no type scale yet. */
 @theme static {
-  --text-nav: 1rem;
+  --text-field: 1rem;
   --text-body: 0.875rem;
   --text-detail: 0.8125rem;
   --text-caption: 0.75rem;
@@ -193,7 +193,7 @@ body {
   position: relative;
   padding-block: var(--spacing-2);
   color: var(--tb-control-text);
-  font-size: var(--text-nav);
+  font-size: var(--text-body);
   font-weight: 600;
   cursor: pointer;
   transition: color var(--duration-hover) ease-out;
@@ -217,7 +217,7 @@ body {
   color: var(--tb-text);
 
   /* iPhones zoom the page when a field under 16px is tapped */
-  font-size: var(--text-nav);
+  font-size: var(--text-field);
 }
 
 .tierbinder-field::placeholder {
