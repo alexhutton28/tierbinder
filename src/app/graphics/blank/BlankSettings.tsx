@@ -63,7 +63,7 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
         type="number"
         min={MIN_CARD_WIDTH}
         max={MAX_CARD_WIDTH}
-        className="tierbinder-field w-[64px]"
+        className="tierbinder-field w-[64px] tabular-nums"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);

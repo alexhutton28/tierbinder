@@ -42,9 +42,9 @@ function loadSaved() {
 
 // The sidebar's main nav, in the tier list's default colors
 const TABS = [
-  { value: 'add', label: 'Add Cards', color: 'var(--color-tier-fraud)' },
-  { value: 'customize', label: 'Customize', color: 'var(--color-tier-mid)' },
-  { value: 'save', label: 'Save & Share', color: 'var(--color-tier-solid)' },
+  { value: 'add', label: 'Add Cards', icon: 'plus', color: 'var(--color-tier-fraud)' },
+  { value: 'customize', label: 'Customize', icon: 'sliders', color: 'var(--color-tier-mid)' },
+  { value: 'save', label: 'Save & Share', icon: 'share', color: 'var(--color-tier-solid)' },
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
@@ -465,7 +465,7 @@ export default function Editor() {
   return (
     // The board, with the sidebar on its left (below it on narrow screens). On wide
     // screens each scrolls on its own, so the search results stay beside the board.
-    <div className="tierbinder-page w-full md:h-full flex flex-col text-[13px]">
+    <div className="tierbinder-page w-full md:h-full flex flex-col text-body">
       <header className="tierbinder-top">
         <Link href="/" className="tierbinder-brand">
           <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
@@ -575,7 +575,7 @@ export default function Editor() {
           </div>
         </div>
 
-        <aside className="tierbinder-side md:w-[340px] md:flex-none flex flex-col min-w-0 md:min-h-0">
+        <aside className="tierbinder-side md:w-[352px] md:flex-none flex flex-col min-w-0 md:min-h-0">
           <div className="tierbinder-side-head">
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>
@@ -598,6 +598,10 @@ export default function Editor() {
               <input
                 ref={searchInputRef}
                 className="tierbinder-field flex-1 min-w-0"
+                // Card names aren't real words: don't let phones "fix" them
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
                 placeholder="Card name"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -639,7 +643,10 @@ export default function Editor() {
                 <textarea
                   rows={10}
                   aria-label="Cards to import"
-                  className="tierbinder-field font-mono text-[12px]"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  className="tierbinder-field font-mono"
                   placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
@@ -649,12 +656,12 @@ export default function Editor() {
                 </Button>
               </>
             )}
-            {/* Fixed-size tiles (80x111 card + 14px caption), as many per row as fit; the
-              box is 3 rows tall (3 x 125 + 2 x 4), or the rest of the sidebar on wide
+            {/* Fixed-size tiles (80x111 card + 16px caption), as many per row as fit; the
+              box is 3 rows tall (3 x 127 + 2 x 4), or the rest of the sidebar on wide
               screens, and scrolls down */}
             <div
               hidden={importing}
-              className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[125px] gap-2 max-h-[383px] md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
+              className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[127px] gap-2 max-h-[389px] md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
             >
               {results.map((card) => (
                 <div
@@ -662,7 +669,7 @@ export default function Editor() {
                   role="button"
                   tabIndex={0}
                   title={`${card.set} ${card.number}`}
-                  className="cursor-grab select-none flex flex-col items-center text-[11px] leading-[14px] text-(--tb-muted)"
+                  className="cursor-grab select-none flex flex-col items-center text-caption text-(--tb-muted)"
                   // Mouse and pen only: on touch, a press-and-move scrolls the results
                   onPointerDown={(e) => {
                     if (e.pointerType === 'touch' || e.button !== 0) return;

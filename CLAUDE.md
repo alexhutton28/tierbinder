@@ -42,7 +42,7 @@ All paths are in `src/app/`.
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
 - `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `tool`).
-- `ui/RadioBar.tsx`: the main nav. A block in each option's color hugs the selected word, measured from the word, and springs to the next; left and right arrow keys move it.
+- `ui/RadioBar.tsx`: the main nav. Each option has an icon from `public/`, drawn in the text color. A block in each option's color hugs the selected icon and word, measured from them, and springs to the next; left and right arrow keys move it.
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
 - `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
 - `Loader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
@@ -107,7 +107,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
   - Split card: Remove card, Replace top half, Replace bottom half, Swap halves, Unsplit (keeps the top).
   - A search result dropped on a card opens the menu with the result's choices (`cardMenu.dropped`): Add as split card (the result is the bottom half) or Add to tier/canvas (the graphic's `dropCard` at the drop point); on a split card, Replace top half, Replace bottom half or Add to tier/canvas.
   - Replace and Make split card switch to the Add Cards tab and put it in picking mode (`picking`: `{ id, part: 'top' | 'bottom' }`): replacing searches that card's name, and the next result clicked takes its place (or becomes the bottom half), until Cancel or Escape.
-- The Add Cards tab: results scroll (3 rows tall on narrow screens). Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
+- The Add Cards tab: autocorrect, auto-capitalize and spellcheck are off on the search field and bulk import, because card names aren't real words. Results scroll (3 rows tall on narrow screens). Click one to add it to the chosen target, or drag it onto the board (pointer events, not HTML drag and drop: a copy of the card follows the pointer after a 5px move, and the release goes to the graphic's `dropCard`; Escape cancels; mouse and pen only, since on touch a press-and-move scrolls the results). A blank search clears the results.
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
 - The board type dropdown above the board lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
@@ -116,6 +116,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## Look and motion
 
 - The palette, look and motion are in `design/hutton-design-system.md`, including `--ease-spring`, `--duration-move`, `--duration-drop` and `--duration-fade`.
+- The type scale (`text-field`, `text-body`, `text-caption`) is in the `@theme` block at the top of `globals.css`, since the token generator has none. Fields are 16px on phones, because iPhones zoom the page on smaller ones.
 - Popups (the card menu, dropdowns) share `.tierbinder-menu` in `globals.css`.
 
 ## Cards from Limitless

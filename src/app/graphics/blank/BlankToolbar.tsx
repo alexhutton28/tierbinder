@@ -80,7 +80,7 @@ function SizeField({
         aria-label={label}
         min={MIN_STROKE_WIDTH}
         max={MAX_STROKE_WIDTH}
-        className="tierbinder-field w-[64px]"
+        className="tierbinder-field w-[64px] tabular-nums"
         value={draft}
         onChange={(e) => {
           setDraft(e.target.value);
