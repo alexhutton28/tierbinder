@@ -75,7 +75,7 @@ function Face({
         verticalAlign="middle"
         fontFamily={fontFamily}
         fontStyle="900"
-        fontSize={13}
+        fontSize={12}
         fill="#ffffff"
       />
     </>
