@@ -19,7 +19,8 @@ deployed on Vercel's Hobby plan.
 
 ## Gotchas
 
-- **Custom spacing scale** (`design/hutton-design-system.md`): Tailwind's numbered spacing doesn't mean the default sizes here, e.g. `p-4` is 16px, but `px-6` (64px) and `gap-5` (32px) are much bigger than usual. Round to the nearest step rather than writing arbitrary spacing like `mt-[12px]`. Widths and heights stay raw (`w-[260px]`).
+- **Custom spacing scale** (`design/hutton-design-system.md`): Tailwind's numbered spacing doesn't mean the default sizes here, e.g. `p-4` is 16px, but `px-6` (64px) and `gap-5` (32px) are much bigger than usual. Round to the nearest step rather than writing arbitrary spacing like `mt-[12px]`.
+- **No magic numbers** (`design/hutton-design-system.md`, section 12): let flex, grid, `aspect-ratio`, `clamp()` and container queries size things; name each fixed size once (a `--tb-*` size in `globals.css` or a TS constant); and ask Alex when a layout has a real choice.
 - **`html` and `body` don't scroll** (`overflow: hidden` in `globals.css`). The page has its own scroll container.
 - **Tailwind's `hover:` variant only applies on devices that can hover.** For hover effects that must work everywhere use plain `:hover` in CSS.
 - **Tailwind's `shadow-[...]` stacks the shadow with four empty layers**, so animating `box-shadow` from it fades instead of moving. Set shadows that animate in plain CSS.
@@ -69,6 +70,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## The board
 
 - 1200×675 for every graphic; export is 2× (2400×1350 PNG), downloaded (named after the graphic's kind) or copied.
+- On screen the stage scales to fill the workspace, larger or smaller than 1200 (`scale` in `Editor.tsx`): its width on narrow screens, and from `b7` up as much as fits beside the sidebar, with room left for the board type, toolbar and status, which it measures rather than assumes.
 - Cards are 100×140, clipped to the card images' rounded corners (`CARD_CORNER_RADIUS`, ~4.5px).
 - Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline), and any a graphic adds (the eraser's circle).
 - The selection outline follows a dragged card: Konva moves the card without React, so the stage's `dragmove` and `dragend` move the outline too. Cards carry their item's id (`CardNode` sets the group's `id`), which is how the editor knows the dragged card is the selected one.

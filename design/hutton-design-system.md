@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.2 · November 6, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.3 · November 7, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -98,8 +98,8 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 - `space-button` is the one exception to the steps: the side padding of buttons, where 8px is too tight and 16px too wide. It is for buttons only.
 - Padding, margins, gaps and offsets use a step, in classes (`gap-3`) and in CSS (`var(--spacing-3)`). A size between steps rounds to the nearest one; there are no arbitrary spacing values such as `mt-[12px]`.
-- Widths and heights are component sizes, not spacing, and use raw values (`w-[260px]`).
-- An offset that has to equal a component size stays raw.
+- Widths and heights are component sizes, not spacing. Each one is named once and reused (see No magic numbers in section 12), and most should come from the layout instead of a fixed number.
+- An offset that has to equal a component size uses that size's name, not a copy of its value.
 - Shadow offsets and animation distances belong to the shadow or the motion, not the spacing scale.
 
 ## 6. Border radius
@@ -184,6 +184,16 @@ Code uses Tailwind's `sm` and `md`, which are the same widths as `b6` and `b7`. 
 - `html` and `body` do not scroll. The page gives itself a scroll container.
 - The sticky top bar tints the iOS status bar. Respect `env(safe-area-inset-*)`.
 
+### No magic numbers: build responsive layouts
+
+Treat responsive design as a boon, not a limitation. Each window size is a chance to use the space better (more result columns in a wider sidebar, a bigger board on a big screen), not only a desktop layout squeezed down.
+
+- **Let the layout size things.** Use flex and grid (`fr`, `repeat(auto-fill, minmax(…))`), `aspect-ratio`, `min()`, `max()` and `clamp()`, container queries and their units (`cqw`, `cqh`), and `%` or `dvh`, so sizes follow the content and the space.
+- **No magic numbers.** A number worked out from other sizes (`calc(100dvh - 192px)` for "the bars above and below", `389px` for "3 rows", `x - 40` for "half the image") is never written as its result. Either the layout makes it unnecessary, or it is written as the calculation of the named sizes it comes from.
+- **Every fixed size has one name.** A size the design really fixes (the top bar, a control's height, a swatch) is a `--tb-*` size on `body` in `globals.css`, or a constant in TypeScript, and every place that size appears uses the name. A size that the canvas code and CSS share comes from the TypeScript constant as a CSS variable, never a copy.
+- **Ask when the layout has a real choice.** What grows, what wraps or stacks, where a size stops growing, what moves at a breakpoint: present Alex with the options (side by side where it helps) instead of picking one.
+- Spacing still uses the spacing steps (section 5), and canvas drawing follows Exceptions.
+
 ## 13. Components
 
 ### Top bar
@@ -205,15 +215,17 @@ Code uses Tailwind's `sm` and `md`, which are the same widths as `b6` and `b7`. 
 
 Places where the token rules do not apply. Keep raw values in named constants, matching a palette color when one exists.
 
-| Where                                            | Allowed                        | Why                                                                                   |
-| ------------------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------- |
-| Canvas drawing: Konva boards                     | Named color and size constants | Canvas drawing does not take CSS variables, and exported images must match the screen |
-| User-chosen colors, including saved board colors | Any value                      | They belong to the user's content, not the design system                              |
-| Exported images                                  | Values the artwork needs       | They are images, not interface                                                        |
-| `themeColor` in metadata                         | Hex matching the top bar       | Browsers read it as a plain value                                                     |
+| Where                                            | Allowed                         | Why                                                                                   |
+| ------------------------------------------------ | ------------------------------- | ------------------------------------------------------------------------------------- |
+| Canvas drawing: Konva boards                     | Named color and size constants  | Canvas drawing does not take CSS variables, and exported images must match the screen |
+| User-chosen colors, including saved board colors | Any value                       | They belong to the user's content, not the design system                              |
+| Exported images                                  | Values the artwork needs        | They are images, not interface                                                        |
+| Image display sizes: search result thumbnails    | A chosen fixed size, named once | Card art reads best at a size picked by eye; deriving it from the layout adds nothing |
+| `themeColor` in metadata                         | Hex matching the top bar        | Browsers read it as a plain value                                                     |
 
 ## 15. Changelog
 
+- **November 7, 2026 · v1.3:** Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).

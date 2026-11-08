@@ -54,6 +54,22 @@ body {
   --tb-focus: var(--color-storm-200);
   --tb-radius: var(--radius-small);
 
+  /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
+     design/hutton-design-system.md). Everything else is sized by the layout. */
+  --tb-line-width: 1px;
+  --tb-focus-width: 2px;
+  --tb-top-height: 48px;
+  --tb-control-height: 32px;
+  --tb-icon: 16px;
+  --tb-swatch: 24px;
+  --tb-number-field: 64px;
+  --tb-sidebar-min: 352px;
+  --tb-sidebar-max: 512px;
+
+  /* Image sizes, chosen rather than derived (see Exceptions) */
+  --tb-thumb-width: 80px;
+  --tb-thumb-height: 111px;
+
   background: var(--tb-page);
 }
 
@@ -71,10 +87,10 @@ body {
   display: flex;
   flex: none;
   align-items: center;
-  height: calc(48px + env(safe-area-inset-top));
+  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
-  border-bottom: 1px solid var(--tb-line);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-top);
 }
 
@@ -83,33 +99,33 @@ body {
   flex: none;
 }
 
-/* Beside the sidebar, the board takes the height it can and stays centered */
+/* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
+   workspace. */
 @media (width >= 48rem) {
   .tierbinder-canvas {
     align-items: center;
     justify-content: center;
   }
-
-  .tierbinder-board {
-    width: min(100%, 1200px, calc((100dvh - 192px) * 16 / 9));
-  }
 }
 
 .tierbinder-side {
-  border-top: 1px solid var(--tb-line);
+  border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
 }
 
+/* Beside the board, it grows with wide windows so search shows more columns */
 @media (width >= 48rem) {
   .tierbinder-side {
+    flex: none;
+    width: clamp(var(--tb-sidebar-min), 30vw, var(--tb-sidebar-max));
     border-top: 0;
-    border-right: 1px solid var(--tb-line);
+    border-right: var(--tb-line-width) solid var(--tb-line);
   }
 }
 
 .tierbinder-side-head {
   padding: var(--spacing-3);
-  border-bottom: 1px solid var(--tb-line);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
 }
 
 .tierbinder-panel {
@@ -127,14 +143,14 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-4);
-  min-height: 32px;
+  min-height: var(--tb-control-height);
   color: var(--tb-muted);
 }
 
 .tierbinder-button {
-  height: 32px;
+  height: var(--tb-control-height);
   padding-inline: var(--spacing-button);
-  border: 1px solid var(--tb-control-border);
+  border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
   white-space: nowrap;
   color: var(--tb-control-text);
@@ -215,8 +231,8 @@ body {
 /* Set per option in ui/RadioBar.tsx with mask-image */
 .tierbinder-radio-icon {
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
   background: currentcolor;
   mask-position: center;
   mask-repeat: no-repeat;
@@ -228,9 +244,9 @@ body {
 }
 
 .tierbinder-field {
-  height: 32px;
+  height: var(--tb-control-height);
   padding-inline: var(--spacing-3);
-  border: 1px solid var(--tb-field);
+  border: var(--tb-line-width) solid var(--tb-field);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
   color: var(--tb-text);
@@ -254,11 +270,44 @@ textarea.tierbinder-field {
   }
 }
 
+/* Hex color fields fit #RRGGBB in the monospace font, plus their padding and border */
+.tierbinder-hex-field {
+  width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
+}
+
+.tierbinder-number-field {
+  width: var(--tb-number-field);
+}
+
+/* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
+   screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. */
+.tierbinder-results {
+  --row: calc(var(--tb-thumb-height) + var(--text-caption--line-height));
+  --rows-shown: 3;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
+  grid-auto-rows: var(--row);
+  gap: var(--spacing-2);
+  max-height: calc(var(--rows-shown) * var(--row) + (var(--rows-shown) - 1) * var(--spacing-2));
+}
+
+@media (width >= 48rem) {
+  .tierbinder-results {
+    max-height: none;
+  }
+}
+
+.tierbinder-thumb {
+  width: var(--tb-thumb-width);
+  height: var(--tb-thumb-height);
+}
+
 /* The color picker, as a plain swatch */
 .tierbinder-page input[type='color'] {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: var(--tb-swatch);
+  height: var(--tb-swatch);
   border-radius: var(--tb-radius);
   overflow: hidden;
   cursor: pointer;
@@ -278,7 +327,7 @@ textarea.tierbinder-field {
 
 .tierbinder-popup {
   overflow: hidden;
-  border: 1px solid var(--tb-control-border);
+  border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
   background: var(--tb-popup);
   box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
@@ -286,8 +335,8 @@ textarea.tierbinder-field {
 
 /* Feather's chevron-down, colored by the text around it */
 .tierbinder-chevron {
-  width: 16px;
-  height: 16px;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
   background: currentcolor;
   mask: url('/chevron-down.svg') center / contain no-repeat;
 }
@@ -315,8 +364,8 @@ textarea.tierbinder-field {
 }
 
 .tierbinder-page :focus-visible {
-  outline: 2px solid var(--tb-focus);
-  outline-offset: 2px;
+  outline: var(--tb-focus-width) solid var(--tb-focus);
+  outline-offset: var(--tb-focus-width);
 }
 
 @media (prefers-reduced-motion: reduce) {

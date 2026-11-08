@@ -41,7 +41,7 @@ export default function ColorField({
       />
       <input
         aria-label={label}
-        className="tierbinder-field w-[96px] font-mono"
+        className="tierbinder-field tierbinder-hex-field font-mono"
         spellCheck={false}
         value={draft}
         onChange={(e) => {
