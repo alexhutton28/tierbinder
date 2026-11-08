@@ -73,6 +73,7 @@ export default function TierListCanvas({
           item={item}
           x={x}
           y={y}
+          fontFamily={fontFamily}
           // Split cards always have a border and divider: the tier's color if tier
           // borders are on, else the board's border color
           borderColor={

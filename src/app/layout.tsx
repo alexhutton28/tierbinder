@@ -12,7 +12,7 @@ const inter = Inter({
   weight: '900',
 });
 
-// The controls. A stand-in for Google Sans Rounded.
+// The controls
 const figtree = Figtree({
   variable: '--font-figtree',
   subsets: ['latin'],

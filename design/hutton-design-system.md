@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.1 · November 6, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.2 · November 6, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -18,7 +18,7 @@ This system records the tool as it is today. Where the code differs, it is track
 - The palette. New colors need Alex's approval.
 
 **Standard (follow as written)**
-Spacing scale, radius values, breakpoints and motion.
+Spacing scale, type scale, radius values, breakpoints and motion.
 
 **Open (can grow)**
 Semantic tokens that map onto existing palette colors and spacing steps, recorded in the Changelog.
@@ -31,7 +31,7 @@ Semantic tokens that map onto existing palette colors and spacing steps, recorde
 - Professional but fun and friendly, with smooth transitions and rounded borders.
 - A real design tool that feels smooth and satisfying to use.
 - Dark interface in petrel and storm. Storm blue marks main actions, and the tier colors mark the main nav.
-- The window is a working tool: a 48px top bar, a docked left sidebar and the board centered in its own darker workspace, divided by 1px lines with no floating panels. Controls are 32px tall with 13px text, and most stay quiet until hovered. Controls and popups use `radius-small`.
+- The window is a working tool: a 48px top bar, a docked left sidebar and the board centered in its own darker workspace, divided by 1px lines with no floating panels. Controls are 32px tall with 14px text, and most stay quiet until hovered. Controls and popups use `radius-small`.
 - Color is used by name through tokens (`bg-petrel-900`, `var(--color-storm-300)`), not raw hex.
 
 ## 3. Color
@@ -67,9 +67,19 @@ Board colors (tier colors, backgrounds, borders) are canvas colors that users ca
 
 ## 4. Typography
 
-Fonts are loaded with `next/font` in `src/app/layout.tsx`. The controls use Figtree (`--font-figtree`), a stand-in for Google Sans Rounded. Canvas text uses Inter Black (900, `--font-inter`). The next/font variables are not generated, because next/font sets them.
+Fonts are loaded with `next/font` in `src/app/layout.tsx`. The controls use Figtree (`--font-figtree`), with `system-ui` and `sans-serif` as fallbacks. Canvas text uses Inter Black (900, `--font-inter`). Hex fields and bulk import use the device's monospace (`font-mono`). The next/font variables are not generated, because next/font sets them.
 
-There is no type scale yet.
+| Token          | Size | Weight | Used for                                                            |
+| -------------- | ---- | ------ | ------------------------------------------------------------------- |
+| `text-field`   | 16px | 400    | Fields on phones                                                    |
+| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 600 |
+| `text-caption` | 12px | 400    | Search result captions, on a 16px line. Section headings at 600     |
+
+- Sizes are in `rem`, in the `@theme` block at the top of `globals.css`, because the token generator has no type scale yet. Tailwind utilities are `text-body` and so on.
+- Sizes stay on even numbers. Fields, including bulk import, are 16px below `b7`, because iPhones zoom the page when a field under 16px is tapped.
+- Weights: buttons 500; section headings, the main nav and the selected dropdown option 600.
+- Page text keeps Tailwind's 1.5 line height. Letter spacing is left at each font's default.
+- Number fields use even-width digits (`tabular-nums`).
 
 ## 5. Spacing
 
@@ -187,8 +197,8 @@ Code uses Tailwind's `sm` and `md`, which are the same widths as `b6` and `b7`. 
 
 ### Main nav
 
-- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 16px at weight 600, and columns size to their labels.
-- A colored block hugs the selected word, with 4px of padding top and bottom and 8px at the sides. It springs to the next word over `duration-move` and changes color over `duration-hover`.
+- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 600, and columns size to their labels. Each label has a 16px Feather icon before it, 4px away: `plus`, `sliders` and `share`. These are stand-ins until Alex draws TierBinder's own.
+- A colored block hugs the selected icon and word, with 4px of padding top and bottom and 8px at the sides (4px below `b3`, so the three tabs fit a small phone). It springs to the next word over `duration-move` and changes color over `duration-hover`.
 - Reduced motion: the block moves straight away and only its color fades.
 
 ## 14. Exceptions
@@ -204,5 +214,6 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).
