@@ -63,6 +63,8 @@ body {
   --tb-icon: 16px;
   --tb-swatch: 24px;
   --tb-number-field: 64px;
+
+  /* Chosen by eye (see Exceptions): the default fits the main nav with its icons */
   --tb-sidebar-default: 368px;
   --tb-sidebar-min: 250px;
 
@@ -72,7 +74,7 @@ body {
   --tb-handle-line: 2px;
   --tb-handle-hover-delay: 150ms;
 
-  /* Image sizes, chosen rather than derived (see Exceptions) */
+  /* Image sizes, chosen by eye (see Exceptions) */
   --tb-thumb-width: 80px;
   --tb-thumb-height: 111px;
 
