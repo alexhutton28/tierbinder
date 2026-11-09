@@ -32,6 +32,12 @@ function saveShare(share: number | null) {
   } catch {}
 }
 
+// CSS keeps the sidebar at least this wide (--tb-sidebar-min). A width saved below it
+// would make the sidebar jump wider on a bigger window, so it's saved at the minimum
+function minWidth(sidebar: HTMLElement) {
+  return parseFloat(getComputedStyle(sidebar).getPropertyValue('--tb-sidebar-min')) || 0;
+}
+
 // Sets the width on the sidebar itself rather than through React state, so dragging
 // doesn't re-render the editor for every pointer move
 function applyShare(sidebar: HTMLElement, share: number | null) {
@@ -43,6 +49,8 @@ export default function SidebarHandle() {
   const ref = React.useRef<HTMLDivElement>(null);
   // The sidebar's width in px, for screen readers and the readout
   const [width, setWidth] = React.useState(0);
+  // Its narrowest width (--tb-sidebar-min in globals.css)
+  const [min, setMin] = React.useState(0);
   // Where the readout shows (the pointer's height, or the middle for keys), while resizing
   const [readoutY, setReadoutY] = React.useState<number | null>(null);
 
@@ -52,10 +60,12 @@ export default function SidebarHandle() {
     if (!sidebar) return;
     applyShare(sidebar, loadShare());
     setWidth(sidebar.offsetWidth);
+    setMin(minWidth(sidebar));
   }, []);
 
   function resize(sidebar: HTMLElement, to: number | null) {
-    const share = to === null ? null : Math.min(1, Math.max(0, to) / window.innerWidth);
+    const share =
+      to === null ? null : Math.min(1, Math.max(minWidth(sidebar), to) / window.innerWidth);
     applyShare(sidebar, share);
     saveShare(share);
     setWidth(sidebar.offsetWidth);
@@ -76,7 +86,7 @@ export default function SidebarHandle() {
       aria-orientation="vertical"
       aria-label="Resize sidebar"
       aria-valuenow={width}
-      aria-valuemin={0}
+      aria-valuemin={min}
       aria-valuetext={`${width} pixels wide`}
       tabIndex={0}
       className="tierbinder-side-handle"

@@ -64,6 +64,7 @@ body {
   --tb-swatch: 24px;
   --tb-number-field: 64px;
   --tb-sidebar-default: 368px;
+  --tb-sidebar-min: 250px;
 
   /* The sidebar's resize handle: how far either side of the line grabs it, and how long
      the pointer rests on it before it lights up, so passing over doesn't flash it */
@@ -122,7 +123,7 @@ body {
   @variant b8 {
     position: relative;
     flex: none;
-    width: var(--tb-sidebar-width, var(--tb-sidebar-default));
+    width: max(var(--tb-sidebar-min), var(--tb-sidebar-width, var(--tb-sidebar-default)));
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
   }
@@ -311,6 +312,30 @@ body {
   font-weight: 600;
 }
 
+/* RadioBar's space, and the hidden copies of the bar it measures to pick a mode */
+.tierbinder-radio-fit {
+  position: relative;
+}
+
+/* A zero-size clipped box, so the copies never widen the page */
+.tierbinder-radio-sizers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.tierbinder-radio-sizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Each label reserves its semibold width with a hidden copy, so selecting a tab doesn't
    shift the tabs or the block (the usual fix for bold-on-select) */
 .tierbinder-radio-label {
@@ -325,6 +350,21 @@ body {
   font-weight: 600;
   visibility: hidden;
   user-select: none;
+}
+
+/* Label only: no icons */
+.tierbinder-radio[data-mode='label'] .tierbinder-radio-icon {
+  display: none;
+}
+
+/* Icon only: the label stays for screen readers, out of sight */
+.tierbinder-radio[data-mode='icon'] .tierbinder-radio-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .tierbinder-field {
