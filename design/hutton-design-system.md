@@ -57,7 +57,7 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 | Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                 |
 | Storm 300   | `#9CC0D4` |                | Main buttons                                     |
 | Storm 400   | `#78A5BD` |                | Top bar                                          |
-| Storm 600   | `#466E85` |                | Not used yet                                     |
+| Storm 600   | `#466E85` |                | Text field focus                                 |
 | Storm 800   | `#2A4352` |                | Not used yet                                     |
 | Tier Goated | `#F0392B` |                | Default tier color. Board only                   |
 | Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav |
@@ -139,7 +139,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 ### Focus
 
 - `.tierbinder-page :focus-visible` draws a 2px `--tb-focus` outline, 2px out.
-- Text fields (`.tierbinder-field`) are focused on every click, so they get a quieter sign instead: their edge turns Storm 300 (70% over the field) with a soft 8px Storm 300 glow (40%), fading in over `duration-hover`.
+- Text fields (`.tierbinder-field`) are focused on every click, so they get a quieter sign instead: their edge turns Storm 600 with a soft 8px Storm 600 glow (60%), fading in over `duration-fade`.
 
 ## 11. Motion
 
@@ -240,7 +240,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
-- **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav. Text fields show focus with a soft Storm 300 glow instead of the focus ring.
+- **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav. Text fields show focus with a soft Storm 600 glow instead of the focus ring.
 - **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added Consult best practices to the principles. The main nav hugs its tabs, in regular weight (400), with the selected tab semibold (600). The sidebar became resizable by dragging its edge or with the arrow keys, between 250px and the window less a 512px workspace, and the main nav names only the selected tab when it doesn't fit, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, sizes Alex chose by eye are allowed and listed in Exceptions, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.

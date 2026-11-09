@@ -120,8 +120,8 @@ body {
   background: var(--tb-field);
   color: var(--tb-text);
   transition:
-    border-color var(--duration-hover) ease-out,
-    box-shadow var(--duration-hover) ease-out;
+    border-color var(--duration-fade) ease-out,
+    box-shadow var(--duration-fade) ease-out;
 
   /* iPhones zoom the page when a field under 16px is tapped */
   font-size: var(--text-field);
@@ -171,11 +171,11 @@ textarea.tierbinder-field {
 }
 
 /* Text fields are focused on every click, so they get a quieter sign than the ring: a
-   Storm 300 edge with a soft glow, like the sidebar handle's */
+   Storm 600 edge with a soft glow, darker than the ring so it stays in the background */
 .tierbinder-page .tierbinder-field:focus-visible {
   outline: none;
-  border-color: color-mix(in srgb, var(--color-storm-300) 70%, var(--tb-field));
-  box-shadow: 0 0 var(--tb-focus-glow) color-mix(in srgb, var(--color-storm-300) 40%, transparent);
+  border-color: var(--color-storm-600);
+  box-shadow: 0 0 var(--tb-focus-glow) color-mix(in srgb, var(--color-storm-600) 60%, transparent);
 }
 
 /* Card menu and dropdowns (ui/Dropdown.tsx): stretches out from its edge
