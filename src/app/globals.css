@@ -68,6 +68,10 @@ body {
   --tb-sidebar-default: 368px;
   --tb-sidebar-min: 250px;
 
+  /* The workspace never gets narrower than this, which caps the sidebar: the main area
+     keeps its space, as in most editors with resizable panels */
+  --tb-workspace-min: var(--breakpoint-b5);
+
   /* The sidebar's resize handle: how far either side of the line grabs it, and how long
      the pointer rests on it before it lights up, so passing over doesn't flash it */
   --tb-handle-hit: 8px;
@@ -125,7 +129,11 @@ body {
   @variant b8 {
     position: relative;
     flex: none;
-    width: max(var(--tb-sidebar-min), var(--tb-sidebar-width, var(--tb-sidebar-default)));
+    width: clamp(
+      var(--tb-sidebar-min),
+      var(--tb-sidebar-width, var(--tb-sidebar-default)),
+      100vw - var(--tb-workspace-min)
+    );
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
   }
@@ -286,8 +294,11 @@ body {
   transition: color var(--duration-hover) ease-out;
 }
 
+/* Block-level flex, not inline: an inline box sits on the text's baseline, which moves
+   as a label folds, and that nudges the icon up or down. Labels keep their line's height
+   while folded, so every tab stays the same height. */
 .tierbinder-radio-option > span {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   padding: var(--spacing-2);
   white-space: nowrap;

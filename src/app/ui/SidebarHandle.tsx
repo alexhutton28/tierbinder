@@ -32,10 +32,14 @@ function saveShare(share: number | null) {
   } catch {}
 }
 
-// CSS keeps the sidebar at least this wide (--tb-sidebar-min). A width saved below it
-// would make the sidebar jump wider on a bigger window, so it's saved at the minimum
-function minWidth(sidebar: HTMLElement) {
-  return parseFloat(getComputedStyle(sidebar).getPropertyValue('--tb-sidebar-min')) || 0;
+// CSS keeps the sidebar between these (--tb-sidebar-min, and the window less
+// --tb-workspace-min; the minimum wins). A width saved outside them would make the sidebar
+// jump on a different window, so it's saved within them.
+function limits(sidebar: HTMLElement) {
+  const style = getComputedStyle(sidebar);
+  const min = parseFloat(style.getPropertyValue('--tb-sidebar-min')) || 0;
+  const workspace = parseFloat(style.getPropertyValue('--tb-workspace-min')) || 0;
+  return { min, max: Math.max(min, window.innerWidth - workspace) };
 }
 
 // Sets the width on the sidebar itself rather than through React state, so dragging
@@ -49,8 +53,8 @@ export default function SidebarHandle() {
   const ref = React.useRef<HTMLDivElement>(null);
   // The sidebar's width in px, for screen readers and the readout
   const [width, setWidth] = React.useState(0);
-  // Its narrowest width (--tb-sidebar-min in globals.css)
-  const [min, setMin] = React.useState(0);
+  // Its narrowest and widest widths, for screen readers
+  const [range, setRange] = React.useState({ min: 0, max: 0 });
   // Where the readout shows (the pointer's height, or the middle for keys), while resizing
   const [readoutY, setReadoutY] = React.useState<number | null>(null);
 
@@ -60,12 +64,13 @@ export default function SidebarHandle() {
     if (!sidebar) return;
     applyShare(sidebar, loadShare());
     setWidth(sidebar.offsetWidth);
-    setMin(minWidth(sidebar));
+    setRange(limits(sidebar));
   }, []);
 
   function resize(sidebar: HTMLElement, to: number | null) {
-    const share =
-      to === null ? null : Math.min(1, Math.max(minWidth(sidebar), to) / window.innerWidth);
+    const { min, max } = limits(sidebar);
+    setRange({ min, max });
+    const share = to === null ? null : Math.min(max, Math.max(min, to)) / window.innerWidth;
     applyShare(sidebar, share);
     saveShare(share);
     setWidth(sidebar.offsetWidth);
@@ -86,7 +91,8 @@ export default function SidebarHandle() {
       aria-orientation="vertical"
       aria-label="Resize sidebar"
       aria-valuenow={width}
-      aria-valuemin={min}
+      aria-valuemin={range.min}
+      aria-valuemax={range.max}
       aria-valuetext={`${width} pixels wide`}
       tabIndex={0}
       className="tierbinder-side-handle"
@@ -110,6 +116,11 @@ export default function SidebarHandle() {
         e.preventDefault();
         resize(sidebar, sidebar.offsetWidth + direction * (e.shiftKey ? KEY_STEP_LARGE : KEY_STEP));
         setReadoutY(sidebar.offsetHeight / 2);
+      }}
+      // The widest width follows the window, so it's refreshed when the handle is reached
+      onFocus={(e) => {
+        const sidebar = e.currentTarget.parentElement;
+        if (sidebar) setRange(limits(sidebar));
       }}
       onBlur={() => setReadoutY(null)}
       onDoubleClick={(e) => {
