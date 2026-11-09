@@ -129,7 +129,8 @@ body {
 }
 
 /* The resize handle: an invisible strip over the sidebar's edge line. On hover (after a
-   short rest) and while dragging, a Storm 300 line with a soft glow shows on it. */
+   short rest), with keyboard focus and while resizing, a Storm 300 line with a soft glow
+   shows on it (with the usual focus ring). */
 .tierbinder-side-handle {
   display: none;
 
@@ -157,7 +158,8 @@ body {
   transition: opacity var(--duration-hover) ease-out;
 }
 
-.tierbinder-side-handle[data-dragging]::after {
+.tierbinder-side-handle[data-resizing]::after,
+.tierbinder-side-handle:focus-visible::after {
   opacity: 1;
   transition-delay: 0s;
 }
@@ -169,7 +171,7 @@ body {
   }
 }
 
-/* The width while dragging, beside the pointer */
+/* The width while resizing, beside the pointer */
 .tierbinder-side-readout {
   position: absolute;
   left: calc(100% + var(--spacing-3));
@@ -242,10 +244,12 @@ body {
   color: var(--tb-selected-text);
 }
 
-/* The main nav (ui/RadioBar.tsx): a colored block that hugs the selected word */
+/* The main nav (ui/RadioBar.tsx): hugs its tabs, with a colored block that hugs the
+   selected word */
 .tierbinder-radio {
   position: relative;
   display: grid;
+  width: fit-content;
   grid-auto-columns: auto;
   grid-auto-flow: column;
   padding: var(--spacing-2);

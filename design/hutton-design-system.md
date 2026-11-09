@@ -27,6 +27,7 @@ Semantic tokens that map onto existing palette colors and spacing steps, recorde
 
 - Make unique designs. Take inspiration from anywhere, but stay out of the AI-generated style. Every element earns its place: taglines, very round corners, eyebrow headers and drop shadows are fine sometimes, when the design calls for them, but they are never defaults.
 - Give every design element thought. Nothing looks or behaves a certain way just because of what it is: each component gets real care for its looks, usability and motion, and still works with a keyboard, a screen reader, touch and reduced motion.
+- Consult best practices. Before building a feature that has an established pattern (a resize handle, a menu, tabs, a dialog, drag and drop), look up how it's usually done: the WAI-ARIA Authoring Practices, platform guidelines, and well-known tools. Follow the convention unless there's a reason not to, and say which one was followed and where it was left.
 - Use color. Do not go monochromatic. Alex has a habit of sticking to one color, so use more of the palette and flag it when one color takes over.
 - Professional but fun and friendly, with smooth transitions and rounded borders.
 - A real design tool that feels smooth and satisfying to use.
@@ -210,11 +211,12 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 - From `b8` up, the sidebar's right edge is a resize handle (`ui/SidebarHandle.tsx`): an 8px strip centered on the 1px line, with the `col-resize` cursor.
 - After resting on it for 150ms, or straight away while dragging, a 2px Storm 300 line with a soft Storm 300 glow fades in over `duration-hover`.
 - Dragging is smooth, not stepped. The width shows in px beside the pointer while dragging. It's saved as a share of the window, so the board keeps its share when the window changes size. Double-click goes back to the default, 352px.
-- No minimum width yet; Alex will choose one. No keyboard control or collapse yet.
+- It follows the WAI-ARIA window splitter pattern: a focusable `separator` that reports its width. Left and right arrows move it 16px, or 64px with Shift, and show the readout.
+- No minimum width yet; Alex will choose one. No collapse yet.
 
 ### Main nav
 
-- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 600, and columns size to their labels. Each label has a 16px Feather icon before it, 4px away: `plus`, `sliders` and `share`. These are stand-ins until Alex draws TierBinder's own.
+- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 600, and columns size to their labels. The bar hugs its tabs rather than filling the sidebar's width. Each label has a 16px Feather icon before it, 4px away: `plus`, `sliders` and `share`. These are stand-ins until Alex draws TierBinder's own.
 - A colored block hugs the selected icon and word, with 4px of padding top and bottom and 8px at the sides (4px below `b3`, so the three tabs fit a small phone). It springs to the next word over `duration-move` and changes color over `duration-hover`.
 - Reduced motion: the block moves straight away and only its color fades.
 
@@ -233,7 +235,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
-- **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. The sidebar became resizable by dragging its edge, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
+- **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added Consult best practices to the principles. The main nav hugs its tabs. The sidebar became resizable by dragging its edge or with the arrow keys, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).
