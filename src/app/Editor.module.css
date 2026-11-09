@@ -28,28 +28,41 @@
   }
 }
 
-.side {
-  border-top: var(--tb-line-width) solid var(--tb-line);
-  background: var(--tb-bar);
+/* The header and the sidebar, as one column left of the board, at the width the user
+   dragged it to (ui/SidebarHandle.tsx) or the default. On narrow screens it dissolves, so
+   the header and the sidebar are laid out in the page on their own (see .side). */
+.sideColumn {
+  display: contents;
 
-  /* Beside the board, at the width the user dragged it to (ui/SidebarHandle.tsx), or the
-     default */
   @variant b8 {
     position: relative;
+    display: flex;
     flex: none;
+    flex-direction: column;
     width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
       100vw - var(--tb-workspace-min)
     );
-    border-top: 0;
+    min-height: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
+  }
+}
+
+/* Below the board on narrow screens (the column's header stays first); beside it, under
+   the header */
+.side {
+  order: 1;
+  border-top: var(--tb-line-width) solid var(--tb-line);
+  background: var(--tb-bar);
+
+  @variant b8 {
+    border-top: 0;
   }
 }
 
 .sideHead {
   padding: var(--spacing-3);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
 }
 
 /* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow

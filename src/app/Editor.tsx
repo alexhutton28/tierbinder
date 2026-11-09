@@ -499,128 +499,19 @@ export default function Editor() {
   }
 
   return (
-    // The board, with the sidebar on its left (below it on narrow screens). On wide
-    // screens each scrolls on its own, so the search results stay beside the board.
-    <div className="tierbinder-page w-full b8:h-full flex flex-col text-body">
-      <header className={styles.top}>
-        <Link href="/" className={styles.brand}>
-          <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
-        </Link>
-      </header>
-      <div className="flex-1 min-h-0 flex flex-col b8:flex-row-reverse">
-        <div
-          ref={workspaceRef}
-          className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
-        >
-          <div
-            ref={boardRef}
-            className="flex flex-col gap-4"
-            style={{ width: BOARD_WIDTH * scale }}
-          >
-            <div className="flex">
-              <Dropdown
-                hideLabel
-                label="Board type"
-                value={doc.kind}
-                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-                onChange={(kind) => {
-                  if (kind !== doc.kind) showBoard(kind);
-                }}
-              />
-            </div>
-            <div ref={boardBoxRef} className="w-full relative">
-              <Stage
-                ref={(stage) => {
-                  stageRef.current = stage;
-                }}
-                width={BOARD_WIDTH * scale}
-                height={BOARD_HEIGHT * scale}
-                scaleX={scale}
-                scaleY={scale}
-                onMouseDown={(e) => {
-                  if (e.target === e.target.getStage() || e.target.name() === 'background') {
-                    setSelectedId(null);
-                  }
-                }}
-                onDragMove={moveOutline}
-                // After the card's own dragend has put it back at its laid-out spot; React only
-                // moves the outline when that spot changes
-                onDragEnd={moveOutline}
-              >
-                <type.Canvas
-                  graphic={graphic}
-                  fontFamily={fontFamily}
-                  onChange={(next) => setGraphic(() => next)}
-                  onSelect={setSelectedId}
-                  onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-                  onPickTarget={setTarget}
-                  onEditSetting={(key) => {
-                    setTab('customize');
-                    setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
-                  }}
-                  tool={tool}
-                />
-                {/* Editor-only layer: hidden while exporting */}
-                <Layer name="editor" listening={false}>
-                  {placements
-                    .filter((p) => p.item.id === selectedId)
-                    .map((p) => (
-                      <Rect
-                        key={p.item.id}
-                        ref={outlineRef}
-                        x={p.x - OUTLINE.width}
-                        y={p.y - OUTLINE.width}
-                        width={p.width + 2 * OUTLINE.width}
-                        height={p.height + 2 * OUTLINE.width}
-                        stroke={OUTLINE.color}
-                        strokeWidth={OUTLINE.width}
-                        cornerRadius={OUTLINE.radius}
-                      />
-                    ))}
-                </Layer>
-              </Stage>
-              {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
-                <div
-                  // A new element for each menu, so each one plays the opening animation
-                  key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
-                  ref={cardMenuRef}
-                  role="menu"
-                  onContextMenu={(e) => e.preventDefault()}
-                  className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
-                  // Kept inside the board's right edge
-                  style={{
-                    minWidth: MENU_WIDTH,
-                    left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
-                    top: shownMenu.y,
-                  }}
-                >
-                  {cardMenuItems(shownMenu).map((label) => (
-                    <button
-                      key={label}
-                      role="menuitem"
-                      className="tierbinder-option"
-                      onClick={() => {
-                        runCardMenuItem(shownMenu, label);
-                        setCardMenu(null);
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {type.Toolbar && (
-              <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
-            )}
-
-            {status && <p className="whitespace-pre-line">{status}</p>}
-          </div>
-        </div>
-
-        <aside className={`${styles.side} flex flex-col min-w-0 b8:min-h-0`}>
-          <SidebarHandle />
+    // The sidebar column (the logo header, then the sidebar) on the left of the board. On
+    // narrow screens the column dissolves (Editor.module.css): the header stays at the top,
+    // then the board, then the sidebar. On wide screens each side scrolls on its own, so
+    // the search results stay beside the board.
+    <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
+      <div className={styles.sideColumn}>
+        <header className={styles.top}>
+          <Link href="/" className={styles.brand}>
+            <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
+          </Link>
+        </header>
+        <SidebarHandle />
+        <aside className={`${styles.side} flex flex-col min-w-0 b8:flex-1 b8:min-h-0`}>
           <div className={styles.sideHead}>
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>
@@ -796,6 +687,113 @@ export default function Editor() {
             </div>
           </section>
         </aside>
+      </div>
+
+      <div
+        ref={workspaceRef}
+        className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+      >
+        <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
+          <div className="flex">
+            <Dropdown
+              hideLabel
+              label="Board type"
+              value={doc.kind}
+              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+              onChange={(kind) => {
+                if (kind !== doc.kind) showBoard(kind);
+              }}
+            />
+          </div>
+          <div ref={boardBoxRef} className="w-full relative">
+            <Stage
+              ref={(stage) => {
+                stageRef.current = stage;
+              }}
+              width={BOARD_WIDTH * scale}
+              height={BOARD_HEIGHT * scale}
+              scaleX={scale}
+              scaleY={scale}
+              onMouseDown={(e) => {
+                if (e.target === e.target.getStage() || e.target.name() === 'background') {
+                  setSelectedId(null);
+                }
+              }}
+              onDragMove={moveOutline}
+              // After the card's own dragend has put it back at its laid-out spot; React only
+              // moves the outline when that spot changes
+              onDragEnd={moveOutline}
+            >
+              <type.Canvas
+                graphic={graphic}
+                fontFamily={fontFamily}
+                onChange={(next) => setGraphic(() => next)}
+                onSelect={setSelectedId}
+                onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                onPickTarget={setTarget}
+                onEditSetting={(key) => {
+                  setTab('customize');
+                  setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+                }}
+                tool={tool}
+              />
+              {/* Editor-only layer: hidden while exporting */}
+              <Layer name="editor" listening={false}>
+                {placements
+                  .filter((p) => p.item.id === selectedId)
+                  .map((p) => (
+                    <Rect
+                      key={p.item.id}
+                      ref={outlineRef}
+                      x={p.x - OUTLINE.width}
+                      y={p.y - OUTLINE.width}
+                      width={p.width + 2 * OUTLINE.width}
+                      height={p.height + 2 * OUTLINE.width}
+                      stroke={OUTLINE.color}
+                      strokeWidth={OUTLINE.width}
+                      cornerRadius={OUTLINE.radius}
+                    />
+                  ))}
+              </Layer>
+            </Stage>
+            {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
+              <div
+                // A new element for each menu, so each one plays the opening animation
+                key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
+                ref={cardMenuRef}
+                role="menu"
+                onContextMenu={(e) => e.preventDefault()}
+                className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                // Kept inside the board's right edge
+                style={{
+                  minWidth: MENU_WIDTH,
+                  left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
+                  top: shownMenu.y,
+                }}
+              >
+                {cardMenuItems(shownMenu).map((label) => (
+                  <button
+                    key={label}
+                    role="menuitem"
+                    className="tierbinder-option"
+                    onClick={() => {
+                      runCardMenuItem(shownMenu, label);
+                      setCardMenu(null);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {type.Toolbar && (
+            <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
+          )}
+
+          {status && <p className="whitespace-pre-line">{status}</p>}
+        </div>
       </div>
 
       {dragGhost && (

@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.3 · November 7, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.4 · November 9, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -32,7 +32,7 @@ Semantic tokens that map onto existing palette colors and spacing steps, recorde
 - Professional but fun and friendly, with smooth transitions and rounded borders.
 - A real design tool that feels smooth and satisfying to use.
 - Dark interface in petrel and storm. Storm blue marks main actions, and the tier colors mark the main nav.
-- The window is a working tool: a 48px top bar, a docked left sidebar and the board centered in its own darker workspace, divided by 1px lines with no floating panels. Controls are 32px tall with 14px text, and most stay quiet until hovered. Controls and popups use `radius-small`.
+- The window is a working tool: a docked left sidebar headed by a 48px logo bar, and the board centered in its own darker workspace, which runs the window's full height, divided by 1px lines with no floating panels. Controls are 32px tall with 14px text, and most stay quiet until hovered. Controls and popups use `radius-small`.
 - Color is used by name through tokens (`bg-petrel-900`, `var(--color-storm-300)`), not raw hex.
 
 ## 3. Color
@@ -183,7 +183,7 @@ Code uses the `b` names: `b8:` in classes and `@variant b8` in CSS, never a raw 
 ### Layout
 
 - `html` and `body` do not scroll. The page gives itself a scroll container.
-- The sticky top bar tints the iOS status bar. Respect `env(safe-area-inset-*)`.
+- On phones the top bar is sticky at the top of the page and tints the iOS status bar. Respect `env(safe-area-inset-*)`.
 
 ### No magic numbers: build responsive layouts
 
@@ -200,7 +200,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Top bar
 
-- Sticky with the same status bar padding. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
+- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar, and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
 
 ### Settings
 
@@ -209,7 +209,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Sidebar resize handle
 
-- From `b8` up, the sidebar's right edge is a resize handle (`ui/SidebarHandle.tsx`): an 8px strip centered on the 1px line, with the `col-resize` cursor.
+- From `b8` up, the sidebar column's right edge (header included) is a resize handle (`ui/SidebarHandle.tsx`): an 8px strip centered on the 1px line, with the `col-resize` cursor.
 - After resting on it for 150ms, or straight away while dragging, a 2px Storm 300 line with a soft Storm 300 glow fades in over `duration-hover`.
 - Dragging is smooth, not stepped. The width shows in px beside the pointer while dragging. It's saved as a share of the window, so the board keeps its share when the window changes size. Double-click goes back to the default, 368px: wide enough for the main nav with its padding.
 - It follows the WAI-ARIA window splitter pattern: a focusable `separator` that reports its width. Left and right arrows move it 16px, or 64px with Shift, and show the readout.
@@ -239,6 +239,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar, and the board's workspace runs the full height of the window. Removed the line under the main nav.
 - **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added Consult best practices to the principles. The main nav hugs its tabs, in regular weight (400), with the selected tab semibold (600). The sidebar became resizable by dragging its edge or with the arrow keys, between 250px and the window less a 512px workspace, and the main nav names only the selected tab when it doesn't fit, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, sizes Alex chose by eye are allowed and listed in Exceptions, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.

@@ -3,7 +3,7 @@
 import React from 'react';
 import styles from './SidebarHandle.module.css';
 
-// Drag handle on the sidebar's right edge (from b8 up, where it sits beside the board),
+// Drag handle on the sidebar column's right edge (from b8 up, where it sits beside the board),
 // following the WAI-ARIA window splitter pattern. The width is saved as a share of the
 // window, so it keeps the board's share when the window changes size; Editor.module.css
 // turns it into the sidebar's width (--tb-sidebar-width). Drag it, or focus it and use the left
