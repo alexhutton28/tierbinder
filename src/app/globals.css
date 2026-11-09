@@ -63,7 +63,7 @@ body {
   --tb-icon: 16px;
   --tb-swatch: 24px;
   --tb-number-field: 64px;
-  --tb-sidebar-default: 352px;
+  --tb-sidebar-default: 368px;
 
   /* The sidebar's resize handle: how far either side of the line grabs it, and how long
      the pointer rests on it before it lights up, so passing over doesn't flash it */
@@ -255,6 +255,11 @@ body {
   padding: var(--spacing-2);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
+
+  /* Room at the ends, from b3 up; small phones keep 4px so the three tabs fit */
+  @variant b3 {
+    padding-inline: var(--spacing-3);
+  }
 }
 
 .tierbinder-radio-block {
