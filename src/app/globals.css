@@ -349,8 +349,8 @@ body {
 }
 
 /* A tab's label: a clip that folds to nothing and back out to its full width
-   (--label-width, measured in RadioBar.tsx). It opens on the spring and folds closed
-   like the card menu, speeding up and fading over its last part. */
+   (--label-width, measured in RadioBar.tsx). Folding and opening share the block's
+   spring and duration, so the block slides over in step with the tabs. */
 .tierbinder-radio-label {
   display: inline-flex;
   max-width: var(--label-width, none);
@@ -392,9 +392,6 @@ body {
   .tierbinder-radio-label {
   max-width: 0;
   opacity: 0;
-  transition:
-    max-width var(--duration-fold) var(--ease-fold),
-    opacity var(--duration-fold-fade) ease-in calc(var(--duration-fold) - var(--duration-fold-fade));
 }
 
 .tierbinder-field {

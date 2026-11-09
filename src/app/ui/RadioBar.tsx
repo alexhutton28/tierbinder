@@ -36,15 +36,27 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
   const barRef = React.useRef<HTMLDivElement>(null);
   const wordRefs = React.useRef(new Map<T, HTMLSpanElement>());
   const [block, setBlock] = React.useState<BlockBox | null>(null);
-  const moved = React.useRef(value);
+  const moved = React.useRef({ value, mode });
   const selected = options.find((option) => option.value === value);
 
+  // The block goes where the selected word will be once the bar settles. While labels
+  // fold and open the bar's own words are moving, so the target comes from the hidden copy
+  // laid out for this mode and selection, and the block slides there on the spring, as
+  // the tabs do (with icons only nothing moves, so the bar is measured directly).
   React.useLayoutEffect(() => {
     const bar = barRef.current;
-    const word = wordRefs.current.get(value);
-    if (!bar || !word) return;
+    const index = options.findIndex((option) => option.value === value);
+    const sizer =
+      mode === 'icon'
+        ? undefined
+        : sizerRefs.current.get(mode === 'full' ? 'full ' : `selected ${value}`);
+    const box = sizer ?? bar;
+    const word = sizer
+      ? (sizer.children[index]?.firstElementChild as HTMLElement | undefined)
+      : wordRefs.current.get(value);
+    if (!bar || !box || !word) return;
     const measure = (animate: boolean) => {
-      const from = bar.getBoundingClientRect();
+      const from = box.getBoundingClientRect();
       const to = word.getBoundingClientRect();
       const top = to.top - from.top;
       const left = to.left - from.left;
@@ -55,15 +67,15 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
           : { top, left, width, height, transition: animate ? undefined : 'none' }
       );
     };
-    // Only a new selection springs: the first placement doesn't
-    measure(moved.current !== value);
-    moved.current = value;
+    // A new selection or step slides; the first placement doesn't
+    measure(moved.current.value !== value || moved.current.mode !== mode);
+    moved.current = { value, mode };
     // Word widths change when the font loads and when the sidebar resizes
     const observer = new ResizeObserver(() => measure(false));
     observer.observe(word);
-    observer.observe(bar);
+    observer.observe(box);
     return () => observer.disconnect();
-  }, [value]);
+  }, [value, mode, options]);
 
   React.useLayoutEffect(() => {
     const fit = fitRef.current;
