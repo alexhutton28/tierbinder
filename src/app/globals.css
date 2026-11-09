@@ -354,11 +354,6 @@ body {
   user-select: none;
 }
 
-/* Label only: no icons */
-.tierbinder-radio[data-mode='label'] .tierbinder-radio-icon {
-  display: none;
-}
-
 /* Icons, with only the selected tab named; and icons only. Hidden labels stay for
    screen readers, out of sight */
 .tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,

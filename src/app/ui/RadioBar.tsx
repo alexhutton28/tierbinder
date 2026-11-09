@@ -5,10 +5,10 @@ import React from 'react';
 // `icon` is an SVG's name in public/, drawn in the text color
 type Option<T extends string> = { value: T; label: string; icon: string; color: string };
 
-// How the tabs show, from widest to narrowest: icon and label; label only; icons, with
-// the selected tab's label too; icons only. The bar uses the widest one that fits.
-type Mode = 'full' | 'label' | 'selected' | 'icon';
-const TRIED_MODES = ['full', 'label', 'selected'] as const;
+// How the tabs show, from widest to narrowest: icon and label; icons, with the selected
+// tab's label too; icons only. The bar uses the widest one that fits.
+type Mode = 'full' | 'selected' | 'icon';
+const TRIED_MODES = ['full', 'selected'] as const;
 
 type BlockBox = { top: number; left: number; width: number; height: number; transition?: string };
 
@@ -21,8 +21,8 @@ type Props<T extends string> = {
 
 // The sidebar's main nav: a block of the selected option's color hugs its word, and
 // springs to the next word. The block is measured from the word, so it fits any label.
-// When the tabs don't fit their space they drop their icons, then show icons with only
-// the selected tab named, then only icons (hidden labels are tooltips and stay for screen
+// When the tabs don't fit their space they show icons with only the selected tab named,
+// then only icons (hidden labels are tooltips and stay for screen
 // readers). Hidden copies of the bar in the wider modes are measured against the space,
 // so the switch follows the real text widths. 'selected' is measured with each tab
 // selected in turn and needs the widest, so switching tabs never changes the mode.
