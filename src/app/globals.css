@@ -308,6 +308,23 @@ body {
 
 .tierbinder-radio-option[aria-selected='true'] {
   color: var(--tb-primary-text);
+  font-weight: 600;
+}
+
+/* Each label reserves its semibold width with a hidden copy, so selecting a tab doesn't
+   shift the tabs or the block (the usual fix for bold-on-select) */
+.tierbinder-radio-label {
+  display: inline-flex;
+  flex-direction: column;
+}
+
+.tierbinder-radio-label::after {
+  content: attr(data-label) / '';
+  height: 0;
+  overflow: hidden;
+  font-weight: 600;
+  visibility: hidden;
+  user-select: none;
 }
 
 .tierbinder-field {

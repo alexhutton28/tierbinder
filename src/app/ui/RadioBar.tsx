@@ -95,7 +95,9 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
               className="tierbinder-radio-icon"
               style={{ maskImage: `url('/${option.icon}.svg')` }}
             />
-            {option.label}
+            <span className="tierbinder-radio-label" data-label={option.label}>
+              {option.label}
+            </span>
           </span>
         </button>
       ))}
