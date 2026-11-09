@@ -701,7 +701,7 @@ export default function Editor() {
             {/* Fixed-size tiles, as many per row as fit (.tierbinder-results) */}
             <div
               hidden={importing}
-              className="tierbinder-results md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
+              className="tierbinder-results text-caption md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
             >
               {results.map((card) => (
                 <div
@@ -709,7 +709,7 @@ export default function Editor() {
                   role="button"
                   tabIndex={0}
                   title={`${card.set} ${card.number}`}
-                  className="cursor-grab select-none flex flex-col items-center text-caption text-(--tb-muted)"
+                  className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
                   // Mouse and pen only: on touch, a press-and-move scrolls the results
                   onPointerDown={(e) => {
                     if (e.pointerType === 'touch' || e.button !== 0) return;
