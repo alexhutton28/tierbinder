@@ -282,6 +282,7 @@ textarea.tierbinder-field {
 /* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
    screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. */
 .tierbinder-results {
+  /* stylelint-disable-next-line custom-property-pattern -- Tailwind sets the name */
   --row: calc(var(--tb-thumb-height) + var(--text-caption--line-height));
   --rows-shown: 3;
 
