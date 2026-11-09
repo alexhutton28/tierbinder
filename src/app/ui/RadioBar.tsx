@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import styles from './RadioBar.module.css';
 
 // `icon` is an SVG's name in public/, drawn in the text color
 type Option<T extends string> = { value: T; label: string; icon: string; color: string };
@@ -89,7 +90,7 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
             .map(([, sizer]) => sizer.offsetWidth)
         );
       setMode(TRIED_MODES.find((m) => needs(m) <= room) ?? 'icon');
-      const labels = sizerRefs.current.get('full ')?.querySelectorAll('.tierbinder-radio-label');
+      const labels = sizerRefs.current.get('full ')?.querySelectorAll(`.${styles.label}`);
       const widths = [...(labels ?? [])].map((l) => (l as HTMLElement).offsetWidth);
       setLabelWidths((old) => (old && old.join() === widths.join() ? old : widths));
     };
@@ -106,18 +107,18 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
     <>
       <span
         aria-hidden
-        className="tierbinder-radio-icon"
+        className={styles.icon}
         style={{ maskImage: `url('/${option.icon}.svg')` }}
       />
       <span
-        className="tierbinder-radio-label"
+        className={styles.label}
         style={
           labelWidth === undefined
             ? undefined
             : ({ '--label-width': `${labelWidth}px` } as React.CSSProperties)
         }
       >
-        <span className="tierbinder-radio-text" data-label={option.label}>
+        <span className={styles.text} data-label={option.label}>
           {option.label}
         </span>
       </span>
@@ -135,8 +136,8 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
   };
 
   return (
-    <div ref={fitRef} className="tierbinder-radio-fit">
-      <div className="tierbinder-radio-sizers">
+    <div ref={fitRef} className={styles.fit}>
+      <div className={styles.sizers}>
         {TRIED_MODES.flatMap((m) =>
           // Keyed by mode and the tab shown as selected
           (m === 'selected' ? options.map((o) => o.value) : ['']).map((shown) => (
@@ -147,13 +148,13 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
                 else sizerRefs.current.delete(`${m} ${shown}`);
               }}
               aria-hidden
-              className="tierbinder-radio tierbinder-radio-sizer"
+              className={`${styles.bar} ${styles.sizer}`}
               data-mode={m}
             >
               {options.map((option) => (
                 <span
                   key={option.value}
-                  className="tierbinder-radio-option"
+                  className={styles.option}
                   data-selected={option.value === shown ? '' : undefined}
                 >
                   <span>{content(option)}</span>
@@ -167,14 +168,14 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
         ref={barRef}
         role="tablist"
         aria-label={label}
-        className="tierbinder-radio"
+        className={styles.bar}
         data-mode={mode}
         onKeyDown={onKeyDown}
       >
         {block && (
           <span
             aria-hidden
-            className="tierbinder-radio-block"
+            className={styles.block}
             style={{ ...block, background: selected?.color }}
           />
         )}
@@ -185,7 +186,7 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
             role="tab"
             aria-selected={option.value === value}
             tabIndex={option.value === value ? 0 : -1}
-            className="tierbinder-radio-option"
+            className={styles.option}
             data-selected={option.value === value ? '' : undefined}
             title={
               mode === 'icon' || (mode === 'selected' && option.value !== value)

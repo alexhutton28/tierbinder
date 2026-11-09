@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import styles from './ColorField.module.css';
 
 // A color as a hex text field, with the browser's picker on the swatch beside it.
 // Typing applies as soon as the text is a full hex color (#rgb or #rrggbb, # optional).
@@ -35,13 +36,14 @@ export default function ColorField({
     <span className="inline-flex items-center gap-2">
       <input
         type="color"
+        className={styles.swatch}
         aria-label={`${label} picker`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
       <input
         aria-label={label}
-        className="tierbinder-field tierbinder-hex-field font-mono"
+        className={`tierbinder-field ${styles.hex} font-mono`}
         spellCheck={false}
         value={draft}
         onChange={(e) => {

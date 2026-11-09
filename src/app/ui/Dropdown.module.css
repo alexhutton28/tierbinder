@@ -1,0 +1,7 @@
+/* Feather's chevron-down, colored by the text around it */
+.chevron {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-down.svg') center / contain no-repeat;
+}

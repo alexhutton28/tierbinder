@@ -1,0 +1,57 @@
+@reference "../globals.css";
+
+/* An invisible strip over the sidebar's edge line. On hover (after a short rest), with
+   keyboard focus and while resizing, a Storm 300 line with a soft glow shows on it (with
+   the usual focus ring). */
+.handle {
+  display: none;
+
+  @variant b8 {
+    position: absolute;
+    inset-block: 0;
+    right: calc(var(--tb-handle-hit) / -2);
+    z-index: 10;
+    display: block;
+    width: var(--tb-handle-hit);
+    cursor: col-resize;
+    touch-action: none;
+  }
+}
+
+.handle::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - var(--tb-handle-line) / 2);
+  width: var(--tb-handle-line);
+  background: var(--color-storm-300);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-storm-300) 60%, transparent);
+  opacity: 0;
+  transition: opacity var(--duration-hover) ease-out;
+}
+
+.handle[data-resizing]::after,
+.handle:focus-visible::after {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+@media (hover: hover) {
+  .handle:hover::after {
+    opacity: 1;
+    transition-delay: var(--tb-handle-hover-delay);
+  }
+}
+
+/* The width while resizing, beside the pointer */
+.readout {
+  position: absolute;
+  left: calc(100% + var(--spacing-3));
+  padding: var(--spacing-2) var(--spacing-3);
+  color: var(--tb-text);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+}

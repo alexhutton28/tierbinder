@@ -1,0 +1,150 @@
+@reference "../globals.css";
+
+/* The main nav: hugs its tabs, with a colored block that hugs the selected word */
+.bar {
+  position: relative;
+  display: grid;
+  width: fit-content;
+  grid-auto-columns: auto;
+  grid-auto-flow: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-2);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+
+  /* Room at the ends, from b3 up; small phones keep 4px so the three tabs fit */
+  @variant b3 {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+.block {
+  position: absolute;
+  border-radius: var(--tb-radius);
+  transition:
+    top var(--duration-move) var(--ease-spring),
+    left var(--duration-move) var(--ease-spring),
+    width var(--duration-move) var(--ease-spring),
+    background-color var(--duration-hover) ease-out;
+}
+
+.option {
+  position: relative;
+  padding-block: var(--spacing-2);
+  color: var(--tb-control-text);
+  font-size: var(--text-body);
+  font-weight: 400;
+  cursor: pointer;
+  transition: color var(--duration-hover) ease-out;
+}
+
+/* Block-level flex, not inline: an inline box sits on the text's baseline, which moves
+   as a label folds, and that nudges the icon up or down. Labels keep their line's height
+   while folded, so every tab stays the same height. */
+.option > span {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-2);
+  white-space: nowrap;
+
+  @variant b3 {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+/* Set per option with mask-image */
+.icon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.option[aria-selected='true'] {
+  color: var(--tb-primary-text);
+  font-weight: 600;
+}
+
+/* The bar's space, and the hidden copies of the bar it measures to pick a mode */
+.fit {
+  position: relative;
+}
+
+/* A zero-size clipped box, so the copies never widen the page */
+.sizers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.sizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A tab's label: a clip that folds to nothing and back out to its full width
+   (--label-width, measured in RadioBar.tsx). Folding and opening share the block's
+   spring and duration, so the block slides over in step with the tabs. */
+.label {
+  display: inline-flex;
+  max-width: var(--label-width, none);
+  overflow: hidden;
+  transition:
+    max-width var(--duration-move) var(--ease-spring),
+    opacity var(--duration-fade) ease-out;
+}
+
+/* The text, 4px from the icon (inside the clip, so the space folds away too). It reserves
+   its semibold width with a hidden copy, so selecting a tab doesn't shift the tabs or the
+   block (the usual fix for bold-on-select). */
+.text {
+  display: inline-flex;
+  flex-direction: column;
+  padding-left: var(--spacing-2);
+}
+
+.text::after {
+  content: attr(data-label) / '';
+  height: 0;
+  overflow: hidden;
+  font-weight: 600;
+  visibility: hidden;
+  user-select: none;
+}
+
+/* The hidden copies measure open labels at their natural width, without transitions */
+.sizer .label {
+  max-width: none;
+  transition: none;
+}
+
+/* Folded: every label with icons only, and all but the selected one in 'selected'. The
+   text stays in place for screen readers. */
+.bar[data-mode='icon'] .label,
+.bar[data-mode='selected'] .option:not([data-selected]) .label {
+  max-width: 0;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block {
+    transition: background-color var(--duration-hover) ease-out;
+  }
+
+  /* Labels appear and disappear with a fade only */
+  .label,
+  .bar[data-mode='icon'] .label,
+  .bar[data-mode='selected'] .option:not([data-selected]) .label {
+    transition: opacity var(--duration-fade) ease-out;
+  }
+}

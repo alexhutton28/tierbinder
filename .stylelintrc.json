@@ -13,5 +13,18 @@
       "rules"
     ],
     "order/properties-order": []
-  }
+  },
+  "overrides": [
+    {
+      "files": ["**/*.module.css"],
+      "rules": {
+        "selector-class-pattern": [
+          "^[a-z][a-zA-Z0-9]*$",
+          {
+            "message": "Expected class selector \"%s\" to be camelCase, so it reads as styles.name in TypeScript"
+          }
+        ]
+      }
+    }
+  ]
 }

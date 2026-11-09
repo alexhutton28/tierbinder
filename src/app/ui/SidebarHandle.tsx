@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
+import styles from './SidebarHandle.module.css';
 
 // Drag handle on the sidebar's right edge (from b8 up, where it sits beside the board),
 // following the WAI-ARIA window splitter pattern. The width is saved as a share of the
-// window, so it keeps the board's share when the window changes size; globals.css turns
-// it into the sidebar's width (--tb-sidebar-width). Drag it, or focus it and use the left
+// window, so it keeps the board's share when the window changes size; Editor.module.css
+// turns it into the sidebar's width (--tb-sidebar-width). Drag it, or focus it and use the left
 // and right arrow keys; double-click goes back to the default width. While resizing, the
 // width shows in px.
 
@@ -95,7 +96,7 @@ export default function SidebarHandle() {
       aria-valuemax={range.max}
       aria-valuetext={`${width} pixels wide`}
       tabIndex={0}
-      className="tierbinder-side-handle"
+      className={styles.handle}
       data-resizing={readoutY !== null ? '' : undefined}
       onPointerDown={(e) => {
         if (e.button !== 0) return;
@@ -131,7 +132,7 @@ export default function SidebarHandle() {
       {readoutY !== null && (
         <output
           aria-hidden
-          className="tierbinder-side-readout tierbinder-popup"
+          className={`${styles.readout} tierbinder-popup`}
           style={{ top: readoutY }}
         >
           {width} px
