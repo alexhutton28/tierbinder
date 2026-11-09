@@ -58,6 +58,7 @@ body {
      design/hutton-design-system.md). Everything else is sized by the layout. */
   --tb-line-width: 1px;
   --tb-focus-width: 2px;
+  --tb-focus-glow: 8px;
   --tb-top-height: 48px;
   --tb-control-height: 32px;
   --tb-icon: 16px;
@@ -118,6 +119,9 @@ body {
   border-radius: var(--tb-radius);
   background: var(--tb-field);
   color: var(--tb-text);
+  transition:
+    border-color var(--duration-hover) ease-out,
+    box-shadow var(--duration-hover) ease-out;
 
   /* iPhones zoom the page when a field under 16px is tapped */
   font-size: var(--text-field);
@@ -164,6 +168,14 @@ textarea.tierbinder-field {
 .tierbinder-page :focus-visible {
   outline: var(--tb-focus-width) solid var(--tb-focus);
   outline-offset: var(--tb-focus-width);
+}
+
+/* Text fields are focused on every click, so they get a quieter sign than the ring: a
+   Storm 300 edge with a soft glow, like the sidebar handle's */
+.tierbinder-page .tierbinder-field:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-storm-300) 70%, var(--tb-field));
+  box-shadow: 0 0 var(--tb-focus-glow) color-mix(in srgb, var(--color-storm-300) 40%, transparent);
 }
 
 /* Card menu and dropdowns (ui/Dropdown.tsx): stretches out from its edge
