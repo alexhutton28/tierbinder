@@ -359,8 +359,12 @@ body {
   display: none;
 }
 
-/* Icon only: the label stays for screen readers, out of sight */
-.tierbinder-radio[data-mode='icon'] .tierbinder-radio-label {
+/* Icons, with only the selected tab named; and icons only. Hidden labels stay for
+   screen readers, out of sight */
+.tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
+.tierbinder-radio[data-mode='selected']
+  .tierbinder-radio-option:not([data-selected])
+  .tierbinder-radio-label {
   position: absolute;
   width: 1px;
   height: 1px;

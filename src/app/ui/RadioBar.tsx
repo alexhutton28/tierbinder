@@ -5,10 +5,10 @@ import React from 'react';
 // `icon` is an SVG's name in public/, drawn in the text color
 type Option<T extends string> = { value: T; label: string; icon: string; color: string };
 
-// How the tabs show, from widest to narrowest: icon and label, label only, icon only.
-// The bar uses the widest one that fits its space.
-type Mode = 'full' | 'label' | 'icon';
-const TRIED_MODES = ['full', 'label'] as const;
+// How the tabs show, from widest to narrowest: icon and label; label only; icons, with
+// the selected tab's label too; icons only. The bar uses the widest one that fits.
+type Mode = 'full' | 'label' | 'selected' | 'icon';
+const TRIED_MODES = ['full', 'label', 'selected'] as const;
 
 type BlockBox = { top: number; left: number; width: number; height: number; transition?: string };
 
@@ -21,12 +21,14 @@ type Props<T extends string> = {
 
 // The sidebar's main nav: a block of the selected option's color hugs its word, and
 // springs to the next word. The block is measured from the word, so it fits any label.
-// When the tabs don't fit their space they drop their icons, then show only icons (with
-// the label as a tooltip and for screen readers). Hidden copies of the bar in the wider
-// modes are measured against the space, so the switch follows the real text widths.
+// When the tabs don't fit their space they drop their icons, then show icons with only
+// the selected tab named, then only icons (hidden labels are tooltips and stay for screen
+// readers). Hidden copies of the bar in the wider modes are measured against the space,
+// so the switch follows the real text widths. 'selected' is measured with each tab
+// selected in turn and needs the widest, so switching tabs never changes the mode.
 export default function RadioBar<T extends string>({ label, options, value, onChange }: Props<T>) {
   const fitRef = React.useRef<HTMLDivElement>(null);
-  const sizerRefs = React.useRef(new Map<Mode, HTMLDivElement>());
+  const sizerRefs = React.useRef(new Map<string, HTMLDivElement>());
   const [mode, setMode] = React.useState<Mode>('full');
   const barRef = React.useRef<HTMLDivElement>(null);
   const wordRefs = React.useRef(new Map<T, HTMLSpanElement>());
@@ -65,8 +67,13 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
     if (!fit) return;
     const choose = () => {
       const room = fit.clientWidth;
-      const widths = TRIED_MODES.map((m) => sizerRefs.current.get(m)?.offsetWidth ?? Infinity);
-      setMode(TRIED_MODES.find((_, i) => widths[i] <= room) ?? 'icon');
+      const needs = (m: Mode) =>
+        Math.max(
+          ...[...sizerRefs.current]
+            .filter(([key]) => key.startsWith(`${m} `))
+            .map(([, sizer]) => sizer.offsetWidth)
+        );
+      setMode(TRIED_MODES.find((m) => needs(m) <= room) ?? 'icon');
     };
     choose();
     // The space changes as the sidebar resizes; the copies change when the font loads
@@ -102,24 +109,31 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
   return (
     <div ref={fitRef} className="tierbinder-radio-fit">
       <div className="tierbinder-radio-sizers">
-        {TRIED_MODES.map((m) => (
-          <div
-            key={m}
-            ref={(el) => {
-              if (el) sizerRefs.current.set(m, el);
-              else sizerRefs.current.delete(m);
-            }}
-            aria-hidden
-            className="tierbinder-radio tierbinder-radio-sizer"
-            data-mode={m}
-          >
-            {options.map((option) => (
-              <span key={option.value} className="tierbinder-radio-option">
-                <span>{content(option)}</span>
-              </span>
-            ))}
-          </div>
-        ))}
+        {TRIED_MODES.flatMap((m) =>
+          // Keyed by mode and the tab shown as selected
+          (m === 'selected' ? options.map((o) => o.value) : [value]).map((shown) => (
+            <div
+              key={`${m} ${shown}`}
+              ref={(el) => {
+                if (el) sizerRefs.current.set(`${m} ${shown}`, el);
+                else sizerRefs.current.delete(`${m} ${shown}`);
+              }}
+              aria-hidden
+              className="tierbinder-radio tierbinder-radio-sizer"
+              data-mode={m}
+            >
+              {options.map((option) => (
+                <span
+                  key={option.value}
+                  className="tierbinder-radio-option"
+                  data-selected={option.value === shown ? '' : undefined}
+                >
+                  <span>{content(option)}</span>
+                </span>
+              ))}
+            </div>
+          ))
+        )}
       </div>
       <div
         ref={barRef}
@@ -144,7 +158,12 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
             aria-selected={option.value === value}
             tabIndex={option.value === value ? 0 : -1}
             className="tierbinder-radio-option"
-            title={mode === 'icon' ? option.label : undefined}
+            data-selected={option.value === value ? '' : undefined}
+            title={
+              mode === 'icon' || (mode === 'selected' && option.value !== value)
+                ? option.label
+                : undefined
+            }
             onClick={() => onChange(option.value)}
           >
             <span
