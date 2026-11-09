@@ -27,6 +27,7 @@ import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SidebarHandle from './ui/SidebarHandle';
+import styles from './Editor.module.css';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -501,19 +502,19 @@ export default function Editor() {
     // The board, with the sidebar on its left (below it on narrow screens). On wide
     // screens each scrolls on its own, so the search results stay beside the board.
     <div className="tierbinder-page w-full b8:h-full flex flex-col text-body">
-      <header className="tierbinder-top">
-        <Link href="/" className="tierbinder-brand">
+      <header className={styles.top}>
+        <Link href="/" className={styles.brand}>
           <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
         </Link>
       </header>
       <div className="flex-1 min-h-0 flex flex-col b8:flex-row-reverse">
         <div
           ref={workspaceRef}
-          className="tierbinder-canvas flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col"
+          className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
         >
           <div
             ref={boardRef}
-            className="tierbinder-board flex flex-col gap-4"
+            className="flex flex-col gap-4"
             style={{ width: BOARD_WIDTH * scale }}
           >
             <div className="flex">
@@ -618,9 +619,9 @@ export default function Editor() {
           </div>
         </div>
 
-        <aside className="tierbinder-side flex flex-col min-w-0 b8:min-h-0">
+        <aside className={`${styles.side} flex flex-col min-w-0 b8:min-h-0`}>
           <SidebarHandle />
-          <div className="tierbinder-side-head">
+          <div className={styles.sideHead}>
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>
 
@@ -700,10 +701,10 @@ export default function Editor() {
                 </Button>
               </>
             )}
-            {/* Fixed-size tiles, as many per row as fit (.tierbinder-results) */}
+            {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
             <div
               hidden={importing}
-              className="tierbinder-results text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
+              className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden`}
             >
               {results.map((card) => (
                 <div
@@ -732,7 +733,7 @@ export default function Editor() {
                   <img
                     src={card.thumb}
                     alt={`${card.set} ${card.number}`}
-                    className="tierbinder-thumb object-contain"
+                    className={`${styles.thumb} object-contain`}
                     loading="lazy"
                     draggable={false}
                     // The CDN occasionally fails a load; retry once through the image proxy
@@ -802,7 +803,7 @@ export default function Editor() {
         <img
           src={dragGhost.card.thumb}
           alt=""
-          className="tierbinder-thumb fixed z-20 -translate-1/2 object-contain pointer-events-none opacity-80"
+          className={`${styles.thumb} fixed z-20 -translate-1/2 object-contain pointer-events-none opacity-80`}
           style={{ left: dragGhost.x, top: dragGhost.y }}
         />
       )}

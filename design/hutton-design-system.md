@@ -118,7 +118,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 ## 7. Iconography
 
 - Icons and logos are SVGs in `public/`, with no icon library package.
-- Icons come from [Feather](https://feathericons.com) (MIT license). Copy the icon's SVG into `public/` under its Feather name, unchanged. Where it needs to follow the text color, use it as a CSS mask over `currentcolor` (see `.tierbinder-chevron`).
+- Icons come from [Feather](https://feathericons.com) (MIT license). Copy the icon's SVG into `public/` under its Feather name, unchanged. Where it needs to follow the text color, use it as a CSS mask over `currentcolor` (see `.chevron` in `ui/Dropdown.module.css`).
 
 ## 8. Logo
 

@@ -1,0 +1,56 @@
+.button {
+  height: var(--tb-control-height);
+  padding-inline: var(--spacing-button);
+  border: var(--tb-line-width) solid var(--tb-control-border);
+  border-radius: var(--tb-radius);
+  white-space: nowrap;
+  color: var(--tb-control-text);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform var(--duration-move) var(--ease-spring),
+    background-color var(--duration-hover) ease-out,
+    color var(--duration-hover) ease-out;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.primary {
+  border-color: transparent;
+  background: var(--tb-primary);
+  color: var(--tb-primary-text);
+}
+
+/* Tools show as selected from aria-pressed */
+.tool[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--tb-selected);
+  color: var(--tb-selected-text);
+}
+
+@media (hover: hover) {
+  .button:hover:not(:disabled) {
+    background: var(--tb-control-hover);
+  }
+
+  .primary:hover:not(:disabled) {
+    background: var(--tb-primary-hover);
+  }
+
+  .tool[aria-pressed='true']:hover {
+    background: var(--tb-selected);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button:active:not(:disabled) {
+    transform: none;
+  }
+}

@@ -92,114 +92,6 @@ body {
   color-scheme: dark;
 }
 
-.tierbinder-top {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  flex: none;
-  align-items: center;
-  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
-  padding-top: env(safe-area-inset-top);
-  padding-inline: var(--spacing-4);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
-  background: var(--tb-top);
-}
-
-.tierbinder-brand {
-  display: flex;
-  flex: none;
-}
-
-/* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
-   workspace. */
-.tierbinder-canvas {
-  @variant b8 {
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-.tierbinder-side {
-  border-top: var(--tb-line-width) solid var(--tb-line);
-  background: var(--tb-bar);
-
-  /* Beside the board, at the width the user dragged it to (SidebarHandle.tsx), or the
-     default */
-  @variant b8 {
-    position: relative;
-    flex: none;
-    width: clamp(
-      var(--tb-sidebar-min),
-      var(--tb-sidebar-width, var(--tb-sidebar-default)),
-      100vw - var(--tb-workspace-min)
-    );
-    border-top: 0;
-    border-right: var(--tb-line-width) solid var(--tb-line);
-  }
-}
-
-/* The resize handle: an invisible strip over the sidebar's edge line. On hover (after a
-   short rest), with keyboard focus and while resizing, a Storm 300 line with a soft glow
-   shows on it (with the usual focus ring). */
-.tierbinder-side-handle {
-  display: none;
-
-  @variant b8 {
-    position: absolute;
-    inset-block: 0;
-    right: calc(var(--tb-handle-hit) / -2);
-    z-index: 10;
-    display: block;
-    width: var(--tb-handle-hit);
-    cursor: col-resize;
-    touch-action: none;
-  }
-}
-
-.tierbinder-side-handle::after {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  left: calc(50% - var(--tb-handle-line) / 2);
-  width: var(--tb-handle-line);
-  background: var(--color-storm-300);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--color-storm-300) 60%, transparent);
-  opacity: 0;
-  transition: opacity var(--duration-hover) ease-out;
-}
-
-.tierbinder-side-handle[data-resizing]::after,
-.tierbinder-side-handle:focus-visible::after {
-  opacity: 1;
-  transition-delay: 0s;
-}
-
-@media (hover: hover) {
-  .tierbinder-side-handle:hover::after {
-    opacity: 1;
-    transition-delay: var(--tb-handle-hover-delay);
-  }
-}
-
-/* The width while resizing, beside the pointer */
-.tierbinder-side-readout {
-  position: absolute;
-  left: calc(100% + var(--spacing-3));
-  padding: var(--spacing-2) var(--spacing-3);
-  color: var(--tb-text);
-  font-size: var(--text-caption);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  pointer-events: none;
-  transform: translateY(-50%);
-}
-
-.tierbinder-side-head {
-  padding: var(--spacing-3);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
-}
-
 .tierbinder-panel {
   padding: var(--spacing-4);
 }
@@ -217,181 +109,6 @@ body {
   gap: var(--spacing-4);
   min-height: var(--tb-control-height);
   color: var(--tb-muted);
-}
-
-.tierbinder-button {
-  height: var(--tb-control-height);
-  padding-inline: var(--spacing-button);
-  border: var(--tb-line-width) solid var(--tb-control-border);
-  border-radius: var(--tb-radius);
-  white-space: nowrap;
-  color: var(--tb-control-text);
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    transform var(--duration-move) var(--ease-spring),
-    background-color var(--duration-hover) ease-out,
-    color var(--duration-hover) ease-out;
-}
-
-.tierbinder-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.tierbinder-button:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.tierbinder-button.primary {
-  border-color: transparent;
-  background: var(--tb-primary);
-  color: var(--tb-primary-text);
-}
-
-.tierbinder-tool[aria-pressed='true'] {
-  border-color: transparent;
-  background: var(--tb-selected);
-  color: var(--tb-selected-text);
-}
-
-/* The main nav (ui/RadioBar.tsx): hugs its tabs, with a colored block that hugs the
-   selected word */
-.tierbinder-radio {
-  position: relative;
-  display: grid;
-  width: fit-content;
-  grid-auto-columns: auto;
-  grid-auto-flow: column;
-  gap: var(--spacing-1);
-  padding: var(--spacing-2);
-  border-radius: var(--tb-radius);
-  background: var(--tb-field);
-
-  /* Room at the ends, from b3 up; small phones keep 4px so the three tabs fit */
-  @variant b3 {
-    padding-inline: var(--spacing-3);
-  }
-}
-
-.tierbinder-radio-block {
-  position: absolute;
-  border-radius: var(--tb-radius);
-  transition:
-    top var(--duration-move) var(--ease-spring),
-    left var(--duration-move) var(--ease-spring),
-    width var(--duration-move) var(--ease-spring),
-    background-color var(--duration-hover) ease-out;
-}
-
-.tierbinder-radio-option {
-  position: relative;
-  padding-block: var(--spacing-2);
-  color: var(--tb-control-text);
-  font-size: var(--text-body);
-  font-weight: 400;
-  cursor: pointer;
-  transition: color var(--duration-hover) ease-out;
-}
-
-/* Block-level flex, not inline: an inline box sits on the text's baseline, which moves
-   as a label folds, and that nudges the icon up or down. Labels keep their line's height
-   while folded, so every tab stays the same height. */
-.tierbinder-radio-option > span {
-  display: flex;
-  align-items: center;
-  padding: var(--spacing-2);
-  white-space: nowrap;
-
-  @variant b3 {
-    padding-inline: var(--spacing-3);
-  }
-}
-
-/* Set per option in ui/RadioBar.tsx with mask-image */
-.tierbinder-radio-icon {
-  flex: none;
-  width: var(--tb-icon);
-  height: var(--tb-icon);
-  background: currentcolor;
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
-}
-
-.tierbinder-radio-option[aria-selected='true'] {
-  color: var(--tb-primary-text);
-  font-weight: 600;
-}
-
-/* RadioBar's space, and the hidden copies of the bar it measures to pick a mode */
-.tierbinder-radio-fit {
-  position: relative;
-}
-
-/* A zero-size clipped box, so the copies never widen the page */
-.tierbinder-radio-sizers {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-.tierbinder-radio-sizer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: max-content;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* A tab's label: a clip that folds to nothing and back out to its full width
-   (--label-width, measured in RadioBar.tsx). Folding and opening share the block's
-   spring and duration, so the block slides over in step with the tabs. */
-.tierbinder-radio-label {
-  display: inline-flex;
-  max-width: var(--label-width, none);
-  overflow: hidden;
-  transition:
-    max-width var(--duration-move) var(--ease-spring),
-    opacity var(--duration-fade) ease-out;
-}
-
-/* The text, 4px from the icon (inside the clip, so the space folds away too). It reserves
-   its semibold width with a hidden copy, so selecting a tab doesn't shift the tabs or the
-   block (the usual fix for bold-on-select). */
-.tierbinder-radio-text {
-  display: inline-flex;
-  flex-direction: column;
-  padding-left: var(--spacing-2);
-}
-
-.tierbinder-radio-text::after {
-  content: attr(data-label) / '';
-  height: 0;
-  overflow: hidden;
-  font-weight: 600;
-  visibility: hidden;
-  user-select: none;
-}
-
-/* The hidden copies measure open labels at their natural width, without transitions */
-.tierbinder-radio-sizer .tierbinder-radio-label {
-  max-width: none;
-  transition: none;
-}
-
-/* Folded: every label with icons only, and all but the selected one in 'selected'. The
-   text stays in place for screen readers. */
-.tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
-.tierbinder-radio[data-mode='selected']
-  .tierbinder-radio-option:not([data-selected])
-  .tierbinder-radio-label {
-  max-width: 0;
-  opacity: 0;
 }
 
 .tierbinder-field {
@@ -419,59 +136,8 @@ textarea.tierbinder-field {
   padding-block: var(--spacing-3);
 }
 
-/* Hex color fields fit #RRGGBB in the monospace font, plus their padding and border */
-.tierbinder-hex-field {
-  width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
-}
-
 .tierbinder-number-field {
   width: var(--tb-number-field);
-}
-
-/* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
-   screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. A row
-   is a thumbnail and one line of caption (1lh: the box sets the caption text). */
-.tierbinder-results {
-  --rows-shown: 3;
-
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
-  align-content: start;
-  gap: var(--spacing-2);
-  max-height: calc(
-    var(--rows-shown) * (var(--tb-thumb-height) + 1lh) + (var(--rows-shown) - 1) * var(--spacing-2)
-  );
-
-  @variant b8 {
-    max-height: none;
-  }
-}
-
-.tierbinder-thumb {
-  width: var(--tb-thumb-width);
-  height: var(--tb-thumb-height);
-}
-
-/* The color picker, as a plain swatch */
-.tierbinder-page input[type='color'] {
-  flex: none;
-  width: var(--tb-swatch);
-  height: var(--tb-swatch);
-  border-radius: var(--tb-radius);
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.tierbinder-page input[type='color']::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-
-.tierbinder-page input[type='color']::-webkit-color-swatch {
-  border: 0;
-}
-
-.tierbinder-page input[type='color']::-moz-color-swatch {
-  border: 0;
 }
 
 .tierbinder-popup {
@@ -482,14 +148,6 @@ textarea.tierbinder-field {
   box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
 }
 
-/* Feather's chevron-down, colored by the text around it */
-.tierbinder-chevron {
-  width: var(--tb-icon);
-  height: var(--tb-icon);
-  background: currentcolor;
-  mask: url('/chevron-down.svg') center / contain no-repeat;
-}
-
 .tierbinder-option {
   padding: var(--spacing-3) var(--spacing-4);
   color: var(--tb-text);
@@ -498,42 +156,14 @@ textarea.tierbinder-field {
 }
 
 @media (hover: hover) {
-  .tierbinder-button:hover:not(:disabled),
   .tierbinder-option:hover {
     background: var(--tb-control-hover);
-  }
-
-  .tierbinder-button.primary:hover:not(:disabled) {
-    background: var(--tb-primary-hover);
-  }
-
-  .tierbinder-tool[aria-pressed='true']:hover {
-    background: var(--tb-selected);
   }
 }
 
 .tierbinder-page :focus-visible {
   outline: var(--tb-focus-width) solid var(--tb-focus);
   outline-offset: var(--tb-focus-width);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tierbinder-button:active:not(:disabled) {
-    transform: none;
-  }
-
-  .tierbinder-radio-block {
-    transition: background-color var(--duration-hover) ease-out;
-  }
-
-  /* Labels appear and disappear with a fade only */
-  .tierbinder-radio-label,
-  .tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
-  .tierbinder-radio[data-mode='selected']
-    .tierbinder-radio-option:not([data-selected])
-    .tierbinder-radio-label {
-    transition: opacity var(--duration-fade) ease-out;
-  }
 }
 
 /* Card menu and dropdowns (ui/Dropdown.tsx): stretches out from its edge

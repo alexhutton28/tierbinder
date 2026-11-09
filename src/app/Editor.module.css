@@ -1,0 +1,77 @@
+@reference "./globals.css";
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-inline: var(--spacing-4);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
+  background: var(--tb-top);
+}
+
+.brand {
+  display: flex;
+  flex: none;
+}
+
+/* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
+   workspace. */
+.canvas {
+  @variant b8 {
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.side {
+  border-top: var(--tb-line-width) solid var(--tb-line);
+  background: var(--tb-bar);
+
+  /* Beside the board, at the width the user dragged it to (ui/SidebarHandle.tsx), or the
+     default */
+  @variant b8 {
+    position: relative;
+    flex: none;
+    width: clamp(
+      var(--tb-sidebar-min),
+      var(--tb-sidebar-width, var(--tb-sidebar-default)),
+      100vw - var(--tb-workspace-min)
+    );
+    border-top: 0;
+    border-right: var(--tb-line-width) solid var(--tb-line);
+  }
+}
+
+.sideHead {
+  padding: var(--spacing-3);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
+}
+
+/* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
+   screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. A row
+   is a thumbnail and one line of caption (1lh: the box sets the caption text). */
+.results {
+  --rows-shown: 3;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
+  align-content: start;
+  gap: var(--spacing-2);
+  max-height: calc(
+    var(--rows-shown) * (var(--tb-thumb-height) + 1lh) + (var(--rows-shown) - 1) * var(--spacing-2)
+  );
+
+  @variant b8 {
+    max-height: none;
+  }
+}
+
+.thumb {
+  width: var(--tb-thumb-width);
+  height: var(--tb-thumb-height);
+}

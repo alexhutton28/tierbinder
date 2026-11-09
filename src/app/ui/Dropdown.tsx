@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Button from './Button';
+import styles from './Dropdown.module.css';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
@@ -100,7 +101,7 @@ export default function Dropdown<T extends string | number>({
           }}
         >
           {options[selected]?.label}
-          <span aria-hidden className="tierbinder-chevron" />
+          <span aria-hidden className={styles.chevron} />
         </Button>
         {shown && (
           <div
