@@ -278,7 +278,7 @@ body {
   padding-block: var(--spacing-2);
   color: var(--tb-control-text);
   font-size: var(--text-body);
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: color var(--duration-hover) ease-out;
 }
