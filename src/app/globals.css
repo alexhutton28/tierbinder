@@ -288,7 +288,6 @@ body {
 
 .tierbinder-radio-option > span {
   display: inline-flex;
-  gap: var(--spacing-2);
   align-items: center;
   padding: var(--spacing-2);
   white-space: nowrap;
@@ -338,14 +337,28 @@ body {
   pointer-events: none;
 }
 
-/* Each label reserves its semibold width with a hidden copy, so selecting a tab doesn't
-   shift the tabs or the block (the usual fix for bold-on-select) */
+/* A tab's label: a clip that folds to nothing and back out to its full width
+   (--label-width, measured in RadioBar.tsx). It opens on the spring and folds closed
+   like the card menu, speeding up and fading over its last part. */
 .tierbinder-radio-label {
   display: inline-flex;
-  flex-direction: column;
+  max-width: var(--label-width, none);
+  overflow: hidden;
+  transition:
+    max-width var(--duration-move) var(--ease-spring),
+    opacity var(--duration-fade) ease-out;
 }
 
-.tierbinder-radio-label::after {
+/* The text, 4px from the icon (inside the clip, so the space folds away too). It reserves
+   its semibold width with a hidden copy, so selecting a tab doesn't shift the tabs or the
+   block (the usual fix for bold-on-select). */
+.tierbinder-radio-text {
+  display: inline-flex;
+  flex-direction: column;
+  padding-left: var(--spacing-2);
+}
+
+.tierbinder-radio-text::after {
   content: attr(data-label) / '';
   height: 0;
   overflow: hidden;
@@ -354,18 +367,23 @@ body {
   user-select: none;
 }
 
-/* Icons, with only the selected tab named; and icons only. Hidden labels stay for
-   screen readers, out of sight */
+/* The hidden copies measure open labels at their natural width, without transitions */
+.tierbinder-radio-sizer .tierbinder-radio-label {
+  max-width: none;
+  transition: none;
+}
+
+/* Folded: every label with icons only, and all but the selected one in 'selected'. The
+   text stays in place for screen readers. */
 .tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
 .tierbinder-radio[data-mode='selected']
   .tierbinder-radio-option:not([data-selected])
   .tierbinder-radio-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  max-width: 0;
+  opacity: 0;
+  transition:
+    max-width var(--duration-fold) var(--ease-fold),
+    opacity var(--duration-fold-fade) ease-in calc(var(--duration-fold) - var(--duration-fold-fade));
 }
 
 .tierbinder-field {
@@ -498,6 +516,15 @@ textarea.tierbinder-field {
 
   .tierbinder-radio-block {
     transition: background-color var(--duration-hover) ease-out;
+  }
+
+  /* Labels appear and disappear with a fade only */
+  .tierbinder-radio-label,
+  .tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
+  .tierbinder-radio[data-mode='selected']
+    .tierbinder-radio-option:not([data-selected])
+    .tierbinder-radio-label {
+    transition: opacity var(--duration-fade) ease-out;
   }
 }
 

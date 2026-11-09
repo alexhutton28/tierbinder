@@ -30,6 +30,9 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
   const fitRef = React.useRef<HTMLDivElement>(null);
   const sizerRefs = React.useRef(new Map<string, HTMLDivElement>());
   const [mode, setMode] = React.useState<Mode>('full');
+  // Each label's full width, measured from the hidden copy, so labels can fold to 0 and
+  // back out to it with a transition (CSS can't transition to an automatic width)
+  const [labelWidths, setLabelWidths] = React.useState<number[] | null>(null);
   const barRef = React.useRef<HTMLDivElement>(null);
   const wordRefs = React.useRef(new Map<T, HTMLSpanElement>());
   const [block, setBlock] = React.useState<BlockBox | null>(null);
@@ -74,6 +77,9 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
             .map(([, sizer]) => sizer.offsetWidth)
         );
       setMode(TRIED_MODES.find((m) => needs(m) <= room) ?? 'icon');
+      const labels = sizerRefs.current.get('full ')?.querySelectorAll('.tierbinder-radio-label');
+      const widths = [...(labels ?? [])].map((l) => (l as HTMLElement).offsetWidth);
+      setLabelWidths((old) => (old && old.join() === widths.join() ? old : widths));
     };
     choose();
     // The space changes as the sidebar resizes; the copies change when the font loads
@@ -83,15 +89,25 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
     return () => observer.disconnect();
   }, []);
 
-  const content = (option: Option<T>) => (
+  // The label folds to nothing (the clip) around its text; labelWidth is its open width
+  const content = (option: Option<T>, labelWidth?: number) => (
     <>
       <span
         aria-hidden
         className="tierbinder-radio-icon"
         style={{ maskImage: `url('/${option.icon}.svg')` }}
       />
-      <span className="tierbinder-radio-label" data-label={option.label}>
-        {option.label}
+      <span
+        className="tierbinder-radio-label"
+        style={
+          labelWidth === undefined
+            ? undefined
+            : ({ '--label-width': `${labelWidth}px` } as React.CSSProperties)
+        }
+      >
+        <span className="tierbinder-radio-text" data-label={option.label}>
+          {option.label}
+        </span>
       </span>
     </>
   );
@@ -111,7 +127,7 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
       <div className="tierbinder-radio-sizers">
         {TRIED_MODES.flatMap((m) =>
           // Keyed by mode and the tab shown as selected
-          (m === 'selected' ? options.map((o) => o.value) : [value]).map((shown) => (
+          (m === 'selected' ? options.map((o) => o.value) : ['']).map((shown) => (
             <div
               key={`${m} ${shown}`}
               ref={(el) => {
@@ -172,7 +188,7 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
                 else wordRefs.current.delete(option.value);
               }}
             >
-              {content(option)}
+              {content(option, labelWidths?.[options.indexOf(option)])}
             </span>
           </button>
         ))}
