@@ -26,6 +26,7 @@ import { parseImport } from './importText';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
+import SidebarHandle from './ui/SidebarHandle';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -618,6 +619,7 @@ export default function Editor() {
         </div>
 
         <aside className="tierbinder-side flex flex-col min-w-0 b8:min-h-0">
+          <SidebarHandle />
           <div className="tierbinder-side-head">
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>

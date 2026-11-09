@@ -63,8 +63,13 @@ body {
   --tb-icon: 16px;
   --tb-swatch: 24px;
   --tb-number-field: 64px;
-  --tb-sidebar-min: 352px;
-  --tb-sidebar-max: 512px;
+  --tb-sidebar-default: 352px;
+
+  /* The sidebar's resize handle: how far either side of the line grabs it, and how long
+     the pointer rests on it before it lights up, so passing over doesn't flash it */
+  --tb-handle-hit: 8px;
+  --tb-handle-line: 2px;
+  --tb-handle-hover-delay: 150ms;
 
   /* Image sizes, chosen rather than derived (see Exceptions) */
   --tb-thumb-width: 80px;
@@ -112,13 +117,69 @@ body {
   border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
 
-  /* Beside the board, it grows with wide windows so search shows more columns */
+  /* Beside the board, at the width the user dragged it to (SidebarHandle.tsx), or the
+     default */
   @variant b8 {
+    position: relative;
     flex: none;
-    width: clamp(var(--tb-sidebar-min), 30vw, var(--tb-sidebar-max));
+    width: var(--tb-sidebar-width, var(--tb-sidebar-default));
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
   }
+}
+
+/* The resize handle: an invisible strip over the sidebar's edge line. On hover (after a
+   short rest) and while dragging, a Storm 300 line with a soft glow shows on it. */
+.tierbinder-side-handle {
+  display: none;
+
+  @variant b8 {
+    position: absolute;
+    inset-block: 0;
+    right: calc(var(--tb-handle-hit) / -2);
+    z-index: 10;
+    display: block;
+    width: var(--tb-handle-hit);
+    cursor: col-resize;
+    touch-action: none;
+  }
+}
+
+.tierbinder-side-handle::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - var(--tb-handle-line) / 2);
+  width: var(--tb-handle-line);
+  background: var(--color-storm-300);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-storm-300) 60%, transparent);
+  opacity: 0;
+  transition: opacity var(--duration-hover) ease-out;
+}
+
+.tierbinder-side-handle[data-dragging]::after {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+@media (hover: hover) {
+  .tierbinder-side-handle:hover::after {
+    opacity: 1;
+    transition-delay: var(--tb-handle-hover-delay);
+  }
+}
+
+/* The width while dragging, beside the pointer */
+.tierbinder-side-readout {
+  position: absolute;
+  left: calc(100% + var(--spacing-3));
+  padding: var(--spacing-2) var(--spacing-3);
+  color: var(--tb-text);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .tierbinder-side-head {

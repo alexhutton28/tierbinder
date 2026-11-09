@@ -205,6 +205,13 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 - Section headings are 12px and muted. Rows put the label on the left and the value on the right.
 - Color pickers are plain 24px swatches, next to their hex field.
 
+### Sidebar resize handle
+
+- From `b8` up, the sidebar's right edge is a resize handle (`ui/SidebarHandle.tsx`): an 8px strip centered on the 1px line, with the `col-resize` cursor.
+- After resting on it for 150ms, or straight away while dragging, a 2px Storm 300 line with a soft Storm 300 glow fades in over `duration-hover`.
+- Dragging is smooth, not stepped. The width shows in px beside the pointer while dragging. It's saved as a share of the window, so the board keeps its share when the window changes size. Double-click goes back to the default, 352px.
+- No minimum width yet; Alex will choose one. No keyboard control or collapse yet.
+
 ### Main nav
 
 - A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 600, and columns size to their labels. Each label has a 16px Feather icon before it, 4px away: `plus`, `sliders` and `share`. These are stand-ins until Alex draws TierBinder's own.
@@ -221,11 +228,12 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 | User-chosen colors, including saved board colors | Any value                       | They belong to the user's content, not the design system                              |
 | Exported images                                  | Values the artwork needs        | They are images, not interface                                                        |
 | Image display sizes: search result thumbnails    | A chosen fixed size, named once | Card art reads best at a size picked by eye; deriving it from the layout adds nothing |
+| The sidebar's width once someone drags it        | Any width, smoothly             | It's the user's choice, like their colors                                             |
 | `themeColor` in metadata                         | Hex matching the top bar        | Browsers read it as a plain value                                                     |
 
 ## 15. Changelog
 
-- **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
+- **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. The sidebar became resizable by dragging its edge, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).
