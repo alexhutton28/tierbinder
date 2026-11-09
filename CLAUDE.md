@@ -19,7 +19,8 @@ deployed on Vercel's Hobby plan.
 
 ## Gotchas
 
-- **Custom spacing scale** (`design/hutton-design-system.md`): Tailwind's numbered spacing doesn't mean the default sizes here, e.g. `p-4` is 16px, but `px-6` (64px) and `gap-5` (32px) are much bigger than usual. Round to the nearest step rather than writing arbitrary spacing like `mt-[12px]`. Widths and heights stay raw (`w-[260px]`).
+- **Custom spacing scale** (`design/hutton-design-system.md`): Tailwind's numbered spacing doesn't mean the default sizes here, e.g. `p-4` is 16px, but `px-6` (64px) and `gap-5` (32px) are much bigger than usual. Round to the nearest step rather than writing arbitrary spacing like `mt-[12px]`.
+- **No magic numbers** (`design/hutton-design-system.md`, section 12): let flex, grid, `aspect-ratio`, `clamp()` and container queries size things; name each fixed size once (a `--tb-*` size in `globals.css` or a TS constant); and ask Alex when a layout has a real choice.
 - **`html` and `body` don't scroll** (`overflow: hidden` in `globals.css`). The page has its own scroll container.
 - **Tailwind's `hover:` variant only applies on devices that can hover.** For hover effects that must work everywhere use plain `:hover` in CSS.
 - **Tailwind's `shadow-[...]` stacks the shadow with four empty layers**, so animating `box-shadow` from it fades instead of moving. Set shadows that animate in plain CSS.
@@ -42,8 +43,9 @@ All paths are in `src/app/`.
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
 - `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `tool`).
-- `ui/RadioBar.tsx`: the main nav. Each option has an icon from `public/`, drawn in the text color. A block in each option's color hugs the selected icon and word, measured from them, and springs to the next; left and right arrow keys move it.
+- `ui/RadioBar.tsx`: the main nav. Each option has an icon from `public/`, drawn in the text color. A block in each option's color hugs the selected icon and word, measured from them, and springs to the next; left and right arrow keys move it. When the tabs don't fit, they show icons with only the selected tab named, then only icons (hidden labels are tooltips and stay for screen readers): hidden copies of the bar in each wider mode are measured against its space (`.tierbinder-radio-sizers`), so the switch follows the real text widths. Labels fold and open by transitioning `max-width` to each label's measured width (`--label-width`), on the block's spring; the block's target comes from the hidden copy for the current step and selection, so it slides straight to where the name settles instead of chasing it.
 - `ui/ColorField.tsx`: a hex text field plus the browser's color picker.
+- `ui/SidebarHandle.tsx`: the sidebar's resize handle (from `b8` up). Saves the width as a share of the window in `localStorage` (`tierbinder-sidebar`) and sets it on the sidebar as `--tb-sidebar-width` (a `vw` value), which `globals.css` uses, falling back to `--tb-sidebar-default`. Its limits are a `clamp()` in that CSS: at least `--tb-sidebar-min` (250px) and at most the window less `--tb-workspace-min` (`b5`, 512px), the minimum winning; a drag past either is saved at the limit, and the readout shows the width the sidebar really has. Double-click resets; it's also a focusable `separator` (WAI-ARIA window splitter) that the left and right arrows move.
 - `ui/Dropdown.tsx`: a labeled dropdown (the Add to picker) in place of a native `<select>`, so it can open and close with the card menu's animation (top to bottom); arrow keys, Enter/Space and Escape work as in a select.
 - `Loader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
 - `layout.tsx`: the root layout: fonts (Inter Black for tier labels, Figtree for the controls), metadata, analytics and the scroll container.
@@ -69,6 +71,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## The board
 
 - 1200×675 for every graphic; export is 2× (2400×1350 PNG), downloaded (named after the graphic's kind) or copied.
+- On screen the stage scales to fill the workspace, larger or smaller than 1200 (`scale` in `Editor.tsx`): its width on narrow screens, and from `b8` up as much as fits beside the sidebar, with room left for the board type, toolbar and status, which it measures rather than assumes.
 - Cards are 100×140, clipped to the card images' rounded corners (`CARD_CORNER_RADIUS`, ~4.5px).
 - Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline), and any a graphic adds (the eraser's circle).
 - The selection outline follows a dragged card: Konva moves the card without React, so the stage's `dragmove` and `dragend` move the outline too. Cards carry their item's id (`CardNode` sets the group's `id`), which is how the editor knows the dragged card is the selected one.
@@ -111,7 +114,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
 - The board type dropdown above the board lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
-- The window: a top bar (`.tierbinder-top`) with the logo; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
+- The window: a top bar (`.tierbinder-top`) with the logo; a docked sidebar left of the board (below it under `b8`); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
 
 ## Look and motion
 

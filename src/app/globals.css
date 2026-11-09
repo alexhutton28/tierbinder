@@ -54,6 +54,34 @@ body {
   --tb-focus: var(--color-storm-200);
   --tb-radius: var(--radius-small);
 
+  /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
+     design/hutton-design-system.md). Everything else is sized by the layout. */
+  --tb-line-width: 1px;
+  --tb-focus-width: 2px;
+  --tb-top-height: 48px;
+  --tb-control-height: 32px;
+  --tb-icon: 16px;
+  --tb-swatch: 24px;
+  --tb-number-field: 64px;
+
+  /* Chosen by eye (see Exceptions): the default fits the main nav with its icons */
+  --tb-sidebar-default: 368px;
+  --tb-sidebar-min: 250px;
+
+  /* The workspace never gets narrower than this, which caps the sidebar: the main area
+     keeps its space, as in most editors with resizable panels */
+  --tb-workspace-min: var(--breakpoint-b5);
+
+  /* The sidebar's resize handle: how far either side of the line grabs it, and how long
+     the pointer rests on it before it lights up, so passing over doesn't flash it */
+  --tb-handle-hit: 8px;
+  --tb-handle-line: 2px;
+  --tb-handle-hover-delay: 150ms;
+
+  /* Image sizes, chosen by eye (see Exceptions) */
+  --tb-thumb-width: 80px;
+  --tb-thumb-height: 111px;
+
   background: var(--tb-page);
 }
 
@@ -71,10 +99,10 @@ body {
   display: flex;
   flex: none;
   align-items: center;
-  height: calc(48px + env(safe-area-inset-top));
+  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
-  border-bottom: 1px solid var(--tb-line);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-top);
 }
 
@@ -83,33 +111,93 @@ body {
   flex: none;
 }
 
-/* Beside the sidebar, the board takes the height it can and stays centered */
-@media (width >= 48rem) {
-  .tierbinder-canvas {
+/* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
+   workspace. */
+.tierbinder-canvas {
+  @variant b8 {
     align-items: center;
     justify-content: center;
-  }
-
-  .tierbinder-board {
-    width: min(100%, 1200px, calc((100dvh - 192px) * 16 / 9));
   }
 }
 
 .tierbinder-side {
-  border-top: 1px solid var(--tb-line);
+  border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
+
+  /* Beside the board, at the width the user dragged it to (SidebarHandle.tsx), or the
+     default */
+  @variant b8 {
+    position: relative;
+    flex: none;
+    width: clamp(
+      var(--tb-sidebar-min),
+      var(--tb-sidebar-width, var(--tb-sidebar-default)),
+      100vw - var(--tb-workspace-min)
+    );
+    border-top: 0;
+    border-right: var(--tb-line-width) solid var(--tb-line);
+  }
 }
 
-@media (width >= 48rem) {
-  .tierbinder-side {
-    border-top: 0;
-    border-right: 1px solid var(--tb-line);
+/* The resize handle: an invisible strip over the sidebar's edge line. On hover (after a
+   short rest), with keyboard focus and while resizing, a Storm 300 line with a soft glow
+   shows on it (with the usual focus ring). */
+.tierbinder-side-handle {
+  display: none;
+
+  @variant b8 {
+    position: absolute;
+    inset-block: 0;
+    right: calc(var(--tb-handle-hit) / -2);
+    z-index: 10;
+    display: block;
+    width: var(--tb-handle-hit);
+    cursor: col-resize;
+    touch-action: none;
   }
+}
+
+.tierbinder-side-handle::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: calc(50% - var(--tb-handle-line) / 2);
+  width: var(--tb-handle-line);
+  background: var(--color-storm-300);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-storm-300) 60%, transparent);
+  opacity: 0;
+  transition: opacity var(--duration-hover) ease-out;
+}
+
+.tierbinder-side-handle[data-resizing]::after,
+.tierbinder-side-handle:focus-visible::after {
+  opacity: 1;
+  transition-delay: 0s;
+}
+
+@media (hover: hover) {
+  .tierbinder-side-handle:hover::after {
+    opacity: 1;
+    transition-delay: var(--tb-handle-hover-delay);
+  }
+}
+
+/* The width while resizing, beside the pointer */
+.tierbinder-side-readout {
+  position: absolute;
+  left: calc(100% + var(--spacing-3));
+  padding: var(--spacing-2) var(--spacing-3);
+  color: var(--tb-text);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .tierbinder-side-head {
   padding: var(--spacing-3);
-  border-bottom: 1px solid var(--tb-line);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
 }
 
 .tierbinder-panel {
@@ -127,14 +215,14 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-4);
-  min-height: 32px;
+  min-height: var(--tb-control-height);
   color: var(--tb-muted);
 }
 
 .tierbinder-button {
-  height: 32px;
+  height: var(--tb-control-height);
   padding-inline: var(--spacing-button);
-  border: 1px solid var(--tb-control-border);
+  border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
   white-space: nowrap;
   color: var(--tb-control-text);
@@ -167,15 +255,23 @@ body {
   color: var(--tb-selected-text);
 }
 
-/* The main nav (ui/RadioBar.tsx): a colored block that hugs the selected word */
+/* The main nav (ui/RadioBar.tsx): hugs its tabs, with a colored block that hugs the
+   selected word */
 .tierbinder-radio {
   position: relative;
   display: grid;
+  width: fit-content;
   grid-auto-columns: auto;
   grid-auto-flow: column;
+  gap: var(--spacing-1);
   padding: var(--spacing-2);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
+
+  /* Room at the ends, from b3 up; small phones keep 4px so the three tabs fit */
+  @variant b3 {
+    padding-inline: var(--spacing-3);
+  }
 }
 
 .tierbinder-radio-block {
@@ -193,21 +289,21 @@ body {
   padding-block: var(--spacing-2);
   color: var(--tb-control-text);
   font-size: var(--text-body);
-  font-weight: 600;
+  font-weight: 400;
   cursor: pointer;
   transition: color var(--duration-hover) ease-out;
 }
 
+/* Block-level flex, not inline: an inline box sits on the text's baseline, which moves
+   as a label folds, and that nudges the icon up or down. Labels keep their line's height
+   while folded, so every tab stays the same height. */
 .tierbinder-radio-option > span {
-  display: inline-flex;
-  gap: var(--spacing-2);
+  display: flex;
   align-items: center;
   padding: var(--spacing-2);
   white-space: nowrap;
-}
 
-@media (width >= 24rem) {
-  .tierbinder-radio-option > span {
+  @variant b3 {
     padding-inline: var(--spacing-3);
   }
 }
@@ -215,8 +311,8 @@ body {
 /* Set per option in ui/RadioBar.tsx with mask-image */
 .tierbinder-radio-icon {
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
   background: currentcolor;
   mask-position: center;
   mask-repeat: no-repeat;
@@ -225,18 +321,93 @@ body {
 
 .tierbinder-radio-option[aria-selected='true'] {
   color: var(--tb-primary-text);
+  font-weight: 600;
+}
+
+/* RadioBar's space, and the hidden copies of the bar it measures to pick a mode */
+.tierbinder-radio-fit {
+  position: relative;
+}
+
+/* A zero-size clipped box, so the copies never widen the page */
+.tierbinder-radio-sizers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.tierbinder-radio-sizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* A tab's label: a clip that folds to nothing and back out to its full width
+   (--label-width, measured in RadioBar.tsx). Folding and opening share the block's
+   spring and duration, so the block slides over in step with the tabs. */
+.tierbinder-radio-label {
+  display: inline-flex;
+  max-width: var(--label-width, none);
+  overflow: hidden;
+  transition:
+    max-width var(--duration-move) var(--ease-spring),
+    opacity var(--duration-fade) ease-out;
+}
+
+/* The text, 4px from the icon (inside the clip, so the space folds away too). It reserves
+   its semibold width with a hidden copy, so selecting a tab doesn't shift the tabs or the
+   block (the usual fix for bold-on-select). */
+.tierbinder-radio-text {
+  display: inline-flex;
+  flex-direction: column;
+  padding-left: var(--spacing-2);
+}
+
+.tierbinder-radio-text::after {
+  content: attr(data-label) / '';
+  height: 0;
+  overflow: hidden;
+  font-weight: 600;
+  visibility: hidden;
+  user-select: none;
+}
+
+/* The hidden copies measure open labels at their natural width, without transitions */
+.tierbinder-radio-sizer .tierbinder-radio-label {
+  max-width: none;
+  transition: none;
+}
+
+/* Folded: every label with icons only, and all but the selected one in 'selected'. The
+   text stays in place for screen readers. */
+.tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
+.tierbinder-radio[data-mode='selected']
+  .tierbinder-radio-option:not([data-selected])
+  .tierbinder-radio-label {
+  max-width: 0;
+  opacity: 0;
 }
 
 .tierbinder-field {
-  height: 32px;
+  height: var(--tb-control-height);
   padding-inline: var(--spacing-3);
-  border: 1px solid var(--tb-field);
+  border: var(--tb-line-width) solid var(--tb-field);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
   color: var(--tb-text);
 
   /* iPhones zoom the page when a field under 16px is tapped */
   font-size: var(--text-field);
+
+  @variant b7 {
+    font-size: var(--text-body);
+  }
 }
 
 .tierbinder-field::placeholder {
@@ -248,17 +419,44 @@ textarea.tierbinder-field {
   padding-block: var(--spacing-3);
 }
 
-@media (width >= 48rem) {
-  .tierbinder-field {
-    font-size: var(--text-body);
+/* Hex color fields fit #RRGGBB in the monospace font, plus their padding and border */
+.tierbinder-hex-field {
+  width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
+}
+
+.tierbinder-number-field {
+  width: var(--tb-number-field);
+}
+
+/* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
+   screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. A row
+   is a thumbnail and one line of caption (1lh: the box sets the caption text). */
+.tierbinder-results {
+  --rows-shown: 3;
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
+  align-content: start;
+  gap: var(--spacing-2);
+  max-height: calc(
+    var(--rows-shown) * (var(--tb-thumb-height) + 1lh) + (var(--rows-shown) - 1) * var(--spacing-2)
+  );
+
+  @variant b8 {
+    max-height: none;
   }
+}
+
+.tierbinder-thumb {
+  width: var(--tb-thumb-width);
+  height: var(--tb-thumb-height);
 }
 
 /* The color picker, as a plain swatch */
 .tierbinder-page input[type='color'] {
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: var(--tb-swatch);
+  height: var(--tb-swatch);
   border-radius: var(--tb-radius);
   overflow: hidden;
   cursor: pointer;
@@ -278,7 +476,7 @@ textarea.tierbinder-field {
 
 .tierbinder-popup {
   overflow: hidden;
-  border: 1px solid var(--tb-control-border);
+  border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
   background: var(--tb-popup);
   box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
@@ -286,8 +484,8 @@ textarea.tierbinder-field {
 
 /* Feather's chevron-down, colored by the text around it */
 .tierbinder-chevron {
-  width: 16px;
-  height: 16px;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
   background: currentcolor;
   mask: url('/chevron-down.svg') center / contain no-repeat;
 }
@@ -315,8 +513,8 @@ textarea.tierbinder-field {
 }
 
 .tierbinder-page :focus-visible {
-  outline: 2px solid var(--tb-focus);
-  outline-offset: 2px;
+  outline: var(--tb-focus-width) solid var(--tb-focus);
+  outline-offset: var(--tb-focus-width);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -326,6 +524,15 @@ textarea.tierbinder-field {
 
   .tierbinder-radio-block {
     transition: background-color var(--duration-hover) ease-out;
+  }
+
+  /* Labels appear and disappear with a fade only */
+  .tierbinder-radio-label,
+  .tierbinder-radio[data-mode='icon'] .tierbinder-radio-label,
+  .tierbinder-radio[data-mode='selected']
+    .tierbinder-radio-option:not([data-selected])
+    .tierbinder-radio-label {
+    transition: opacity var(--duration-fade) ease-out;
   }
 }
 

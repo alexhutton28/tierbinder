@@ -26,11 +26,20 @@ import { parseImport } from './importText';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
+import SidebarHandle from './ui/SidebarHandle';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+
+// The selection outline, drawn just outside the card (canvas values; see Exceptions in
+// design/hutton-design-system.md)
+const OUTLINE = { width: 3, radius: 8, color: '#ffffff' };
+
+// The card menu's narrowest width; it opens left of the pointer when this wouldn't fit
+// inside the board's right edge
+const MENU_WIDTH = 160;
 
 function loadSaved() {
   try {
@@ -96,6 +105,8 @@ export default function Editor() {
   const [settingsFocus, setSettingsFocus] = React.useState<{ key: string; n: number } | null>(null);
 
   const stageRef = React.useRef<Konva.Stage | null>(null);
+  const workspaceRef = React.useRef<HTMLDivElement>(null);
+  const boardRef = React.useRef<HTMLDivElement>(null);
   const boardBoxRef = React.useRef<HTMLDivElement>(null);
   // The selection outline. Konva moves a dragged card itself, without React, so the
   // outline is moved the same way to stay on it (cards carry their item's id).
@@ -168,15 +179,39 @@ export default function Editor() {
     } catch {}
   }, [doc]);
 
-  // Board scales down to fit narrow windows; exports are always full size
+  // The board fills the workspace: its width on narrow screens (where the page scrolls),
+  // and from b8 up as much as fits, leaving room for the board type, toolbar and status
+  // around it. Exports are always full size.
   React.useEffect(() => {
+    const workspace = workspaceRef.current;
+    const board = boardRef.current;
+    const box = boardBoxRef.current;
+    if (!workspace || !board || !box) return;
+    const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
+    const wide = matchMedia(`(width >= ${b8.trim()})`);
     const fit = () => {
-      const width = boardBoxRef.current?.clientWidth ?? BOARD_WIDTH;
-      setScale(Math.min(1, width / BOARD_WIDTH));
+      const style = getComputedStyle(workspace);
+      const width =
+        workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      let next = width / BOARD_WIDTH;
+      if (wide.matches) {
+        const height =
+          workspace.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+        const around = board.offsetHeight - box.offsetHeight;
+        next = Math.min(next, (height - around) / BOARD_HEIGHT);
+      }
+      // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
+      setScale(Math.max(0, Math.floor(next * 1000) / 1000));
     };
     fit();
-    window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
+    const observer = new ResizeObserver(fit);
+    observer.observe(workspace);
+    observer.observe(board);
+    wide.addEventListener('change', fit);
+    return () => {
+      observer.disconnect();
+      wide.removeEventListener('change', fit);
+    };
   }, []);
 
   // Canvas text needs the font loaded first; next/font gives it a generated family name,
@@ -465,15 +500,22 @@ export default function Editor() {
   return (
     // The board, with the sidebar on its left (below it on narrow screens). On wide
     // screens each scrolls on its own, so the search results stay beside the board.
-    <div className="tierbinder-page w-full md:h-full flex flex-col text-body">
+    <div className="tierbinder-page w-full b8:h-full flex flex-col text-body">
       <header className="tierbinder-top">
         <Link href="/" className="tierbinder-brand">
           <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
         </Link>
       </header>
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row-reverse">
-        <div className="tierbinder-canvas flex-1 min-w-0 md:overflow-y-auto p-4 flex flex-col">
-          <div className="tierbinder-board flex flex-col gap-4">
+      <div className="flex-1 min-h-0 flex flex-col b8:flex-row-reverse">
+        <div
+          ref={workspaceRef}
+          className="tierbinder-canvas flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col"
+        >
+          <div
+            ref={boardRef}
+            className="tierbinder-board flex flex-col gap-4"
+            style={{ width: BOARD_WIDTH * scale }}
+          >
             <div className="flex">
               <Dropdown
                 hideLabel
@@ -525,13 +567,13 @@ export default function Editor() {
                       <Rect
                         key={p.item.id}
                         ref={outlineRef}
-                        x={p.x - 3}
-                        y={p.y - 3}
-                        width={p.width + 6}
-                        height={p.height + 6}
-                        stroke="#ffffff"
-                        strokeWidth={3}
-                        cornerRadius={8}
+                        x={p.x - OUTLINE.width}
+                        y={p.y - OUTLINE.width}
+                        width={p.width + 2 * OUTLINE.width}
+                        height={p.height + 2 * OUTLINE.width}
+                        stroke={OUTLINE.color}
+                        strokeWidth={OUTLINE.width}
+                        cornerRadius={OUTLINE.radius}
                       />
                     ))}
                 </Layer>
@@ -543,10 +585,11 @@ export default function Editor() {
                   ref={cardMenuRef}
                   role="menu"
                   onContextMenu={(e) => e.preventDefault()}
-                  className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col min-w-[160px] ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                  className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
                   // Kept inside the board's right edge
                   style={{
-                    left: Math.min(shownMenu.x, BOARD_WIDTH * scale - 160),
+                    minWidth: MENU_WIDTH,
+                    left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
                     top: shownMenu.y,
                   }}
                 >
@@ -575,7 +618,8 @@ export default function Editor() {
           </div>
         </div>
 
-        <aside className="tierbinder-side md:w-[352px] md:flex-none flex flex-col min-w-0 md:min-h-0">
+        <aside className="tierbinder-side flex flex-col min-w-0 b8:min-h-0">
+          <SidebarHandle />
           <div className="tierbinder-side-head">
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>
@@ -586,7 +630,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'add'}
-            className="tierbinder-panel flex flex-col gap-3 min-w-0 md:flex-1 md:min-h-0"
+            className="tierbinder-panel flex flex-col gap-3 min-w-0 b8:flex-1 b8:min-h-0"
           >
             <form
               onSubmit={(e) => {
@@ -656,12 +700,10 @@ export default function Editor() {
                 </Button>
               </>
             )}
-            {/* Fixed-size tiles (80x111 card + 16px caption), as many per row as fit; the
-              box is 3 rows tall (3 x 127 + 2 x 4), or the rest of the sidebar on wide
-              screens, and scrolls down */}
+            {/* Fixed-size tiles, as many per row as fit (.tierbinder-results) */}
             <div
               hidden={importing}
-              className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] auto-rows-[127px] gap-2 max-h-[389px] md:max-h-none md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
+              className="tierbinder-results text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
             >
               {results.map((card) => (
                 <div
@@ -669,7 +711,7 @@ export default function Editor() {
                   role="button"
                   tabIndex={0}
                   title={`${card.set} ${card.number}`}
-                  className="cursor-grab select-none flex flex-col items-center text-caption text-(--tb-muted)"
+                  className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
                   // Mouse and pen only: on touch, a press-and-move scrolls the results
                   onPointerDown={(e) => {
                     if (e.pointerType === 'touch' || e.button !== 0) return;
@@ -690,7 +732,7 @@ export default function Editor() {
                   <img
                     src={card.thumb}
                     alt={`${card.set} ${card.number}`}
-                    className="w-[80px] h-[111px] object-contain"
+                    className="tierbinder-thumb object-contain"
                     loading="lazy"
                     draggable={false}
                     // The CDN occasionally fails a load; retry once through the image proxy
@@ -710,7 +752,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'customize'}
-            className="tierbinder-panel flex flex-col gap-3 md:flex-1 md:min-h-0 md:overflow-y-auto"
+            className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
@@ -730,7 +772,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'save'}
-            className="tierbinder-panel flex flex-col gap-3 md:flex-1 md:min-h-0"
+            className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
           >
             <h3 className="tierbinder-heading">Image</h3>
             <div className="tierbinder-prop">
@@ -760,8 +802,8 @@ export default function Editor() {
         <img
           src={dragGhost.card.thumb}
           alt=""
-          className="fixed z-20 w-[80px] h-[111px] object-contain pointer-events-none opacity-80"
-          style={{ left: dragGhost.x - 40, top: dragGhost.y - 55 }}
+          className="tierbinder-thumb fixed z-20 -translate-1/2 object-contain pointer-events-none opacity-80"
+          style={{ left: dragGhost.x, top: dragGhost.y }}
         />
       )}
     </div>
