@@ -217,7 +217,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 ### Main nav
 
 - A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 600, and columns size to their labels. The bar hugs its tabs rather than filling the sidebar's width. Each label has a 16px Feather icon before it, 4px away: `plus`, `sliders` and `share`. These are stand-ins until Alex draws TierBinder's own.
-- The bar has 4px of padding inside, and 8px at its ends from `b3` up.
+- The bar has 4px of padding inside, and 8px at its ends from `b3` up. Tabs are 2px apart (`space-1`).
 - A colored block hugs the selected icon and word, with 4px of padding top and bottom and 8px at the sides (4px below `b3`, so the three tabs fit a small phone). It springs to the next word over `duration-move` and changes color over `duration-hover`.
 - Reduced motion: the block moves straight away and only its color fades.
 

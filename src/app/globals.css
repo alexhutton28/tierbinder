@@ -252,6 +252,7 @@ body {
   width: fit-content;
   grid-auto-columns: auto;
   grid-auto-flow: column;
+  gap: var(--spacing-1);
   padding: var(--spacing-2);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
