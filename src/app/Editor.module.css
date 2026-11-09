@@ -10,7 +10,6 @@
   height: calc(var(--tb-top-height) + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-top);
 }
 
@@ -45,12 +44,12 @@
       100vw - var(--tb-workspace-min)
     );
     min-height: 0;
-    border-right: var(--tb-line-width) solid var(--tb-line);
   }
 }
 
 /* Below the board on narrow screens (the column's header stays first); beside it, under
-   the header */
+   the header. The edge line is the sidebar's, so the header runs over it, as wide as the
+   sidebar with its line. */
 .side {
   order: 1;
   border-top: var(--tb-line-width) solid var(--tb-line);
@@ -58,6 +57,7 @@
 
   @variant b8 {
     border-top: 0;
+    border-right: var(--tb-line-width) solid var(--tb-line);
   }
 }
 
