@@ -164,20 +164,20 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ### Breakpoints
 
-Code uses Tailwind's `sm` and `md`, which are the same widths as `b6` and `b7`. New code uses the `b` names. The rest of the grid is available but unused.
+Code uses the `b` names: `b8:` in classes and `@variant b8` in CSS, never a raw width. The rest of the grid is available but unused.
 
-| Breakpoint | Name          | Width  | Purpose                              |
-| ---------- | ------------- | ------ | ------------------------------------ |
-| `b3`       | Phone         | 384px  | Standard and larger phones           |
-| `b5`       | Large phone   | 512px  | Large phones                         |
-| `b6`       | Small tablet  | 640px  | Same as `sm`                         |
-| `b7`       | Tablet        | 768px  | Same as `md`. The main layout change |
-| `b8`       | Large tablet  | 896px  | Large tablets and narrow windows     |
-| `b10`      | Desktop       | 1024px | Standard desktop                     |
-| `b11`      | Laptop        | 1152px | Small laptops                        |
-| `b12`      | Wide          | 1280px | Larger displays                      |
-| `b14`      | Large desktop | 1408px | Large desktop displays               |
-| `b15`      | Extra wide    | 1536px | Very large displays                  |
+| Breakpoint | Name          | Width  | Purpose                                          |
+| ---------- | ------------- | ------ | ------------------------------------------------ |
+| `b3`       | Phone         | 384px  | Standard and larger phones                       |
+| `b5`       | Large phone   | 512px  | Large phones                                     |
+| `b6`       | Small tablet  | 640px  | Same as `sm`                                     |
+| `b7`       | Tablet        | 768px  | Fields drop to 14px text                         |
+| `b8`       | Large tablet  | 896px  | The main layout change: sidebar beside the board |
+| `b10`      | Desktop       | 1024px | Standard desktop                                 |
+| `b11`      | Laptop        | 1152px | Small laptops                                    |
+| `b12`      | Wide          | 1280px | Larger displays                                  |
+| `b14`      | Large desktop | 1408px | Large desktop displays                           |
+| `b15`      | Extra wide    | 1536px | Very large displays                              |
 
 ### Layout
 
@@ -225,7 +225,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
-- **November 7, 2026 · v1.3:** Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
+- **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.
 - **November 6, 2026 · v1.0:** TierBinder's own system, built from the tcgTierStack Page System and the spacing, radius and breakpoint choices in big-a-website's HuttonDesign System ([#72](https://github.com/alexhutton28/big-a-website/issues/72)).

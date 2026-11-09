@@ -179,15 +179,15 @@ export default function Editor() {
   }, [doc]);
 
   // The board fills the workspace: its width on narrow screens (where the page scrolls),
-  // and from b7 up as much as fits, leaving room for the board type, toolbar and status
+  // and from b8 up as much as fits, leaving room for the board type, toolbar and status
   // around it. Exports are always full size.
   React.useEffect(() => {
     const workspace = workspaceRef.current;
     const board = boardRef.current;
     const box = boardBoxRef.current;
     if (!workspace || !board || !box) return;
-    const b7 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b7');
-    const wide = matchMedia(`(width >= ${b7.trim()})`);
+    const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
+    const wide = matchMedia(`(width >= ${b8.trim()})`);
     const fit = () => {
       const style = getComputedStyle(workspace);
       const width =
@@ -499,16 +499,16 @@ export default function Editor() {
   return (
     // The board, with the sidebar on its left (below it on narrow screens). On wide
     // screens each scrolls on its own, so the search results stay beside the board.
-    <div className="tierbinder-page w-full md:h-full flex flex-col text-body">
+    <div className="tierbinder-page w-full b8:h-full flex flex-col text-body">
       <header className="tierbinder-top">
         <Link href="/" className="tierbinder-brand">
           <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
         </Link>
       </header>
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row-reverse">
+      <div className="flex-1 min-h-0 flex flex-col b8:flex-row-reverse">
         <div
           ref={workspaceRef}
-          className="tierbinder-canvas flex-1 min-w-0 md:overflow-y-auto p-4 flex flex-col"
+          className="tierbinder-canvas flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col"
         >
           <div
             ref={boardRef}
@@ -617,7 +617,7 @@ export default function Editor() {
           </div>
         </div>
 
-        <aside className="tierbinder-side flex flex-col min-w-0 md:min-h-0">
+        <aside className="tierbinder-side flex flex-col min-w-0 b8:min-h-0">
           <div className="tierbinder-side-head">
             <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
           </div>
@@ -628,7 +628,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'add'}
-            className="tierbinder-panel flex flex-col gap-3 min-w-0 md:flex-1 md:min-h-0"
+            className="tierbinder-panel flex flex-col gap-3 min-w-0 b8:flex-1 b8:min-h-0"
           >
             <form
               onSubmit={(e) => {
@@ -701,7 +701,7 @@ export default function Editor() {
             {/* Fixed-size tiles, as many per row as fit (.tierbinder-results) */}
             <div
               hidden={importing}
-              className="tierbinder-results text-caption md:flex-1 md:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
+              className="tierbinder-results text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden"
             >
               {results.map((card) => (
                 <div
@@ -750,7 +750,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'customize'}
-            className="tierbinder-panel flex flex-col gap-3 md:flex-1 md:min-h-0 md:overflow-y-auto"
+            className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
@@ -770,7 +770,7 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'save'}
-            className="tierbinder-panel flex flex-col gap-3 md:flex-1 md:min-h-0"
+            className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
           >
             <h3 className="tierbinder-heading">Image</h3>
             <div className="tierbinder-prop">

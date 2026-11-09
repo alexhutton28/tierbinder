@@ -70,7 +70,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 ## The board
 
 - 1200×675 for every graphic; export is 2× (2400×1350 PNG), downloaded (named after the graphic's kind) or copied.
-- On screen the stage scales to fill the workspace, larger or smaller than 1200 (`scale` in `Editor.tsx`): its width on narrow screens, and from `b7` up as much as fits beside the sidebar, with room left for the board type, toolbar and status, which it measures rather than assumes.
+- On screen the stage scales to fill the workspace, larger or smaller than 1200 (`scale` in `Editor.tsx`): its width on narrow screens, and from `b8` up as much as fits beside the sidebar, with room left for the board type, toolbar and status, which it measures rather than assumes.
 - Cards are 100×140, clipped to the card images' rounded corners (`CARD_CORNER_RADIUS`, ~4.5px).
 - Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline), and any a graphic adds (the eraser's circle).
 - The selection outline follows a dragged card: Konva moves the card without React, so the stage's `dragmove` and `dragend` move the outline too. Cards carry their item's id (`CardNode` sets the group's `id`), which is how the editor knows the dragged card is the selected one.
@@ -113,7 +113,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - Delete or Backspace removes the selected card (there's no button for it).
 - Clear board (confirmed on the page) replaces the board showing with a new one of the same type; other types' boards are kept.
 - The board type dropdown above the board lists every type; each keeps its own board, so switching loses nothing (a type not used yet starts new).
-- The window: a top bar (`.tierbinder-top`) with the logo; a docked sidebar left of the board (below it on narrow screens); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
+- The window: a top bar (`.tierbinder-top`) with the logo; a docked sidebar left of the board (below it under `b8`); and the board centered in the workspace. The sidebar's main nav has Add Cards (green), Customize (yellow) and Save & Share (orange). Bulk import opens inside Add Cards, in place of the results. The panels stay mounted and are `hidden` when not shown. On wide screens the sidebar and the workspace each scroll on their own, and the search results fill the sidebar's height. The board's toolbar and status stay under the board.
 
 ## Look and motion
 

@@ -101,8 +101,8 @@ body {
 
 /* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
    workspace. */
-@media (width >= 48rem) {
-  .tierbinder-canvas {
+.tierbinder-canvas {
+  @variant b8 {
     align-items: center;
     justify-content: center;
   }
@@ -111,11 +111,9 @@ body {
 .tierbinder-side {
   border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
-}
 
-/* Beside the board, it grows with wide windows so search shows more columns */
-@media (width >= 48rem) {
-  .tierbinder-side {
+  /* Beside the board, it grows with wide windows so search shows more columns */
+  @variant b8 {
     flex: none;
     width: clamp(var(--tb-sidebar-min), 30vw, var(--tb-sidebar-max));
     border-top: 0;
@@ -220,10 +218,8 @@ body {
   align-items: center;
   padding: var(--spacing-2);
   white-space: nowrap;
-}
 
-@media (width >= 24rem) {
-  .tierbinder-radio-option > span {
+  @variant b3 {
     padding-inline: var(--spacing-3);
   }
 }
@@ -253,6 +249,10 @@ body {
 
   /* iPhones zoom the page when a field under 16px is tapped */
   font-size: var(--text-field);
+
+  @variant b7 {
+    font-size: var(--text-body);
+  }
 }
 
 .tierbinder-field::placeholder {
@@ -262,12 +262,6 @@ body {
 textarea.tierbinder-field {
   height: auto;
   padding-block: var(--spacing-3);
-}
-
-@media (width >= 48rem) {
-  .tierbinder-field {
-    font-size: var(--text-body);
-  }
 }
 
 /* Hex color fields fit #RRGGBB in the monospace font, plus their padding and border */
@@ -292,10 +286,8 @@ textarea.tierbinder-field {
   max-height: calc(
     var(--rows-shown) * (var(--tb-thumb-height) + 1lh) + (var(--rows-shown) - 1) * var(--spacing-2)
   );
-}
 
-@media (width >= 48rem) {
-  .tierbinder-results {
+  @variant b8 {
     max-height: none;
   }
 }
