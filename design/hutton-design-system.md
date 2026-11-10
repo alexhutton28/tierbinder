@@ -141,7 +141,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 - `.tierbinder-page :focus-visible` draws a 2px `--tb-focus` outline, 2px out.
 - Text fields (`.tierbinder-field`) are focused on every click, so they get a quieter sign instead: their 1px edge turns Storm 600, fading in over `duration-fade`.
-- The search field has a 16px Feather `search` icon inside it, 8px from the left, in Petrel 600 (`--tb-icon-rest`). The text starts 8px past the icon's ink (not its 16px box, which Feather leaves room in). It turns Storm 300 (`--tb-icon-lit`) with the edge.
+- The search field has a 16px Feather `search` icon inside it, 8px from the left, in Petrel 600 (`--tb-icon-rest`). The text starts 8px past the icon's ink (not its 16px box, which Feather leaves room in). The search field is taller than other controls: 8px of padding above and below its text sets its height (35px, or 37px on phones), and the Search button beside it matches. It turns Storm 300 (`--tb-icon-lit`) with the edge.
 
 ## 11. Motion
 

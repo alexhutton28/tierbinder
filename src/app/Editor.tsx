@@ -548,7 +548,7 @@ export default function Editor() {
                 e.preventDefault();
                 search(query);
               }}
-              className="flex gap-3"
+              className={`${styles.searchRow} flex gap-3`}
             >
               <label className={styles.search}>
                 <span className={styles.searchIcon} aria-hidden />
