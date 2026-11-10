@@ -134,7 +134,70 @@
   color: var(--tb-text);
 }
 
+/* A card shown large (View): over a dimmed window, as tall as --tb-view-height allows, or
+   narrower to fit the window with a split card's two side by side. It grows from the
+   card on the board (--from, set in Editor.tsx) on the spring, and shrinks back to it
+   as the card menu folds, while the dimming fades. */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: var(--spacing-5);
+  background: var(--tb-view-backdrop);
+  animation: view-fade var(--duration-fade) ease-out;
+}
+
+.viewerClosing {
+  pointer-events: none;
+  animation: view-fade var(--duration-fold) ease-in reverse forwards;
+}
+
+.viewCards {
+  display: flex;
+  gap: var(--spacing-4);
+  animation: view-grow var(--duration-move) var(--ease-spring);
+}
+
+.viewerClosing .viewCards {
+  animation: view-shrink var(--duration-fold) var(--ease-fold) forwards;
+}
+
+.viewCard {
+  width: min(
+    var(--tb-view-height) * (var(--card-ratio)),
+    (100vw - 2 * var(--spacing-5) - (var(--count) - 1) * var(--spacing-4)) / var(--count)
+  );
+  aspect-ratio: var(--card-ratio);
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
+}
+
+@keyframes view-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes view-grow {
+  from {
+    transform: var(--from);
+  }
+}
+
+@keyframes view-shrink {
+  to {
+    transform: var(--from);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .viewCards,
+  .viewerClosing .viewCards {
+    animation: none;
+  }
+
   .resultThumb:not([data-loaded]) {
     animation: none;
   }

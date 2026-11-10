@@ -6,7 +6,14 @@ import Link from 'next/link';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { Layer, Rect, Stage } from 'react-konva';
-import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH, EXPORT_SCALE } from './canvas/size';
+import {
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
+  CARD_CORNER_RADIUS,
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  EXPORT_SCALE,
+} from './canvas/size';
 import {
   faceOf,
   loadImage,
@@ -16,6 +23,7 @@ import {
   searchCards,
   toFace,
   toItem,
+  type CardFace,
   type CardItem,
   type CardResult,
 } from './cards';
@@ -327,6 +335,52 @@ export default function Editor() {
   const justDragged = React.useRef(false);
 
   const placements = type.layout(graphic);
+
+  // A card shown large in the middle of the window (View, in the card menu; a split card
+  // shows both its cards), grown from its place on the board and shrunk back to it when
+  // anything is pressed or Escape. Like the card menu, it stays on screen while it closes.
+  const [viewing, setViewing] = React.useState<{ id: string; faces: CardFace[] } | null>(null);
+  const [shownView, setShownView] = React.useState(viewing);
+  if (viewing && viewing !== shownView) setShownView(viewing);
+  const viewClosing = !viewing && shownView !== null;
+  React.useEffect(() => {
+    if (!viewClosing) return;
+    // Just after the 180ms shrink (Editor.module.css), as the card menu's timer does
+    const timer = setTimeout(() => setShownView(null), 220);
+    return () => clearTimeout(timer);
+  }, [viewClosing]);
+  React.useEffect(() => {
+    if (!viewing) return;
+    const close = () => setViewing(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // Kept from the page's own Escape handling
+      e.stopImmediatePropagation();
+      close();
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [viewing]);
+  // Where the cards grow from and shrink back to: the card on the board, as a transform
+  // of the cards' place in the middle (--from), measured without that transform
+  const viewRef = React.useRef<HTMLDivElement>(null);
+  const viewedPlace = placements.find((p) => p.item.id === shownView?.id);
+  React.useLayoutEffect(() => {
+    const cards = viewRef.current;
+    const stage = stageRef.current;
+    if (!cards || !stage || !viewedPlace) return;
+    const board = stage.container().getBoundingClientRect();
+    const x = board.left + (viewedPlace.x + viewedPlace.width / 2) * scale;
+    const y = board.top + (viewedPlace.y + viewedPlace.height / 2) * scale;
+    const dx = x - (cards.offsetLeft + cards.offsetWidth / 2);
+    const dy = y - (cards.offsetTop + cards.offsetHeight / 2);
+    const shrink = (viewedPlace.height * scale) / cards.offsetHeight;
+    cards.style.setProperty('--from', `translate(${dx}px, ${dy}px) scale(${shrink})`);
+  }, [viewedPlace, viewClosing, scale]);
   const targets = type.targets(graphic);
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
   // without them
@@ -567,8 +621,8 @@ export default function Editor() {
         : ['Add as split card', addToTarget];
     }
     return split
-      ? ['Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
-      : ['Remove card', 'Replace card', 'Make split card'];
+      ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
+      : ['View', 'Remove card', 'Replace card', 'Make split card'];
   };
 
   function runCardMenuItem({ id, dropped }: CardMenu, label: string) {
@@ -584,6 +638,10 @@ export default function Editor() {
         applyPlaced(type.dropCard(graphic, toItem(dropped.card), dropped.point));
       }
       return;
+    }
+    if (label === 'View') {
+      const item = findCard(id);
+      if (item) setViewing({ id, faces: item.split ? [faceOf(item), item.split] : [faceOf(item)] });
     }
     if (label === 'Remove card') removeCard(id);
     if (label === 'Replace card' || label === 'Replace top half') startPicking(id, 'top');
@@ -1182,7 +1240,7 @@ export default function Editor() {
                 ref={cardMenuRef}
                 role="menu"
                 onContextMenu={(e) => e.preventDefault()}
-                className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
                 // Kept inside the board's right edge
                 style={{
                   minWidth: MENU_WIDTH,
@@ -1214,6 +1272,40 @@ export default function Editor() {
           {status && <p className="whitespace-pre-line">{status}</p>}
         </div>
       </div>
+
+      {shownView && (
+        <div
+          role="dialog"
+          aria-label={shownView.faces.map((f) => f.name).join(' / ')}
+          className={`${styles.viewer} ${viewClosing ? styles.viewerClosing : ''}`}
+        >
+          <div
+            ref={viewRef}
+            className={styles.viewCards}
+            style={
+              {
+                '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                '--count': shownView.faces.length,
+              } as React.CSSProperties
+            }
+          >
+            {shownView.faces.map((face, i) => (
+              // eslint-disable-next-line @next/next/no-img-element -- the board's own image, already loaded through the proxy
+              <img
+                key={i}
+                src={proxied(face.image)}
+                alt={face.name}
+                draggable={false}
+                className={styles.viewCard}
+                // The card images' rounded corners, as on the board
+                style={{
+                  borderRadius: `${(CARD_CORNER_RADIUS / CARD_WIDTH) * 100}% / ${(CARD_CORNER_RADIUS / CARD_HEIGHT) * 100}%`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {dragGhost && (
         // eslint-disable-next-line @next/next/no-img-element -- remote thumbnail, as in the results

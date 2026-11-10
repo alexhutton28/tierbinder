@@ -106,12 +106,12 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ## 6. Border radius
 
-| Token           | Value  | Used for                |
-| --------------- | ------ | ----------------------- |
-| `radius-small`  | 4px    | Buttons, fields, popups |
-| `radius-medium` | 8px    | Not used yet            |
-| `radius-large`  | 16px   | Not used yet            |
-| `radius-full`   | 9999px | Not used yet            |
+| Token           | Value  | Used for                                         |
+| --------------- | ------ | ------------------------------------------------ |
+| `radius-small`  | 4px    | Buttons, fields, popups                          |
+| `radius-medium` | 8px    | Popups listing options (4px around rounded rows) |
+| `radius-large`  | 16px   | Not used yet                                     |
+| `radius-full`   | 9999px | Not used yet                                     |
 
 - The values come from the spacing scale, but radius keeps its own tokens.
 - The names avoid Tailwind's `sm`, `md` and `lg`.
@@ -158,7 +158,8 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 - A spring that goes 1.5% past (3% looked like too much live). 450ms for things that move, with plain `ease-out` fades of about 120ms alongside. Use it for new TierBinder animations.
 - Button hover colors ease over `duration-hover`.
-- Popups share `.tierbinder-menu`: stretch open, fold closed. Dropdowns open faster, over `duration-drop`, because people use them constantly. The card menu goes left to right, dropdowns top to bottom.
+- Popups share `.tierbinder-menu`: stretch open, fold closed. Menus and dropdown lists hold their options as rounded rows (`radius-small`, 500 weight) inset 4px, 2px apart, lighting up in Petrel 700 on hover. Dropdowns open faster, over `duration-drop`, because people use them constantly. The card menu goes left to right, dropdowns top to bottom.
+- View (in the card menu) grows the card from the board to the middle of the window on the spring over `duration-move`, over a page dimmed with Petrel 950, and shrinks it back like a closing popup.
 - Closing folds back over `duration-fold` on `ease-fold`, speeding up as it goes. The timers in `Editor.tsx`, `ui/Dropdown.tsx` and `ui/SearchFilters.tsx` wait for it.
 - Reduced motion: fades only, closing over `duration-fold-fade`.
 - Every animation respects `prefers-reduced-motion`.

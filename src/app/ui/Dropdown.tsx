@@ -120,7 +120,7 @@ export default function Dropdown<T extends string | number>({
             role="listbox"
             aria-labelledby={`${id}-label`}
             onKeyDown={onListKey}
-            className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored flex flex-col ${closing ? 'closing pointer-events-none' : ''}`}
+            className={`tierbinder-menu dropdown tierbinder-popup tierbinder-list tierbinder-anchored flex flex-col ${closing ? 'closing pointer-events-none' : ''}`}
           >
             {options.map((option, i) => (
               <button

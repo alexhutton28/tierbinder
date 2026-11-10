@@ -60,6 +60,7 @@ body {
   --tb-selected: var(--color-petrel-100);
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
+  --tb-option-hover: var(--color-petrel-700);
   --tb-focus: var(--color-storm-200);
   --tb-icon-rest: var(--color-petrel-600);
   --tb-icon-lit: var(--color-storm-300);
@@ -67,6 +68,7 @@ body {
   --tb-scroll-thumb-hover: var(--color-petrel-600);
   --tb-scroll-shade: color-mix(in srgb, var(--color-petrel-950) 60%, transparent);
   --tb-skeleton: var(--color-petrel-850);
+  --tb-view-backdrop: color-mix(in srgb, var(--color-petrel-950) 75%, transparent);
   --tb-skeleton-shine: var(--color-petrel-800);
   --tb-radius: var(--radius-small);
 
@@ -78,6 +80,9 @@ body {
   --tb-control-height: 32px;
   --tb-icon: 16px;
   --tb-scrollbar: 8px;
+
+  /* How tall a viewed card (View, in the card menu) can be */
+  --tb-view-height: 85dvh;
 
   /* One sweep of a loading placeholder's shimmer */
   --tb-shimmer: 1.5s;
@@ -246,8 +251,21 @@ textarea.tierbinder-field {
 
 @media (hover: hover) {
   .tierbinder-option:hover {
-    background: var(--tb-control-hover);
+    background: var(--tb-option-hover);
   }
+}
+
+/* A popup listing options (the card menu, dropdowns): the options are rounded rows inset
+   4px from its edge, so its own corners are that much rounder */
+.tierbinder-list {
+  gap: var(--spacing-1);
+  padding: var(--spacing-2);
+  border-radius: calc(var(--tb-radius) + var(--spacing-2));
+}
+
+.tierbinder-list .tierbinder-option {
+  border-radius: var(--tb-radius);
+  font-weight: 500;
 }
 
 .tierbinder-page :focus-visible {
