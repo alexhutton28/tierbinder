@@ -82,7 +82,7 @@ body {
   --tb-scrollbar: 8px;
 
   /* How tall a viewed card (View, in the card menu) can be */
-  --tb-view-height: 85dvh;
+  --tb-view-height: 80dvh;
 
   /* One sweep of a loading placeholder's shimmer */
   --tb-shimmer: 1.5s;
@@ -261,6 +261,11 @@ textarea.tierbinder-field {
   gap: var(--spacing-1);
   padding: var(--spacing-2);
   border-radius: calc(var(--tb-radius) + var(--spacing-2));
+}
+
+/* Dropdown lists keep the controls' corners */
+.tierbinder-list.dropdown {
+  border-radius: var(--tb-radius);
 }
 
 .tierbinder-list .tierbinder-option {

@@ -106,12 +106,12 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ## 6. Border radius
 
-| Token           | Value  | Used for                                         |
-| --------------- | ------ | ------------------------------------------------ |
-| `radius-small`  | 4px    | Buttons, fields, popups                          |
-| `radius-medium` | 8px    | Popups listing options (4px around rounded rows) |
-| `radius-large`  | 16px   | Not used yet                                     |
-| `radius-full`   | 9999px | Not used yet                                     |
+| Token           | Value  | Used for                                    |
+| --------------- | ------ | ------------------------------------------- |
+| `radius-small`  | 4px    | Buttons, fields, popups                     |
+| `radius-medium` | 8px    | The card menu (4px around its rounded rows) |
+| `radius-large`  | 16px   | Not used yet                                |
+| `radius-full`   | 9999px | Not used yet                                |
 
 - The values come from the spacing scale, but radius keeps its own tokens.
 - The names avoid Tailwind's `sm`, `md` and `lg`.

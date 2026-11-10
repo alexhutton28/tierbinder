@@ -124,7 +124,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - The palette, look and motion are in `design/hutton-design-system.md`, including `--ease-spring`, `--duration-move`, `--duration-drop` and `--duration-fade`.
 - The type scale (`text-field`, `text-body`, `text-caption`) is in the `@theme` block at the top of `globals.css`, since the token generator has none. Fields are 16px on phones, because iPhones zoom the page on smaller ones.
 - Scrollbars (the page's and every panel's) are thin, a rounded `--tb-scroll-thumb` on no track (`globals.css`), drawn with `scrollbar-color` where it's supported and the WebKit scrollbar in Safari.
-- Popups (the card menu, dropdowns) share `.tierbinder-menu` in `globals.css`; those listing options (the card menu and the dropdowns' lists) are `.tierbinder-list`: options as rounded rows inset 4px, lighting up in `--tb-option-hover`; the dropdowns and the Sets popup float in the top layer (`ui/anchored.ts`).
+- Popups (the card menu, dropdowns) share `.tierbinder-menu` in `globals.css`; those listing options (the card menu and the dropdowns' lists) are `.tierbinder-list`: options as rounded rows inset 4px, lighting up in `--tb-option-hover`, with 8px corners on the card menu and 4px on dropdowns; the dropdowns and the Sets popup float in the top layer (`ui/anchored.ts`).
 
 ## Cards from TCGdex and Limitless
 
