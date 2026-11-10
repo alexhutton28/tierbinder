@@ -791,50 +791,48 @@ export default function Editor() {
                   Search
                 </Button>
               </form>
-              {/* One row: Sets, always (with no search, it lists the sets ticked); and
-                while there are results (or none found), the Add to picker when there's a choice (a blank
-                canvas has one place for cards) and Sort, at the right */}
-              {!importing && (
-                <div className="flex flex-wrap gap-3 items-center">
-                  <SearchFilters
-                    options={searchOptions}
-                    colors={tickColors}
-                    onChange={changeSearchOptions}
+              {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
+                picker when there's a choice (a blank canvas has one place for cards),
+                always; and while there are results (or none found), Sort, at the right */}
+              <div className="flex flex-wrap gap-3 items-center">
+                <SearchFilters
+                  options={searchOptions}
+                  colors={tickColors}
+                  onChange={changeSearchOptions}
+                />
+                {!picking && targets.length > 1 && (
+                  <Dropdown
+                    label="Add to"
+                    hideLabel
+                    chevron={false}
+                    value={targetIndex}
+                    options={targets.map((t, i) => ({
+                      value: i,
+                      label: t.name.replaceAll('\n', ' '),
+                      color: t.color,
+                    }))}
+                    onChange={setTarget}
                   />
-                  {!picking && searchShown && targets.length > 1 && (
-                    <Dropdown
-                      label="Add to"
-                      hideLabel
-                      chevron={false}
-                      value={targetIndex}
-                      options={targets.map((t, i) => ({
-                        value: i,
-                        label: t.name.replaceAll('\n', ' '),
-                        color: t.color,
-                      }))}
-                      onChange={setTarget}
+                )}
+                {/* Flips the order: newest or oldest set first, and each set's numbers */}
+                {searchShown && (
+                  <Button
+                    type="button"
+                    variant="icon"
+                    className="ml-auto"
+                    aria-label={`Sort: ${sortDirection}`}
+                    title={`Sort: ${sortDirection}`}
+                    onClick={() =>
+                      changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
+                    }
+                  >
+                    <span
+                      aria-hidden
+                      className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
                     />
-                  )}
-                  {/* Flips the order: newest or oldest set first, and each set's numbers */}
-                  {searchShown && (
-                    <Button
-                      type="button"
-                      variant="icon"
-                      className="ml-auto"
-                      aria-label={`Sort: ${sortDirection}`}
-                      title={`Sort: ${sortDirection}`}
-                      onClick={() =>
-                        changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
-                      }
-                    >
-                      <span
-                        aria-hidden
-                        className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
-                      />
-                    </Button>
-                  )}
-                </div>
-              )}
+                  </Button>
+                )}
+              </div>
               {/* What the search was for, and with sets ticked, a way to search them all */}
               {noResults && !importing && (
                 <div role="status" className="flex flex-col gap-3">
