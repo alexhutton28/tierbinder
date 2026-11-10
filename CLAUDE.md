@@ -9,7 +9,7 @@ deployed on Vercel's Hobby plan.
 ## Workflow
 
 - `main` is protected: changes go through a PR and must pass the `build` check. What it runs is in `.github/workflows/ci.yml`; run the same checks locally before committing, plus `npx prettier --write` on changed files and `npx tsc --noEmit`.
-- Before calling a PR done, run the independent reviewers in `.claude/agents/` on its diff: `code-reviewer`, and `design-reviewer` when the interface changed. They haven't seen the work, so they catch what its author misses. Check their findings against the code, fix the clear ones, and ask Alex about any that need a decision.
+- Before calling a PR done, run the independent reviewers in `.claude/agents/` on its diff: `code-reviewer`, and `design-reviewer` when the interface changed. They haven't seen the work, so they catch what its author misses. Check their findings against the code, fix the clear ones, and ask Alex about any that need a decision. Don't request GitHub Copilot reviews on this repo: Alex's Copilot access isn't his to spend on it.
 - Squash-merge and delete the branch.
 - Don't stack PRs.
 - Run tools from the repo folder.
