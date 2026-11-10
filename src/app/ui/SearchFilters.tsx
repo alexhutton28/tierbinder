@@ -6,7 +6,7 @@ import { CARD_SETS } from '../sets';
 import Button from './Button';
 import styles from './SearchFilters.module.css';
 
-// The card search's Filter button and its popup: which sets to search, from a list of
+// The card search's Sets button (a filter) and its popup: which sets to search, from a list of
 // every set (newest first) narrowed by a search of their names and codes. None ticked
 // means every set. Each change applies at once. The popup opens and closes like a
 // dropdown (.tierbinder-menu.dropdown in globals.css); Escape or a press outside closes it.
@@ -70,11 +70,13 @@ export default function SearchFilters({
         type="button"
         aria-expanded={open}
         aria-controls={`${id}-popup`}
+        aria-label={count ? `Sets: ${options.sets.join(', ')}` : 'Sets'}
         className="flex gap-2 items-center"
         onClick={() => setOpen((o) => !o)}
       >
         <span aria-hidden className={styles.icon} />
-        {count ? `Filter (${count})` : 'Filter'}
+        {/* The ticked set's code, or the first one's and how many more ("TWM +2") */}
+        {count ? `${options.sets[0]}${count > 1 ? ` +${count - 1}` : ''}` : 'Sets'}
       </Button>
       {shown && (
         <div
@@ -124,7 +126,7 @@ export default function SearchFilters({
               className="self-start"
               onClick={() => onChange({ ...options, sets: [] })}
             >
-              Clear filters
+              Clear sets
             </Button>
           )}
         </div>

@@ -26,7 +26,7 @@ import { parseImport } from './importText';
 import {
   activeFilters,
   DEFAULT_SEARCH,
-  SORT_DIRECTIONS,
+  sortDirection as sortLabel,
   type SearchOptions,
 } from './searchOptions';
 import Button from './ui/Button';
@@ -233,7 +233,7 @@ export default function Editor() {
   const searchCount = React.useRef(0);
   const [results, setResults] = React.useState<CardResult[]>([]);
   const showingResults = results.length > 0 && !importing;
-  const sortDirection = SORT_DIRECTIONS[searchOptions.reverse ? 1 : 0];
+  const sortDirection = sortLabel(searchOptions);
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -492,7 +492,7 @@ export default function Editor() {
       found.length
         ? ''
         : activeFilters(options)
-          ? 'No cards match these filters.'
+          ? 'No cards match in these sets.'
           : 'No cards found.'
     );
     setBusy(false);
@@ -766,13 +766,13 @@ export default function Editor() {
                   Search
                 </Button>
               </form>
-              {/* One row: Filter, always (with no search, it lists the sets ticked); and
+              {/* One row: Sets, always (with no search, it lists the sets ticked); and
                 while there are results, Sort and the Add to picker when there's a choice
                 (a blank canvas has one place for cards) */}
               {!importing && (
                 <div className="flex flex-wrap gap-3 items-center">
                   <SearchFilters options={searchOptions} onChange={changeSearchOptions} />
-                  {/* Flips the order: newest or oldest set first */}
+                  {/* Flips the order: newest or oldest set first, and each set's numbers */}
                   {showingResults && (
                     <Button
                       type="button"

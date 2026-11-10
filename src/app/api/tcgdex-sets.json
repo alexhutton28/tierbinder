@@ -2,62 +2,74 @@
   "2011bw": {
     "code": "MCD11",
     "name": "McDonald's Collection 2011",
-    "date": "2011-06-17"
+    "date": "2011-06-17",
+    "empty": true
   },
   "2012bw": {
     "code": "MCD12",
     "name": "McDonald's Collection 2012",
-    "date": "2012-06-15"
+    "date": "2012-06-15",
+    "empty": true
   },
   "2014xy": {
     "code": "MCD14",
     "name": "McDonald's Collection 2014",
-    "date": "2014-05-23"
+    "date": "2014-05-23",
+    "empty": true
   },
   "2015xy": {
     "code": "MCD15",
     "name": "McDonald's Collection 2015",
-    "date": "2015-11-27"
+    "date": "2015-11-27",
+    "empty": true
   },
   "2016xy": {
     "code": "MCD16",
     "name": "McDonald's Collection 2016",
-    "date": "2016-08-20"
+    "date": "2016-08-20",
+    "empty": true
   },
   "2017sm": {
     "code": "MCD17",
     "name": "McDonald's Collection 2017",
-    "date": "2017-08-03"
+    "date": "2017-08-03",
+    "empty": true
   },
   "2018sm": {
     "code": "MCD18",
     "name": "McDonald's Collection 2018",
-    "date": "2018-10-19"
+    "date": "2018-10-19",
+    "empty": true
   },
   "2019sm": {
     "code": "MCD19",
     "name": "McDonald's Collection 2019",
-    "date": "2019-10-15"
+    "date": "2019-10-15",
+    "empty": true
   },
   "2021swsh": {
     "code": "MCD21",
     "name": "McDonald's Collection 2021",
-    "date": "2021-02-09"
+    "date": "2021-02-09",
+    "empty": true
   },
   "2022swsh": {
     "code": "MCD22",
     "name": "McDonald's Collection 2022",
-    "date": "2022-08-03"
+    "date": "2022-08-03",
+    "empty": true
   },
   "2023sv": {
     "code": "MCD23",
     "name": "McDonald's Collection 2023",
-    "date": "2023-08-01"
+    "date": "2023-08-01",
+    "empty": true
   },
   "2024sv": {
     "code": "MCD24",
     "name": "McDonald's Collection 2024",
-    "date": "2024-12-04"
+    "date": "2024-12-04",
+    "empty": true
   },
   "30th": {
     "code": "30C",
@@ -102,7 +114,8 @@
   "bog": {
     "code": "BOG",
     "name": "Best of game",
-    "date": "2002-12-01"
+    "date": "2002-12-01",
+    "empty": true
   },
   "bw1": {
     "code": "BLW",
@@ -312,7 +325,8 @@
   "ex5.5": {
     "code": "EX5.5",
     "name": "Poké Card Creator Pack",
-    "date": "2004-07-01"
+    "date": "2004-07-01",
+    "empty": true
   },
   "ex6": {
     "code": "RG",
@@ -337,7 +351,8 @@
   "exu": {
     "code": "EXU",
     "name": "Unseen Forces Unown Collection",
-    "date": "2005-08-22"
+    "date": "2005-08-22",
+    "empty": true
   },
   "fut2020": {
     "code": "FUT20",
@@ -387,7 +402,8 @@
   "jumbo": {
     "code": "JUMBO",
     "name": "Jumbo cards",
-    "date": "2000-02-01"
+    "date": "2000-02-01",
+    "empty": true
   },
   "lc": {
     "code": "LC",
@@ -442,12 +458,14 @@
   "mfb": {
     "code": "MFB",
     "name": "My First Battle",
-    "date": "2023-09-29"
+    "date": "2023-09-29",
+    "empty": true
   },
   "miscp": {
     "code": "MISCP",
     "name": "Miscellaneous Promos",
-    "date": "1996-01-01"
+    "date": "1996-01-01",
+    "empty": true
   },
   "neo1": {
     "code": "N1",
@@ -542,7 +560,8 @@
   "rc": {
     "code": "RC",
     "name": "Radiant Collection",
-    "date": "2013-11-06"
+    "date": "2013-11-06",
+    "empty": true
   },
   "ru1": {
     "code": "RM",
@@ -642,7 +661,8 @@
   "sp": {
     "code": "SP",
     "name": "Sample",
-    "date": "2002-08-01"
+    "date": "2002-08-01",
+    "empty": true
   },
   "sv01": {
     "code": "SVI",
@@ -852,107 +872,128 @@
   "tk-bw-e": {
     "code": "TK5E",
     "name": "BW trainer Kit (Excadrill)",
-    "date": "2011-09-01"
+    "date": "2011-09-01",
+    "empty": true
   },
   "tk-bw-z": {
     "code": "TK5Z",
     "name": "BW trainer Kit (Zoroark)",
-    "date": "2011-09-01"
+    "date": "2011-09-01",
+    "empty": true
   },
   "tk-dp-l": {
     "code": "TK3L",
     "name": "DP trainer Kit (Lucario)",
-    "date": "2007-09-01"
+    "date": "2007-09-01",
+    "empty": true
   },
   "tk-dp-m": {
     "code": "TK3M",
     "name": "DP trainer Kit (Manaphy)",
-    "date": "2007-09-01"
+    "date": "2007-09-01",
+    "empty": true
   },
   "tk-ex-latia": {
     "code": "TK1A",
     "name": "EX trainer Kit (Latias)",
-    "date": "2004-07-01"
+    "date": "2004-07-01",
+    "empty": true
   },
   "tk-ex-latio": {
     "code": "TK1O",
     "name": "EX trainer Kit (Latios)",
-    "date": "2004-07-01"
+    "date": "2004-07-01",
+    "empty": true
   },
   "tk-ex-m": {
     "code": "TK2M",
     "name": "EX trainer Kit 2 (Minun)",
-    "date": "2006-03-01"
+    "date": "2006-03-01",
+    "empty": true
   },
   "tk-ex-p": {
     "code": "TK2P",
     "name": "EX trainer Kit 2 (Plusle)",
-    "date": "2006-03-01"
+    "date": "2006-03-01",
+    "empty": true
   },
   "tk-hs-g": {
     "code": "TK4G",
     "name": "HS trainer Kit (Gyarados)",
-    "date": "2010-05-01"
+    "date": "2010-05-01",
+    "empty": true
   },
   "tk-hs-r": {
     "code": "TK4R",
     "name": "HS trainer Kit (Raichu)",
-    "date": "2010-05-01"
+    "date": "2010-05-01",
+    "empty": true
   },
   "tk-sm-l": {
     "code": "TK10L",
     "name": "SM trainer Kit (Lycanroc)",
-    "date": "2017-04-21"
+    "date": "2017-04-21",
+    "empty": true
   },
   "tk-sm-r": {
     "code": "TK10A",
     "name": "SM trainer Kit (Alolan Raichu)",
-    "date": "2017-04-21"
+    "date": "2017-04-21",
+    "empty": true
   },
   "tk-xy-b": {
     "code": "TK7A",
     "name": "XY trainer Kit (Bisharp)",
-    "date": "2014-11-01"
+    "date": "2014-11-01",
+    "empty": true
   },
   "tk-xy-latia": {
     "code": "TK8A",
     "name": "XY trainer Kit (Latias)",
-    "date": "2015-04-29"
+    "date": "2015-04-29",
+    "empty": true
   },
   "tk-xy-latio": {
     "code": "TK8O",
     "name": "XY trainer Kit (Latios)",
-    "date": "2015-04-29"
+    "date": "2015-04-29",
+    "empty": true
   },
   "tk-xy-n": {
     "code": "TK6N",
     "name": "XY trainer Kit (Noivern)",
-    "date": "2014-03-12"
+    "date": "2014-03-12",
+    "empty": true
   },
   "tk-xy-p": {
     "code": "TK9P",
     "name": "XY trainer Kit (Pikachu Libre)",
-    "date": "2016-04-27"
+    "date": "2016-04-27",
+    "empty": true
   },
   "tk-xy-su": {
     "code": "TK9S",
     "name": "XY trainer Kit (Suicune)",
-    "date": "2016-04-27"
+    "date": "2016-04-27",
+    "empty": true
   },
   "tk-xy-sy": {
     "code": "TK6S",
     "name": "XY trainer Kit (Sylveon)",
-    "date": "2014-03-12"
+    "date": "2014-03-12",
+    "empty": true
   },
   "tk-xy-w": {
     "code": "TK7B",
     "name": "XY trainer Kit (Wigglytuff)",
-    "date": "2014-11-01"
+    "date": "2014-11-01",
+    "empty": true
   },
   "wp": {
     "code": "WP",
     "name": "W Promotional",
-    "date": "1999-09-01"
+    "date": "1999-09-01",
+    "empty": true
   },
   "xy0": {
     "code": "KSS",
@@ -1022,7 +1063,8 @@
   "xya": {
     "code": "XYA",
     "name": "Yellow A Alternate",
-    "date": "2014-02-05"
+    "date": "2014-02-05",
+    "empty": true
   },
   "xyp": {
     "code": "XYP",

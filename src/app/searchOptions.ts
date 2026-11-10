@@ -10,8 +10,15 @@ export type SearchOptions = {
 
 export const DEFAULT_SEARCH: SearchOptions = { sets: [], reverse: false };
 
-// What the sort button says the order is, as given and reversed
-export const SORT_DIRECTIONS = ['Newest first', 'Oldest first'] as const;
+// What the sort button says the order is, as given and reversed: by set, or by number
+// when the filter has one set
+export function sortDirection(options: SearchOptions) {
+  const [usual, reversed] =
+    options.sets.length === 1
+      ? ['Lowest number first', 'Highest number first']
+      : ['Newest first', 'Oldest first'];
+  return options.reverse ? reversed : usual;
+}
 
 // How many filters are on (the sort direction isn't a filter)
 export const activeFilters = (options: SearchOptions) => options.sets.length;

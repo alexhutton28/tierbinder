@@ -110,16 +110,18 @@ const byNumber = (n: string) => parseInt(n, 10) || Infinity;
 
 type Found = CardResult & CardInfo;
 
-// By release date (newest first, or oldest when reversed), then by set code and number
+// Newest set first, then by set code and lowest number first. Reversed, all of it flips:
+// oldest set first, each from its highest number down.
 function arranged(results: Found[], options: SearchOptions): CardResult[] {
   const dir = options.reverse ? -1 : 1;
   return results
     .toSorted(
       (a, b) =>
-        dir * b.date.localeCompare(a.date) ||
-        a.set.localeCompare(b.set) ||
-        byNumber(a.number) - byNumber(b.number) ||
-        a.number.localeCompare(b.number)
+        dir *
+        (b.date.localeCompare(a.date) ||
+          a.set.localeCompare(b.set) ||
+          byNumber(a.number) - byNumber(b.number) ||
+          a.number.localeCompare(b.number))
     )
     .map(({ set, number, image, thumb, name }) => ({ set, number, image, thumb, name }));
 }
