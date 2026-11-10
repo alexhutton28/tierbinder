@@ -10,12 +10,20 @@ import styles from './SearchFilters.module.css';
 // every set (newest first) narrowed by a search of their names and codes. None ticked
 // means every set. Each change applies at once. The popup opens and closes like a
 // dropdown (.tierbinder-menu.dropdown in globals.css); Escape or a press outside closes it.
+// It's shown as a popover, in the top layer, so it overlaps the board instead of being
+// clipped by (or widening) the sidebar; it's placed under the button from the button's
+// position (--anchor-top, --anchor-left), and the CSS keeps it inside the window.
+// Ticked sets' checkboxes take `colors` in the order they were ticked (the board's tier
+// colors: the first ticked in the first tier's, the second in the second's), starting
+// over once they run out.
 
 export default function SearchFilters({
   options,
+  colors,
   onChange,
 }: {
   options: SearchOptions;
+  colors: string[];
   onChange: (options: SearchOptions) => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -33,7 +41,29 @@ export default function SearchFilters({
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
+  const popupRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  // Shown in the top layer under the button, following it while the page or sidebar
+  // scrolls or the window resizes
+  React.useLayoutEffect(() => {
+    const popup = popupRef.current;
+    const button = buttonRef.current;
+    if (!shown || !popup || !button) return;
+    const place = () => {
+      const box = button.getBoundingClientRect();
+      popup.style.setProperty('--anchor-top', `${box.bottom}px`);
+      popup.style.setProperty('--anchor-left', `${box.left}px`);
+    };
+    place();
+    if (!popup.matches(':popover-open')) popup.showPopover?.();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [shown]);
 
   // Opening focuses the set search
   React.useEffect(() => {
@@ -80,7 +110,9 @@ export default function SearchFilters({
       </Button>
       {shown && (
         <div
+          ref={popupRef}
           id={`${id}-popup`}
+          popover="manual"
           role="dialog"
           aria-label="Filter by set"
           onKeyDown={(e) => {
@@ -107,17 +139,25 @@ export default function SearchFilters({
           />
           <fieldset className={styles.sets}>
             <legend className="sr-only">Sets</legend>
-            {sets.map((s) => (
-              <label key={s.code} className={styles.choice}>
-                <input
-                  type="checkbox"
-                  checked={options.sets.includes(s.code)}
-                  onChange={(e) => toggle(s.code, e.target.checked)}
-                />
-                <span className={styles.setName}>{s.name}</span>
-                <span className={styles.code}>{s.code}</span>
-              </label>
-            ))}
+            {sets.map((s) => {
+              const ticked = options.sets.indexOf(s.code);
+              return (
+                <label key={s.code} className={styles.choice}>
+                  <input
+                    type="checkbox"
+                    checked={ticked >= 0}
+                    style={
+                      ticked >= 0 && colors.length
+                        ? { accentColor: colors[ticked % colors.length] }
+                        : undefined
+                    }
+                    onChange={(e) => toggle(s.code, e.target.checked)}
+                  />
+                  <span className={styles.setName}>{s.name}</span>
+                  <span className={styles.code}>{s.code}</span>
+                </label>
+              );
+            })}
             {!sets.length && <p className={styles.code}>No sets match.</p>}
           </fieldset>
           {count > 0 && (

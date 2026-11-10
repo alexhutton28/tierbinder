@@ -21,6 +21,7 @@ import {
 } from './cards';
 import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './document';
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
+import { DEFAULT_TIERS } from './graphics/tier-list/model';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import {
@@ -232,6 +233,17 @@ export default function Editor() {
   // Each search's number, so a slower earlier one can't replace a later one's results
   const searchCount = React.useRef(0);
   const [results, setResults] = React.useState<CardResult[]>([]);
+  // Results whose thumbnail wouldn't load even through the proxy (a source listing an
+  // image it doesn't have): hidden, since there's no picture to show. Each set of results
+  // starts afresh.
+  const [unshown, setUnshown] = React.useState<{ of: CardResult[]; keys: Set<string> }>({
+    of: [],
+    keys: new Set(),
+  });
+  const brokenKeys = unshown.of === results ? unshown.keys : null;
+  const shownResults = brokenKeys
+    ? results.filter((card) => !brokenKeys.has(`${card.set} ${card.number}`))
+    : results;
   const showingResults = results.length > 0 && !importing;
   const sortDirection = sortLabel(searchOptions);
   // Where the next search result goes: one of the graphic's targets
@@ -309,6 +321,10 @@ export default function Editor() {
 
   const placements = type.layout(graphic);
   const targets = type.targets(graphic);
+  // The set filter's ticks: the board's tier colors, or a new tier list's on a board
+  // without them
+  const targetColors = targets.flatMap((t) => (t.color ? [t.color] : []));
+  const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
   const targetIndex = Math.min(target, targets.length - 1);
 
   // Changes the board showing
@@ -771,7 +787,11 @@ export default function Editor() {
                 (a blank canvas has one place for cards) */}
               {!importing && (
                 <div className="flex flex-wrap gap-3 items-center">
-                  <SearchFilters options={searchOptions} onChange={changeSearchOptions} />
+                  <SearchFilters
+                    options={searchOptions}
+                    colors={tickColors}
+                    onChange={changeSearchOptions}
+                  />
                   {/* Flips the order: newest or oldest set first, and each set's numbers */}
                   {showingResults && (
                     <Button
@@ -821,7 +841,7 @@ export default function Editor() {
                 <div
                   className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
                 >
-                  {results.map((card) => (
+                  {shownResults.map((card) => (
                     <div
                       key={`${card.set}-${card.number}`}
                       role="button"
@@ -851,10 +871,19 @@ export default function Editor() {
                         className={`${styles.thumb} object-contain`}
                         loading="lazy"
                         draggable={false}
-                        // The CDN occasionally fails a load; retry once through the image proxy
+                        // The CDN occasionally fails a load; retry once through the image
+                        // proxy, and hide the result if that fails too
                         onError={(e) => {
                           const proxy = proxied(card.thumb);
-                          if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                          if (!e.currentTarget.src.endsWith(proxy)) {
+                            e.currentTarget.src = proxy;
+                            return;
+                          }
+                          const key = `${card.set} ${card.number}`;
+                          setUnshown((u) => ({
+                            of: results,
+                            keys: new Set([...(u.of === results ? u.keys : []), key]),
+                          }));
                         }}
                       />
                       <span className="w-full truncate text-center">

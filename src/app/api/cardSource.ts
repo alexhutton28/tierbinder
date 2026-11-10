@@ -31,7 +31,7 @@ export async function searchCards(
   let found: tcgdex.Search | null = null;
   try {
     found = await tcgdex.searchCards(query);
-    if (!found.results.length && !found.missing.size) {
+    if (!found.results.length && !found.missing.size && !found.elsewhere.size) {
       // Nothing at all, perhaps a set too new for TCGdex: every Limitless result
       found = null;
     } else {
@@ -39,8 +39,9 @@ export async function searchCards(
         results: found.results.filter(inSets),
         // Keyed by cardKey: the set code, a space, the number
         missing: new Map([...found.missing].filter(([key]) => inSets({ set: key.split(' ')[0] }))),
+        elsewhere: new Set([...found.elsewhere].filter((set) => inSets({ set }))),
       };
-      if (!found.missing.size) return arranged(found.results, options);
+      if (!found.missing.size && !found.elsewhere.size) return arranged(found.results, options);
     }
   } catch (e) {
     console.error('TCGdex search failed, trying Limitless:', e);
@@ -54,25 +55,16 @@ export async function searchCards(
     return [];
   });
   if (!found) {
-    // Limitless search results have no names; the search is the best guess. They're
-    // already newest first.
-    const named = extra.filter(inSets).map((card) => ({ ...card, name: query }));
+    // Already newest first
+    const named = extra.filter(inSets).map((card) => ({ ...card, name: card.name ?? query }));
     return options.reverse ? named.toReversed() : named;
   }
-  // Only the cards TCGdex lists without an image: a few older sets have other codes on
-  // Limitless (UD for Undaunted, UND on TCGdex), so anything else could be a duplicate
-  const missing = found.missing;
-  const filled = extra.flatMap((card) => {
-    const info = missing.get(cardKey(card));
-    if (!info) return [];
-    missing.delete(cardKey(card));
-    return [{ ...card, ...info }];
-  });
-  return arranged([...found.results, ...filled], options);
+  return arranged(merged(found, extra), options);
 }
 
 // Every card in the sets asked for (a search with no name): TCGdex's, with Limitless for
-// the cards it has no image for and the sets it doesn't have yet
+// the cards it has no image for, the codes whose cards come from it, and the sets TCGdex
+// doesn't have yet
 async function setCards(options: SearchOptions): Promise<CardResult[]> {
   const codes = options.sets;
   const found = await tcgdex.setCards(codes).catch((e) => {
@@ -80,7 +72,9 @@ async function setCards(options: SearchOptions): Promise<CardResult[]> {
     return null;
   });
   const missingIn = new Set([...(found?.missing.keys() ?? [])].map((key) => key.split(' ')[0]));
-  const fromLimitless = codes.filter((code) => !found?.covered.has(code) || missingIn.has(code));
+  const fromLimitless = codes.filter(
+    (code) => !found?.covered.has(code) || missingIn.has(code) || found.elsewhere.has(code)
+  );
   const extra = (
     await Promise.all(
       fromLimitless.map((code) =>
@@ -91,22 +85,42 @@ async function setCards(options: SearchOptions): Promise<CardResult[]> {
       )
     )
   ).flat();
-
-  const cards: Found[] = [...(found?.results ?? [])];
-  for (const card of extra) {
-    if (found?.covered.has(card.set)) {
-      // Only the cards TCGdex lists without an image
-      const info = found.missing.get(cardKey(card));
-      if (info) cards.push({ ...card, ...info });
-    } else {
-      // A set TCGdex doesn't have yet: Limitless's set pages have no names or dates
-      cards.push({ ...card, name: card.name ?? `${card.set} ${card.number}`, date: '' });
-    }
-  }
-  return arranged(cards, options);
+  if (!found) return arranged(extra.map(limitlessCard), options);
+  // Sets TCGdex doesn't have yet come wholly from Limitless
+  const uncovered = extra.filter((card) => !found.covered.has(card.set));
+  const covered = extra.filter((card) => found.covered.has(card.set));
+  return arranged([...merged(found, covered), ...uncovered.map(limitlessCard)], options);
 }
 
-const byNumber = (n: string) => parseInt(n, 10) || Infinity;
+// TCGdex's cards, plus from Limitless's: the cards TCGdex lists without an image, and
+// those of the codes whose cards come from Limitless (tcgdex.ts's ELSEWHERE) that TCGdex
+// doesn't have. Nothing else: a few older sets have other codes on Limitless (UD for
+// Undaunted, UND on TCGdex), and some codes are other sets there (SP), so anything else
+// could be a duplicate or the wrong card.
+function merged(found: tcgdex.Search, extra: limitless.CardResult[]): Found[] {
+  const cards: Found[] = [...found.results];
+  const have = new Set(found.results.map(cardKey));
+  for (const card of extra) {
+    const key = cardKey(card);
+    const info = found.missing.get(key);
+    if (info) {
+      found.missing.delete(key);
+      cards.push({ ...card, ...info });
+    } else if (found.elsewhere.has(card.set) && !have.has(key)) {
+      have.add(key);
+      cards.push(limitlessCard(card));
+    }
+  }
+  return cards;
+}
+
+// A card from Limitless, named by it (or by its number if its page had no name) and
+// dated by its set code
+const limitlessCard = (card: limitless.CardResult): Found => ({
+  ...card,
+  name: card.name || cardKey(card),
+  date: tcgdex.codeDate(card.set),
+});
 
 type Found = CardResult & CardInfo;
 
@@ -120,8 +134,9 @@ function arranged(results: Found[], options: SearchOptions): CardResult[] {
         dir *
         (b.date.localeCompare(a.date) ||
           a.set.localeCompare(b.set) ||
-          byNumber(a.number) - byNumber(b.number) ||
-          a.number.localeCompare(b.number))
+          // Numbers in order, with letters after: 2 before 10, CC2 before CC10, and
+          // 230 before TG01
+          a.number.localeCompare(b.number, 'en', { numeric: true }))
     )
     .map(({ set, number, image, thumb, name }) => ({ set, number, image, thumb, name }));
 }
