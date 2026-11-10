@@ -1,4 +1,4 @@
-import { isCardRef, lookupCard } from '../limitless';
+import { isCardRef, lookupCard } from '../cardSource';
 
 // One card by set code and number: /api/card?set=TWM&number=130
 export async function GET(req: Request) {

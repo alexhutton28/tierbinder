@@ -495,10 +495,6 @@ export default function Editor() {
 
   const pickingCard = findCard(picking?.id);
 
-  // A search result as one half of a card, named after the search
-  const resultFace = (card: CardResult) =>
-    toFace(card, query.trim() || `${card.set} ${card.number}`);
-
   type CardMenu = NonNullable<typeof cardMenu>;
   const addToTarget = `Add to ${type.targetNoun}`;
 
@@ -519,13 +515,13 @@ export default function Editor() {
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
     // dropped
     if (dropped) {
-      const face = resultFace(dropped.card);
+      const face = toFace(dropped.card);
       if (label === 'Replace top half') updateCard(id, (i) => ({ ...i, ...face }));
       if (label === 'Replace bottom half' || label === 'Add as split card') {
         updateCard(id, (i) => ({ ...i, split: face }));
       }
       if (label === addToTarget) {
-        applyPlaced(type.dropCard(graphic, toItem(dropped.card, query.trim()), dropped.point));
+        applyPlaced(type.dropCard(graphic, toItem(dropped.card), dropped.point));
       }
       return;
     }
@@ -541,14 +537,14 @@ export default function Editor() {
 
   function pickResult(card: CardResult) {
     if (picking && pickingCard) {
-      const face = resultFace(card);
+      const face = toFace(card);
       updateCard(picking.id, (i) =>
         picking.part === 'top' ? { ...i, ...face } : { ...i, split: face }
       );
       setPicking(null);
       return;
     }
-    applyPlaced(type.addCard(graphic, toItem(card, query.trim()), targetIndex));
+    applyPlaced(type.addCard(graphic, toItem(card), targetIndex));
   }
 
   // A search result dropped on the board goes where the graphic puts it. Dropped on a
@@ -576,7 +572,7 @@ export default function Editor() {
       });
       return;
     }
-    applyPlaced(type.dropCard(graphic, toItem(card, query.trim()), point));
+    applyPlaced(type.dropCard(graphic, toItem(card), point));
   });
 
   // Dragging a search result: follows the pointer once it has moved a few pixels;

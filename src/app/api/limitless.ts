@@ -1,24 +1,19 @@
-// Card lookups for TierBinder, read from limitlesstcg.com pages (it has no public
-// card API). Card image numbers aren't predictable (MEG pads to three digits, TWM
-// doesn't), so image URLs always come from Limitless's own pages.
+// The fallback card source, read from limitlesstcg.com pages (it has no public card
+// API), for cards TCGdex has no image for (see cardSource.ts). Card image numbers
+// aren't predictable (MEG pads to three digits, TWM doesn't), so image URLs always
+// come from Limitless's own pages. Search results have no names.
 
-export type CardResult = { set: string; number: string; image: string; thumb: string };
+export type CardResult = {
+  set: string;
+  number: string;
+  image: string;
+  thumb: string;
+  name?: string;
+};
 
 const SITE = 'https://limitlesstcg.com';
 const IMAGE_HOST = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/';
 const CARD_PATH = /^\/cards\/([A-Z0-9-]+)\/([0-9A-Za-z-]+)\/?$/;
-
-const SET_CODE = /^[A-Za-z0-9-]{2,8}$/;
-const CARD_NUMBER = /^[A-Za-z0-9-]{1,8}$/;
-
-export function isCardRef(set: unknown, number: unknown): set is string {
-  return (
-    typeof set === 'string' &&
-    typeof number === 'string' &&
-    SET_CODE.test(set) &&
-    CARD_NUMBER.test(number)
-  );
-}
 
 // Limitless serves _SM thumbnails in lists and _LG (460x640) on card pages
 function sizes(url: string) {
@@ -26,7 +21,10 @@ function sizes(url: string) {
 }
 
 async function getPage(url: string) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TierBinder' } });
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'TierBinder' },
+    next: { revalidate: 86400 },
+  });
   if (!res.ok) return null;
   return { html: await res.text(), url: new URL(res.url) };
 }
