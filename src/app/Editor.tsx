@@ -111,6 +111,53 @@ const FEATURED_POOLS: Pool[] = [
     ],
   },
   {
+    name: 'Best Decks of All Time',
+    cards: [
+      {
+        set: 'SLG',
+        number: '53',
+        name: 'Zoroark-GX',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_SM.png',
+      },
+      {
+        set: 'SVI',
+        number: '86',
+        name: 'Gardevoir ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_SM.png',
+      },
+      {
+        set: 'CEC',
+        number: '156',
+        name: 'Arceus & Dialga & Palkia-GX',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_SM.png',
+      },
+      {
+        set: 'FST',
+        number: '114',
+        name: 'Mew VMAX',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_SM.png',
+      },
+      {
+        set: 'SIT',
+        number: '139',
+        name: 'Lugia VSTAR',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_SM.png',
+      },
+      {
+        set: 'TWM',
+        number: '130',
+        name: 'Dragapult ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_SM.png',
+      },
+    ],
+  },
+  {
     name: 'Energy Cards',
     cards: [
       {
@@ -642,11 +689,12 @@ export default function Editor() {
 
           {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
             so the results scroll instead of widening the sidebar; on wide screens they
-            fill the sidebar's height */}
+            fill the sidebar's height and scroll on their own, and the panel scrolls when
+            the pools and Advanced don't fit */}
           <section
             role="tabpanel"
             hidden={tab !== 'add'}
-            className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
+            className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
             {/* Grows to fill the sidebar while it shows search results */}
             <div
