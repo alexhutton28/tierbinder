@@ -540,6 +540,9 @@ export default function Editor() {
             hidden={tab !== 'add'}
             className="tierbinder-panel flex flex-col gap-3 min-w-0 b8:flex-1 b8:min-h-0"
           >
+            <h3 id="card-search-heading" className="tierbinder-heading">
+              Search
+            </h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -552,6 +555,7 @@ export default function Editor() {
                 <input
                   ref={searchInputRef}
                   className="tierbinder-field"
+                  aria-labelledby="card-search-heading"
                   // Card names aren't real words: don't let phones "fix" them
                   autoCorrect="off"
                   autoCapitalize="off"
