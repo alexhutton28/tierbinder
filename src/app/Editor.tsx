@@ -107,6 +107,16 @@ export default function Editor() {
 
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const workspaceRef = React.useRef<HTMLDivElement>(null);
+  // The sidebar's default width fits the main nav with every label showing and the same
+  // 8px (.sideHead) on both sides, plus the sidebar's edge line. It's measured from the
+  // nav, so it follows the labels and the font; a width the user dragged still wins.
+  const sideColumnRef = React.useRef<HTMLDivElement>(null);
+  const fitSidebarToNav = React.useCallback((navWidth: number) => {
+    sideColumnRef.current?.style.setProperty(
+      '--tb-sidebar-default',
+      `calc(${navWidth}px + 2 * var(--spacing-3) + var(--tb-line-width))`
+    );
+  }, []);
   const boardRef = React.useRef<HTMLDivElement>(null);
   const boardBoxRef = React.useRef<HTMLDivElement>(null);
   // The selection outline. Konva moves a dragged card itself, without React, so the
@@ -504,7 +514,7 @@ export default function Editor() {
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
     <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
-      <div className={styles.sideColumn}>
+      <div ref={sideColumnRef} className={styles.sideColumn}>
         <header className={styles.top}>
           <Link href="/" className={styles.brand}>
             <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
@@ -513,7 +523,13 @@ export default function Editor() {
         <SidebarHandle />
         <aside className={`${styles.side} flex flex-col min-w-0 b8:flex-1 b8:min-h-0`}>
           <div className={styles.sideHead}>
-            <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
+            <RadioBar
+              label="Editor sections"
+              options={TABS}
+              value={tab}
+              onChange={setTab}
+              onFullWidth={fitSidebarToNav}
+            />
           </div>
 
           {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0

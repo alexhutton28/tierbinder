@@ -118,10 +118,13 @@ export default function SidebarHandle() {
         resize(sidebar, sidebar.offsetWidth + direction * (e.shiftKey ? KEY_STEP_LARGE : KEY_STEP));
         setReadoutY(sidebar.offsetHeight / 2);
       }}
-      // The widest width follows the window, so it's refreshed when the handle is reached
+      // The widest width follows the window, and the default width follows the main nav
+      // (Editor.tsx), so both are refreshed when the handle is reached
       onFocus={(e) => {
         const sidebar = e.currentTarget.parentElement;
-        if (sidebar) setRange(limits(sidebar));
+        if (!sidebar) return;
+        setRange(limits(sidebar));
+        setWidth(sidebar.offsetWidth);
       }}
       onBlur={() => setReadoutY(null)}
       onDoubleClick={(e) => {

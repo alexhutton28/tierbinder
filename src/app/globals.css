@@ -66,8 +66,11 @@ body {
   --tb-swatch: 24px;
   --tb-number-field: 64px;
 
-  /* Chosen by eye (see Exceptions): the default fits the main nav with its icons */
+  /* The default sidebar width until the main nav is measured: Editor.tsx then sets it on
+     the sidebar column to fit the nav with every label and 8px each side */
   --tb-sidebar-default: 368px;
+
+  /* Chosen by eye (see Exceptions) */
   --tb-sidebar-min: 250px;
 
   /* The workspace never gets narrower than this, which caps the sidebar: the main area
