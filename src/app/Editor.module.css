@@ -70,10 +70,15 @@
   min-width: 0;
 }
 
+/* The text starts 8px past the icon's ink, not its box: Feather draws on a 24px grid whose
+   ink ends 2 units from the right (11/12 of the width). The padding is inside the field's
+   border, which the icon's position isn't. */
 .search input {
+  --icon-ink: calc(var(--tb-icon) * 11 / 12);
+
   flex: 1;
   min-width: 0;
-  padding-left: calc(var(--spacing-3) * 2 + var(--tb-icon));
+  padding-left: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
 }
 
 .searchIcon {
