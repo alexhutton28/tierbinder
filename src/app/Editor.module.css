@@ -202,3 +202,10 @@
     transition: none;
   }
 }
+
+/* The no-results message under the search: a box outlined like the controls */
+.noResults {
+  padding: var(--spacing-4);
+  border: var(--tb-line-width) solid var(--tb-control-border);
+  border-radius: var(--tb-radius);
+}

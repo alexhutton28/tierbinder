@@ -7,28 +7,16 @@
   mask: url('/filter.svg') center / contain no-repeat;
 }
 
-/* Below the button (--anchor-top and --anchor-left, from SearchFilters.tsx) at a set
-   width (enough for the longest set names), so it doesn't shrink as the set search
-   narrows the list. It's in the top layer, so it's fixed to the window: never wider or
-   taller than the window allows (keeping the sidebar's 8px gutter from its edges), sliding left to stay inside it. Resets the popover's
-   own placement and look. */
+/* A set width (enough for the longest set names), so it doesn't shrink as the set search
+   narrows the list; placed by .tierbinder-anchored */
 .popup {
   --popup-width: 22em;
-  --edge: var(--spacing-3);
-  --width: min(var(--popup-width), 100vw - 2 * var(--edge));
 
-  position: fixed;
-  inset: auto;
-  top: calc(var(--anchor-top, 0px) + var(--spacing-2));
-  left: clamp(var(--edge), var(--anchor-left, 0px), 100vw - var(--edge) - var(--width));
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
-  width: var(--width);
-  max-height: calc(100dvh - var(--anchor-top, 0px) - var(--spacing-2) - var(--edge));
-  margin: 0;
+  width: var(--popup-width);
   padding: var(--spacing-4);
-  color: var(--tb-text);
 }
 
 /* The set list shows this many rows and scrolls (a row is a line and the gap), with 8px

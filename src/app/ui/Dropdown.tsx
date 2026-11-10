@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './Dropdown.module.css';
 
@@ -8,17 +9,20 @@ import styles from './Dropdown.module.css';
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
 // through the options, Enter or Space picks one, Escape closes. An option with a color
 // shows it as a swatch before its name (the tiers); a hidden label is still the button's
-// tooltip.
+// tooltip. The list floats over the board, in the top layer (useAnchored), so a narrow
+// sidebar doesn't clip it.
 
 export default function Dropdown<T extends string | number>({
   label,
   hideLabel = false,
+  chevron = true,
   value,
   options,
   onChange,
 }: {
   label: string;
   hideLabel?: boolean;
+  chevron?: boolean;
   value: T;
   options: { value: T; label: string; color?: string }[];
   onChange: (value: T) => void;
@@ -38,7 +42,9 @@ export default function Dropdown<T extends string | number>({
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
   const optionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  useAnchored(shown, buttonRef, listRef);
   const selected = Math.max(
     0,
     options.findIndex((o) => o.value === value)
@@ -105,14 +111,16 @@ export default function Dropdown<T extends string | number>({
         >
           <Swatch color={options[selected]?.color} />
           {options[selected]?.label}
-          <span aria-hidden className={styles.chevron} />
+          {chevron && <span aria-hidden className={styles.chevron} />}
         </Button>
         {shown && (
           <div
+            ref={listRef}
+            popover="manual"
             role="listbox"
             aria-labelledby={`${id}-label`}
             onKeyDown={onListKey}
-            className={`tierbinder-menu dropdown absolute left-0 top-full mt-1 z-10 tierbinder-popup flex flex-col min-w-full ${closing ? 'closing pointer-events-none' : ''}`}
+            className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored flex flex-col ${closing ? 'closing pointer-events-none' : ''}`}
           >
             {options.map((option, i) => (
               <button
@@ -143,6 +151,8 @@ export default function Dropdown<T extends string | number>({
 
 function Swatch({ color }: { color?: string }) {
   return color ? (
-    <span aria-hidden className={styles.swatch} style={{ background: color }} />
+    <span aria-hidden className={styles.swatchBox}>
+      <span className={styles.swatch} style={{ background: color }} />
+    </span>
   ) : null;
 }

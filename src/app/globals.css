@@ -168,6 +168,33 @@ textarea.tierbinder-field {
   box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
 }
 
+/* A popup floating in the top layer (a popover) under its button, placed by useAnchored
+   (ui/anchored.ts) from --anchor-top, --anchor-left and the widths: at least as wide as
+   the button, and kept 8px inside the window, sliding left when it would hang off the
+   right. Resets the popover's own placement. */
+.tierbinder-anchored {
+  --edge: var(--spacing-3);
+
+  position: fixed;
+  inset: auto;
+  top: calc(var(--anchor-top, 0px) + var(--spacing-2));
+  left: clamp(
+    var(--edge),
+    var(--anchor-left, 0px),
+    100vw - var(--edge) - var(--anchor-popup-width, 0px)
+  );
+  min-width: var(--anchor-width, 0);
+  max-width: calc(100vw - 2 * var(--edge));
+  max-height: calc(100dvh - var(--anchor-top, 0px) - var(--spacing-2) - var(--edge));
+  margin: 0;
+  color: var(--tb-text);
+}
+
+/* No specificity, so a popup's own padding wins */
+:where(.tierbinder-anchored) {
+  padding: 0;
+}
+
 .tierbinder-option {
   padding: var(--spacing-3) var(--spacing-4);
   color: var(--tb-text);

@@ -4,6 +4,7 @@ import React from 'react';
 import { DEFAULT_TIERS } from '../graphics/tier-list/model';
 import { activeFilters, type SearchOptions } from '../searchOptions';
 import { CARD_SETS } from '../sets';
+import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './SearchFilters.module.css';
 
@@ -11,9 +12,7 @@ import styles from './SearchFilters.module.css';
 // every set (newest first) narrowed by a search of their names and codes. None ticked
 // means every set. Each change applies at once. The popup opens and closes like a
 // dropdown (.tierbinder-menu.dropdown in globals.css); Escape or a press outside closes it.
-// It's shown as a popover, in the top layer, so it overlaps the board instead of being
-// clipped by (or widening) the sidebar; it's placed under the button from the button's
-// position (--anchor-top, --anchor-left), and the CSS keeps it inside the window.
+// It floats over the board, in the top layer (useAnchored).
 // Ticked sets' checkboxes take `colors` in the order they were ticked (the board's tier
 // colors: the first ticked in the first tier's, the second in the second's), starting
 // over once they run out.
@@ -68,26 +67,7 @@ export default function SearchFilters({
   const popupRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
 
-  // Shown in the top layer under the button, following it while the page or sidebar
-  // scrolls or the window resizes
-  React.useLayoutEffect(() => {
-    const popup = popupRef.current;
-    const button = buttonRef.current;
-    if (!shown || !popup || !button) return;
-    const place = () => {
-      const box = button.getBoundingClientRect();
-      popup.style.setProperty('--anchor-top', `${box.bottom}px`);
-      popup.style.setProperty('--anchor-left', `${box.left}px`);
-    };
-    place();
-    if (!popup.matches(':popover-open')) popup.showPopover?.();
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
-    return () => {
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
-    };
-  }, [shown]);
+  useAnchored(shown, buttonRef, popupRef);
 
   // Opening focuses the set search
   React.useEffect(() => {
@@ -148,7 +128,7 @@ export default function SearchFilters({
               buttonRef.current?.focus();
             }
           }}
-          className={`tierbinder-menu dropdown tierbinder-popup ${styles.popup} ${closing ? 'closing pointer-events-none' : ''}`}
+          className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored ${styles.popup} ${closing ? 'closing pointer-events-none' : ''}`}
         >
           <input
             ref={searchRef}

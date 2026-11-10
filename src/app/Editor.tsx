@@ -24,12 +24,7 @@ import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphic
 import { DEFAULT_TIERS } from './graphics/tier-list/model';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
-import {
-  activeFilters,
-  DEFAULT_SEARCH,
-  sortDirection as sortLabel,
-  type SearchOptions,
-} from './searchOptions';
+import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
@@ -244,7 +239,11 @@ export default function Editor() {
   const shownResults = brokenKeys
     ? results.filter((card) => !brokenKeys.has(`${card.set} ${card.number}`))
     : results;
+  // The last search found nothing: what it was for, shown under the search
+  const [noResults, setNoResults] = React.useState<{ query: string; sets: string[] } | null>(null);
   const showingResults = results.length > 0 && !importing;
+  // Results or the no-results message, which hide the pools and Advanced
+  const searchShown = !importing && (results.length > 0 || noResults !== null);
   const sortDirection = sortLabel(searchOptions);
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
@@ -488,6 +487,7 @@ export default function Editor() {
     searchCount.current++;
     setSearched('');
     setResults([]);
+    setNoResults(null);
     setStatus('');
     setBusy(false);
   }
@@ -504,13 +504,7 @@ export default function Editor() {
     const found = await searchCards(text.trim(), options);
     if (count !== searchCount.current) return;
     setResults(found);
-    setStatus(
-      found.length
-        ? ''
-        : activeFilters(options)
-          ? 'No cards match in these sets.'
-          : 'No cards found.'
-    );
+    setNoResults(found.length ? null : { query: text.trim(), sets: options.sets });
     setBusy(false);
   }
 
@@ -783,8 +777,8 @@ export default function Editor() {
                 </Button>
               </form>
               {/* One row: Sets, always (with no search, it lists the sets ticked); and
-                while there are results, Sort and the Add to picker when there's a choice
-                (a blank canvas has one place for cards) */}
+                while there are results, the Add to picker when there's a choice (a blank
+                canvas has one place for cards) and Sort, at the right */}
               {!importing && (
                 <div className="flex flex-wrap gap-3 items-center">
                   <SearchFilters
@@ -792,11 +786,26 @@ export default function Editor() {
                     colors={tickColors}
                     onChange={changeSearchOptions}
                   />
+                  {!picking && showingResults && targets.length > 1 && (
+                    <Dropdown
+                      label="Add to"
+                      hideLabel
+                      chevron={false}
+                      value={targetIndex}
+                      options={targets.map((t, i) => ({
+                        value: i,
+                        label: t.name.replaceAll('\n', ' '),
+                        color: t.color,
+                      }))}
+                      onChange={setTarget}
+                    />
+                  )}
                   {/* Flips the order: newest or oldest set first, and each set's numbers */}
                   {showingResults && (
                     <Button
                       type="button"
                       variant="icon"
+                      className="ml-auto"
                       aria-label={`Sort: ${sortDirection}`}
                       title={`Sort: ${sortDirection}`}
                       onClick={() =>
@@ -809,18 +818,28 @@ export default function Editor() {
                       />
                     </Button>
                   )}
-                  {!picking && showingResults && targets.length > 1 && (
-                    <Dropdown
-                      label="Add to"
-                      hideLabel
-                      value={targetIndex}
-                      options={targets.map((t, i) => ({
-                        value: i,
-                        label: t.name.replaceAll('\n', ' '),
-                        color: t.color,
-                      }))}
-                      onChange={setTarget}
-                    />
+                </div>
+              )}
+              {/* What the search was for, and with sets ticked, a way to search them all */}
+              {noResults && !importing && (
+                <div role="status" className={`${styles.noResults} flex flex-col gap-2`}>
+                  <p className="font-semibold">No cards found</p>
+                  {(noResults.query || noResults.sets.length > 0) && (
+                    <p className="text-(--tb-muted)">
+                      {noResults.query && `for “${noResults.query}”`}
+                      {noResults.query && noResults.sets.length > 0 && ' '}
+                      {noResults.sets.length > 0 &&
+                        `in ${new Intl.ListFormat('en').format(noResults.sets)}`}
+                    </p>
+                  )}
+                  {noResults.sets.length > 0 && (
+                    <Button
+                      type="button"
+                      className="self-start"
+                      onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
+                    >
+                      {noResults.query ? 'Search all sets' : 'Clear sets'}
+                    </Button>
                   )}
                 </div>
               )}
@@ -895,10 +914,10 @@ export default function Editor() {
               )}
             </div>
 
-            {/* Card pools to browse and Advanced, until a search shows results; they come
+            {/* Card pools to browse and Advanced, until a search shows results or finds none; they come
               back when the search is emptied or the board is cleared. The pools are
               placeholders for now: they don't open yet. */}
-            {!showingResults && !importing && (
+            {!searchShown && !importing && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Featured Card Pools</h3>
                 {FEATURED_POOLS.map((pool) => (
@@ -945,7 +964,7 @@ export default function Editor() {
               </div>
             )}
 
-            {!showingResults && (
+            {!searchShown && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Advanced</h3>
                 <Button className="self-start" onClick={() => setImporting((on) => !on)}>

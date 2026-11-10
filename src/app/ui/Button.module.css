@@ -28,6 +28,11 @@
   color: var(--tb-primary-text);
 }
 
+/* A button whose dropdown or popup is open keeps its hover color until it closes */
+.button[aria-expanded='true']:not(:disabled) {
+  background: var(--tb-control-hover);
+}
+
 /* Square, as tall as the other controls, with its icon centered */
 .icon {
   display: grid;

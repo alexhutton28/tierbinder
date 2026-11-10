@@ -1,8 +1,17 @@
-/* An option's color (a tier's), as a slightly rounded box the size of an icon */
-.swatch {
+/* An option's color (a tier's): a slightly rounded box in an icon-sized space, as large
+   as Feather's square icon draws (20 of its 24 units, with the stroke), so it sits like
+   the other buttons' icons */
+.swatchBox {
+  display: grid;
   flex: none;
+  place-items: center;
   width: var(--tb-icon);
   height: var(--tb-icon);
+}
+
+.swatch {
+  width: calc(var(--tb-icon) * 20 / 24);
+  aspect-ratio: 1;
   border-radius: var(--radius-small);
 }
 
