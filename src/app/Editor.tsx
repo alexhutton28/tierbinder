@@ -136,10 +136,10 @@ const FEATURED_POOLS: Pool[] = [
       },
       {
         set: 'JTG',
-        number: '169',
-        name: 'Noibat',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/JTG/JTG_169_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/JTG/JTG_169_R_EN_SM.png',
+        number: '159',
+        name: 'Spiky Energy',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/JTG/JTG_159_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/JTG/JTG_159_R_EN_SM.png',
       },
       {
         set: 'TEF',
