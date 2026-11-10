@@ -31,17 +31,15 @@
   color: var(--tb-text);
 }
 
-/* The set list shows this many rows and scrolls (a row is a line and the gap). It's
-   inset like the text in the search field above (.tierbinder-field's padding and
-   border), so the checkboxes line up with what's typed rather than the field's faint
-   edge. */
+/* The set list shows this many rows and scrolls (a row is a line and the gap), with 8px
+   between the set codes and the scrollbar */
 .sets {
   --rows-shown: 10;
 
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  padding-inline-start: calc(var(--spacing-3) + var(--tb-line-width));
+  padding-inline-end: var(--spacing-3);
 
   /* Shrinks when the window is too short for the rows (the popup's max-height) */
   min-height: 0;
@@ -69,4 +67,23 @@
 .code {
   color: var(--tb-muted);
   font-size: var(--text-caption);
+}
+
+/* Drawn here so the check is always white: a box in the field's colors, filled when
+   ticked with --tick (its tier's color, from SearchFilters.tsx) under Feather's check */
+.check {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  margin: 0;
+  appearance: none;
+  border: var(--tb-line-width) solid var(--tb-field-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+  cursor: pointer;
+}
+
+.check:checked {
+  border-color: var(--tick, var(--tb-primary));
+  background: url('/check.svg') center / 75% no-repeat var(--tick, var(--tb-primary));
 }

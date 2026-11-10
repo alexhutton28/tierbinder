@@ -13,7 +13,7 @@ import styles from './SearchFilters.module.css';
 // It's shown as a popover, in the top layer, so it overlaps the board instead of being
 // clipped by (or widening) the sidebar; it's placed under the button from the button's
 // position (--anchor-top, --anchor-left), and the CSS keeps it inside the window.
-// Ticked sets' checkboxes take `colors` in the order they were ticked (the board's tier
+// Ticked sets' checkboxes (with a white check) take `colors` in the order they were ticked (the board's tier
 // colors: the first ticked in the first tier's, the second in the second's), starting
 // over once they run out.
 
@@ -146,9 +146,10 @@ export default function SearchFilters({
                   <input
                     type="checkbox"
                     checked={ticked >= 0}
+                    className={styles.check}
                     style={
                       ticked >= 0 && colors.length
-                        ? { accentColor: colors[ticked % colors.length] }
+                        ? ({ '--tick': colors[ticked % colors.length] } as React.CSSProperties)
                         : undefined
                     }
                     onChange={(e) => toggle(s.code, e.target.checked)}
