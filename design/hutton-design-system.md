@@ -204,7 +204,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 ### Add Cards
 
 - Three sections, 16px apart, each a heading with its contents 8px under it: Add a Card (the search), Featured Card Pools and Advanced (Bulk import).
-- A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. A pool with no cards yet shows card-shaped placeholders in Petrel 850. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. They don't open yet.
+- A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. A pool with no cards yet shows card-shaped placeholders in Petrel 850. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. Energy Cards previews TWM 167, POR 88, SSP 191, JTG 169, TEF 162 and ASC 217. They don't open yet.
 - The Add to picker shows only once a submitted search has results.
 - A search with results shows only Add a Card, with the results filling the sidebar. The pools and Advanced come back when the search field is emptied, the board is cleared or the page reloads.
 

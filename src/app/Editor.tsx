@@ -110,7 +110,53 @@ const FEATURED_POOLS: Pool[] = [
       },
     ],
   },
-  { name: 'Energy Cards', cards: [] },
+  {
+    name: 'Energy Cards',
+    cards: [
+      {
+        set: 'TWM',
+        number: '167',
+        name: 'Legacy Energy',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_167_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_167_R_EN_SM.png',
+      },
+      {
+        set: 'POR',
+        number: '88',
+        name: 'Telepathic Psychic Energy',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/POR/POR_088_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/POR/POR_088_R_EN_SM.png',
+      },
+      {
+        set: 'SSP',
+        number: '191',
+        name: 'Enriching Energy',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SSP/SSP_191_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SSP/SSP_191_R_EN_SM.png',
+      },
+      {
+        set: 'JTG',
+        number: '169',
+        name: 'Noibat',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/JTG/JTG_169_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/JTG/JTG_169_R_EN_SM.png',
+      },
+      {
+        set: 'TEF',
+        number: '162',
+        name: 'Neo Upper Energy',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TEF/TEF_162_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TEF/TEF_162_R_EN_SM.png',
+      },
+      {
+        set: 'ASC',
+        number: '217',
+        name: "Team Rocket's Energy",
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_217_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/ASC/ASC_217_R_EN_SM.png',
+      },
+    ],
+  },
 ];
 const POOL_PREVIEW_CARDS = 6;
 
