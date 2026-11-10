@@ -1,3 +1,5 @@
+@reference "../globals.css";
+
 /* Feather's filter icon, colored by the button's text */
 .icon {
   flex: none;
@@ -42,6 +44,20 @@
   gap: var(--spacing-3);
   align-items: center;
   cursor: pointer;
+}
+
+/* On phones (touch, under b7), each row is a full touch target, with no gaps between */
+@media (pointer: coarse) {
+  @variant max-b7 {
+    .sets {
+      gap: 0;
+      max-height: calc(var(--rows-shown) * var(--tb-touch-target));
+    }
+
+    .choice {
+      min-height: var(--tb-touch-target);
+    }
+  }
 }
 
 .setName {

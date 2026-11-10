@@ -79,9 +79,10 @@ export default function SearchFilters({
     list.scrollTop = first instanceof HTMLElement ? first.offsetTop - list.offsetTop : 0;
   }, [open]);
 
-  // Opening focuses the set search
+  // Opening focuses the set search, except on touch screens, where that would bring up the
+  // keyboard over the list; tapping the field does
   React.useEffect(() => {
-    if (open) searchRef.current?.focus();
+    if (open && matchMedia('(pointer: fine)').matches) searchRef.current?.focus();
   }, [open]);
 
   // Closes on any press outside it

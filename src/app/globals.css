@@ -75,6 +75,9 @@ body {
   --tb-control-height: 32px;
   --tb-icon: 16px;
   --tb-scrollbar: 8px;
+
+  /* The smallest comfortable thing to tap (Apple's guideline) */
+  --tb-touch-target: 44px;
   --tb-swatch: 24px;
   --tb-number-field: 64px;
 
