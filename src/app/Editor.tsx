@@ -64,53 +64,6 @@ type Tab = (typeof TABS)[number]['value'];
 type Pool = { name: string; cards: CardResult[] };
 const FEATURED_POOLS: Pool[] = [
   {
-    name: 'Mega Evolution Cards',
-    cards: [
-      {
-        set: 'MEG',
-        number: '104',
-        name: 'Mega Kangaskhan ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_SM.png',
-      },
-      {
-        set: 'PFL',
-        number: '13',
-        name: 'Mega Charizard X ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_SM.png',
-      },
-      {
-        set: 'MEG',
-        number: '77',
-        name: 'Mega Lucario ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_SM.png',
-      },
-      {
-        set: 'MEG',
-        number: '86',
-        name: 'Mega Absol ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_SM.png',
-      },
-      {
-        set: 'PBL',
-        number: '65',
-        name: 'Mega Excadrill ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_SM.png',
-      },
-      {
-        set: 'CRI',
-        number: '22',
-        name: 'Mega Greninja ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_SM.png',
-      },
-    ],
-  },
-  {
     name: 'Best Decks of All Time',
     cards: [
       {
@@ -201,6 +154,53 @@ const FEATURED_POOLS: Pool[] = [
         name: 'Raikou ex',
         image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_LG.png',
         thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_SM.png',
+      },
+    ],
+  },
+  {
+    name: 'Mega Evolution Cards',
+    cards: [
+      {
+        set: 'MEG',
+        number: '104',
+        name: 'Mega Kangaskhan ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_SM.png',
+      },
+      {
+        set: 'PFL',
+        number: '13',
+        name: 'Mega Charizard X ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_SM.png',
+      },
+      {
+        set: 'MEG',
+        number: '77',
+        name: 'Mega Lucario ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_SM.png',
+      },
+      {
+        set: 'MEG',
+        number: '86',
+        name: 'Mega Absol ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_SM.png',
+      },
+      {
+        set: 'PBL',
+        number: '65',
+        name: 'Mega Excadrill ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_SM.png',
+      },
+      {
+        set: 'CRI',
+        number: '22',
+        name: 'Mega Greninja ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_SM.png',
       },
     ],
   },
