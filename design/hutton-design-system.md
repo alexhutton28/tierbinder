@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.3 · November 7, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.4 · November 9, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -32,7 +32,7 @@ Semantic tokens that map onto existing palette colors and spacing steps, recorde
 - Professional but fun and friendly, with smooth transitions and rounded borders.
 - A real design tool that feels smooth and satisfying to use.
 - Dark interface in petrel and storm. Storm blue marks main actions, and the tier colors mark the main nav.
-- The window is a working tool: a 48px top bar, a docked left sidebar and the board centered in its own darker workspace, divided by 1px lines with no floating panels. Controls are 32px tall with 14px text, and most stay quiet until hovered. Controls and popups use `radius-small`.
+- The window is a working tool: a docked left sidebar headed by a 48px logo bar, and the board centered in its own darker workspace, which runs the window's full height, divided by 1px lines with no floating panels. Controls are 32px tall with 14px text, and most stay quiet until hovered. Controls and popups use `radius-small`.
 - Color is used by name through tokens (`bg-petrel-900`, `var(--color-storm-300)`), not raw hex.
 
 ## 3. Color
@@ -41,23 +41,23 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 
 | Name        | Hex       | Semantic roles | Used for                                         |
 | ----------- | --------- | -------------- | ------------------------------------------------ |
-| Petrel 50   | `#F2F5F6` |                | Not used yet                                     |
+| Petrel 50   | `#F2F5F6` |                | Section headings                                 |
 | Petrel 100  | `#E3E8EB` |                | Text, selected tool                              |
 | Petrel 200  | `#CCD4D8` |                | Not used yet                                     |
 | Petrel 300  | `#B3BEC4` |                | Not used yet                                     |
 | Petrel 400  | `#94A2AA` |                | Muted text                                       |
 | Petrel 500  | `#6C7D88` |                | Not used yet                                     |
-| Petrel 600  | `#546470` |                | Not used yet                                     |
-| Petrel 700  | `#3E4B53` |                | Button and popup borders                         |
+| Petrel 600  | `#546470` |                | Search icon at rest                              |
+| Petrel 700  | `#3E4B53` |                | Button, popup and field borders                  |
 | Petrel 800  | `#2D373D` |                | Dividing lines, hover                            |
-| Petrel 850  | `#232B30` |                | Popups                                           |
+| Petrel 850  | `#232B30` |                | Popups, card placeholders                        |
 | Petrel 900  | `#1B2125` |                | Sidebar                                          |
 | Petrel 950  | `#12171A` |                | Workspace, fields, text on main actions          |
 | Storm 100   | `#DCEAF1` |                | Not used yet                                     |
 | Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                 |
-| Storm 300   | `#9CC0D4` |                | Main buttons                                     |
+| Storm 300   | `#9CC0D4` |                | Main buttons, lit search icon                    |
 | Storm 400   | `#78A5BD` |                | Top bar                                          |
-| Storm 600   | `#466E85` |                | Not used yet                                     |
+| Storm 600   | `#466E85` |                | Text field focus                                 |
 | Storm 800   | `#2A4352` |                | Not used yet                                     |
 | Tier Goated | `#F0392B` |                | Default tier color. Board only                   |
 | Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav |
@@ -70,13 +70,14 @@ Board colors (tier colors, backgrounds, borders) are canvas colors that users ca
 
 Fonts are loaded with `next/font` in `src/app/layout.tsx`. The controls use Figtree (`--font-figtree`), with `system-ui` and `sans-serif` as fallbacks. Canvas text uses Inter Black (900, `--font-inter`). Hex fields and bulk import use the device's monospace (`font-mono`). The next/font variables are not generated, because next/font sets them.
 
-| Token          | Size | Weight | Used for                                                                           |
-| -------------- | ---- | ------ | ---------------------------------------------------------------------------------- |
-| `text-field`   | 16px | 400    | Fields on phones                                                                   |
-| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 400 (600 selected) |
-| `text-caption` | 12px | 400    | Search result captions, on a 16px line. Section headings at 600                    |
+| Token          | Size | Weight | Used for                                                                                                    |
+| -------------- | ---- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| `text-field`   | 16px | 400    | Fields on phones                                                                                            |
+| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 400 (600 selected), section headings at 600 |
+| `text-caption` | 12px | 400    | Search result captions, on a 16px line                                                                      |
 
 - Sizes are in `rem`, in the `@theme` block at the top of `globals.css`, because the token generator has no type scale yet. Tailwind utilities are `text-body` and so on.
+- Text uses the font's normal line height (about 1.2 for Figtree), not Tailwind's 1.5, so a line takes about the room its letters do and spacing measures what it looks like. `text-caption` keeps its set 16px line, which the search results grid sizes rows by.
 - Sizes stay on even numbers. Fields, including bulk import, are 16px below `b7`, because iPhones zoom the page when a field under 16px is tapped.
 - Weights: buttons 500; section headings and the selected dropdown option 600; the main nav 400, with the selected tab at 600. Each tab keeps its semibold width, so selecting one doesn't shift the others.
 - Page text keeps Tailwind's 1.5 line height. Letter spacing is left at each font's default.
@@ -139,6 +140,8 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 ### Focus
 
 - `.tierbinder-page :focus-visible` draws a 2px `--tb-focus` outline, 2px out.
+- Text fields (`.tierbinder-field`) are focused on every click, so they get a quieter sign instead: their 1px edge turns Storm 600, fading in over `duration-fade`.
+- The search field has a 16px Feather `search` icon inside it, 8px from the left, in Petrel 600 (`--tb-icon-rest`). The text starts 8px past the icon's ink (not its 16px box, which Feather leaves room in). The search field is taller than other controls: 8px of padding above and below its text sets its height (35px, or 37px on phones), and the Search button beside it matches. It turns Storm 300 (`--tb-icon-lit`) with the edge.
 
 ## 11. Motion
 
@@ -183,7 +186,7 @@ Code uses the `b` names: `b8:` in classes and `@variant b8` in CSS, never a raw 
 ### Layout
 
 - `html` and `body` do not scroll. The page gives itself a scroll container.
-- The sticky top bar tints the iOS status bar. Respect `env(safe-area-inset-*)`.
+- On phones the top bar is sticky at the top of the page and tints the iOS status bar. Respect `env(safe-area-inset-*)`.
 
 ### No magic numbers: build responsive layouts
 
@@ -198,20 +201,27 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ## 13. Components
 
+### Add Cards
+
+- Three sections, 16px apart, each a heading with its contents 8px under it: Add a Card (the search), Featured Card Pools and Advanced (Bulk import).
+- A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. A pool with no cards yet shows card-shaped placeholders in Petrel 850. In order: Best Decks of All Time previews SLG 53, SVI 86, CEC 156, FST 114, SIT 139 and TWM 130. Delta Reign previews DLR 84, 88, 11, 69, 47 and 33. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. They don't open yet.
+- The Add to picker shows only once a submitted search has results.
+- A search with results shows only Add a Card, with the results filling the sidebar. The pools and Advanced come back when the search field is emptied, the board is cleared or the page reloads.
+
 ### Top bar
 
-- Sticky with the same status bar padding. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
+- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding. It has no line under it. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
 
 ### Settings
 
-- Section headings are 12px and muted. Rows put the label on the left and the value on the right.
+- Section headings are 14px semibold in Petrel 50 (`--tb-heading`), a step brighter than the text under them. Rows put the label on the left and the value on the right.
 - Color pickers are plain 24px swatches, next to their hex field.
 
 ### Sidebar resize handle
 
-- From `b8` up, the sidebar's right edge is a resize handle (`ui/SidebarHandle.tsx`): an 8px strip centered on the 1px line, with the `col-resize` cursor.
+- From `b8` up, the sidebar column's right edge (header included) is a resize handle (`ui/SidebarHandle.tsx`): an 8px strip centered on the 1px line, with the `col-resize` cursor.
 - After resting on it for 150ms, or straight away while dragging, a 2px Storm 300 line with a soft Storm 300 glow fades in over `duration-hover`.
-- Dragging is smooth, not stepped. The width shows in px beside the pointer while dragging. It's saved as a share of the window, so the board keeps its share when the window changes size. Double-click goes back to the default, 368px: wide enough for the main nav with its padding.
+- Dragging is smooth, not stepped. The width shows in px beside the pointer while dragging. It's saved as a share of the window, so the board keeps its share when the window changes size. Double-click goes back to the default: just wide enough for the main nav with every label showing and 8px on each side (about 363px). It's measured from the nav, so it follows the labels and the font; 368px stands in until then.
 - It follows the WAI-ARIA window splitter pattern: a focusable `separator` that reports its width. Left and right arrows move it 16px, or 64px with Shift, and show the readout.
 - It's never narrower than 250px (`--tb-sidebar-min`), and never so wide that the workspace drops below `b5`, 512px (`--tb-workspace-min`), so the board stays at least 480px wide. The main area keeps its space, as in most editors with resizable panels. The minimum wins on a window too narrow for both. A drag past either limit stops there and is saved there. No collapse yet.
 
@@ -221,24 +231,25 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 - When the tabs don't fit the sidebar, they show icons with only the selected tab named, then only icons. Hidden labels are tooltips and stay for screen readers. The named-selected step is measured with the longest label, so switching tabs never changes the step.
 - Labels fold closed and open on the same spring and `duration-move` as the block, so switching tabs feels like the color sliding over, as at full size. The block slides straight to where the selected name settles. Reduced motion: names fade only. Which one shows is measured from the real text widths, not set at breakpoints.
 - The bar has 4px of padding inside, and 8px at its ends from `b3` up. Tabs are 2px apart (`space-1`).
-- A colored block hugs the selected icon and word, with 4px of padding top and bottom and 8px at the sides (4px below `b3`, so the three tabs fit a small phone). It springs to the next word over `duration-move` and changes color over `duration-hover`.
+- A colored block hugs the selected icon and word, with 8px of padding top and bottom and 8px at the sides (4px below `b3`, so the three tabs fit a small phone). It springs to the next word over `duration-move` and changes color over `duration-hover`.
 - Reduced motion: the block moves straight away and only its color fades.
 
 ## 14. Exceptions
 
 Places where the token rules do not apply. Keep raw values in named constants, matching a palette color when one exists.
 
-| Where                                                                                                                | Allowed                         | Why                                                                                                          |
-| -------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Canvas drawing: Konva boards                                                                                         | Named color and size constants  | Canvas drawing does not take CSS variables, and exported images must match the screen                        |
-| User-chosen colors, including saved board colors                                                                     | Any value                       | They belong to the user's content, not the design system                                                     |
-| Exported images                                                                                                      | Values the artwork needs        | They are images, not interface                                                                               |
-| Sizes chosen by eye: search result thumbnails (80 × 111px), the sidebar's default (368px) and minimum (250px) widths | A chosen fixed size, named once | Alex picked them by looking at them; nothing in the layout derives them, and deriving them would add nothing |
-| The sidebar's width once someone drags it                                                                            | Any width, smoothly             | It's the user's choice, like their colors                                                                    |
-| `themeColor` in metadata                                                                                             | Hex matching the top bar        | Browsers read it as a plain value                                                                            |
+| Where                                                                                           | Allowed                         | Why                                                                                                          |
+| ----------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Canvas drawing: Konva boards                                                                    | Named color and size constants  | Canvas drawing does not take CSS variables, and exported images must match the screen                        |
+| User-chosen colors, including saved board colors                                                | Any value                       | They belong to the user's content, not the design system                                                     |
+| Exported images                                                                                 | Values the artwork needs        | They are images, not interface                                                                               |
+| Sizes chosen by eye: search result thumbnails (80 × 111px), the sidebar's minimum width (250px) | A chosen fixed size, named once | Alex picked them by looking at them; nothing in the layout derives them, and deriving them would add nothing |
+| The sidebar's width once someone drags it                                                       | Any width, smoothly             | It's the user's choice, like their colors                                                                    |
+| `themeColor` in metadata                                                                        | Hex matching the top bar        | Browsers read it as a plain value                                                                            |
 
 ## 15. Changelog
 
+- **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav, and the main nav has 8px above it, below it and at its sides, with the tab's content lined up with it. Text fields have a Petrel 700 border at rest, like buttons. Section headings went from 12px muted to 14px Petrel 50. Add Cards gained sections: Add a Card, Featured Card Pools (placeholders for now) and Advanced. Text went back to the font's normal line height from Tailwind's 1.5, and the main nav's block gained 4px top and bottom. The sidebar's default width became the nav's width with 8px each side, measured, instead of 368px chosen by eye. Text fields show focus with a Storm 600 edge instead of the focus ring, and the search field gained a search icon that lights up with it.
 - **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added Consult best practices to the principles. The main nav hugs its tabs, in regular weight (400), with the selected tab semibold (600). The sidebar became resizable by dragging its edge or with the arrow keys, between 250px and the window less a 512px workspace, and the main nav names only the selected tab when it doesn't fit, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, sizes Alex chose by eye are allowed and listed in Exceptions, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.

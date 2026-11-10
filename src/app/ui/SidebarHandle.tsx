@@ -3,7 +3,7 @@
 import React from 'react';
 import styles from './SidebarHandle.module.css';
 
-// Drag handle on the sidebar's right edge (from b8 up, where it sits beside the board),
+// Drag handle on the sidebar column's right edge (from b8 up, where it sits beside the board),
 // following the WAI-ARIA window splitter pattern. The width is saved as a share of the
 // window, so it keeps the board's share when the window changes size; Editor.module.css
 // turns it into the sidebar's width (--tb-sidebar-width). Drag it, or focus it and use the left
@@ -118,10 +118,13 @@ export default function SidebarHandle() {
         resize(sidebar, sidebar.offsetWidth + direction * (e.shiftKey ? KEY_STEP_LARGE : KEY_STEP));
         setReadoutY(sidebar.offsetHeight / 2);
       }}
-      // The widest width follows the window, so it's refreshed when the handle is reached
+      // The widest width follows the window, and the default width follows the main nav
+      // (Editor.tsx), so both are refreshed when the handle is reached
       onFocus={(e) => {
         const sidebar = e.currentTarget.parentElement;
-        if (sidebar) setRange(limits(sidebar));
+        if (!sidebar) return;
+        setRange(limits(sidebar));
+        setWidth(sidebar.offsetWidth);
       }}
       onBlur={() => setReadoutY(null)}
       onDoubleClick={(e) => {

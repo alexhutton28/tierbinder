@@ -20,6 +20,13 @@ body {
   overflow: hidden;
 }
 
+/* Text sits on the font's own line height, not Tailwind's 1.5, so a line takes about the
+   room its letters do and gaps measure what they look like. Sizes that need a set line
+   (text-caption) keep it. */
+html {
+  line-height: normal;
+}
+
 /* Buttons, links and images are things to press, not text to select: no selection
    highlight from a double-click, drag or select-all, and images can't be dragged off */
 button,
@@ -40,11 +47,13 @@ body {
   --tb-bar: var(--color-petrel-900);
   --tb-line: var(--color-petrel-800);
   --tb-text: var(--color-petrel-100);
+  --tb-heading: var(--color-petrel-50);
   --tb-muted: var(--color-petrel-400);
   --tb-control-hover: var(--color-petrel-800);
   --tb-control-text: var(--color-petrel-100);
   --tb-control-border: var(--color-petrel-700);
   --tb-field: var(--color-petrel-950);
+  --tb-field-border: var(--color-petrel-700);
   --tb-primary: var(--color-storm-300);
   --tb-primary-hover: var(--color-storm-200);
   --tb-primary-text: var(--color-petrel-950);
@@ -52,6 +61,8 @@ body {
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
   --tb-focus: var(--color-storm-200);
+  --tb-icon-rest: var(--color-petrel-600);
+  --tb-icon-lit: var(--color-storm-300);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
@@ -64,8 +75,11 @@ body {
   --tb-swatch: 24px;
   --tb-number-field: 64px;
 
-  /* Chosen by eye (see Exceptions): the default fits the main nav with its icons */
+  /* The default sidebar width until the main nav is measured: Editor.tsx then sets it on
+     the sidebar column to fit the nav with every label and 8px each side */
   --tb-sidebar-default: 368px;
+
+  /* Chosen by eye (see Exceptions) */
   --tb-sidebar-min: 250px;
 
   /* The workspace never gets narrower than this, which caps the sidebar: the main area
@@ -92,13 +106,15 @@ body {
   color-scheme: dark;
 }
 
+/* The sidebar's tab panels: 8px under the main nav (as it is under the header) and at the
+   sides to line up with it (.sideHead in Editor.module.css), and 16px at the bottom */
 .tierbinder-panel {
-  padding: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-3) var(--spacing-4);
 }
 
 .tierbinder-heading {
-  color: var(--tb-muted);
-  font-size: var(--text-caption);
+  color: var(--tb-heading);
+  font-size: var(--text-body);
   font-weight: 600;
 }
 
@@ -114,10 +130,11 @@ body {
 .tierbinder-field {
   height: var(--tb-control-height);
   padding-inline: var(--spacing-3);
-  border: var(--tb-line-width) solid var(--tb-field);
+  border: var(--tb-line-width) solid var(--tb-field-border);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
   color: var(--tb-text);
+  transition: border-color var(--duration-fade) ease-out;
 
   /* iPhones zoom the page when a field under 16px is tapped */
   font-size: var(--text-field);
@@ -164,6 +181,14 @@ textarea.tierbinder-field {
 .tierbinder-page :focus-visible {
   outline: var(--tb-focus-width) solid var(--tb-focus);
   outline-offset: var(--tb-focus-width);
+}
+
+/* Text fields are focused on every click, so they get a quieter sign than the ring: a
+   Storm 600 edge, darker than the ring so it stays in the background. The
+   search field's icon lights up with it (.searchIcon in Editor.module.css). */
+.tierbinder-page .tierbinder-field:focus-visible {
+  outline: none;
+  border-color: var(--color-storm-600);
 }
 
 /* Card menu and dropdowns (ui/Dropdown.tsx): stretches out from its edge

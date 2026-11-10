@@ -18,6 +18,10 @@ type Props<T extends string> = {
   options: readonly Option<T>[];
   value: T;
   onChange: (value: T) => void;
+  // The width the bar needs to show every label, measured from its hidden copy (in whole
+  // px, as the mode is chosen with), and again whenever that changes (as when the font
+  // loads)
+  onFullWidth?: (width: number) => void;
 };
 
 // The sidebar's main nav: a block of the selected option's color hugs its word, and
@@ -27,7 +31,13 @@ type Props<T extends string> = {
 // readers). Hidden copies of the bar in the wider modes are measured against the space,
 // so the switch follows the real text widths. 'selected' is measured with each tab
 // selected in turn and needs the widest, so switching tabs never changes the mode.
-export default function RadioBar<T extends string>({ label, options, value, onChange }: Props<T>) {
+export default function RadioBar<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  onFullWidth,
+}: Props<T>) {
   const fitRef = React.useRef<HTMLDivElement>(null);
   const sizerRefs = React.useRef(new Map<string, HTMLDivElement>());
   const [mode, setMode] = React.useState<Mode>('full');
@@ -38,6 +48,10 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
   const wordRefs = React.useRef(new Map<T, HTMLSpanElement>());
   const [block, setBlock] = React.useState<BlockBox | null>(null);
   const moved = React.useRef({ value, mode });
+  const onFullWidthRef = React.useRef(onFullWidth);
+  React.useLayoutEffect(() => {
+    onFullWidthRef.current = onFullWidth;
+  });
   const selected = options.find((option) => option.value === value);
 
   // The block goes where the selected word will be once the bar settles. While labels
@@ -90,7 +104,9 @@ export default function RadioBar<T extends string>({ label, options, value, onCh
             .map(([, sizer]) => sizer.offsetWidth)
         );
       setMode(TRIED_MODES.find((m) => needs(m) <= room) ?? 'icon');
-      const labels = sizerRefs.current.get('full ')?.querySelectorAll(`.${styles.label}`);
+      const full = sizerRefs.current.get('full ');
+      if (full) onFullWidthRef.current?.(full.offsetWidth);
+      const labels = full?.querySelectorAll(`.${styles.label}`);
       const widths = [...(labels ?? [])].map((l) => (l as HTMLElement).offsetWidth);
       setLabelWidths((old) => (old && old.join() === widths.join() ? old : widths));
     };

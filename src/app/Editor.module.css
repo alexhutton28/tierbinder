@@ -10,7 +10,6 @@
   height: calc(var(--tb-top-height) + env(safe-area-inset-top));
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-top);
 }
 
@@ -28,28 +27,94 @@
   }
 }
 
-.side {
-  border-top: var(--tb-line-width) solid var(--tb-line);
-  background: var(--tb-bar);
+/* The header and the sidebar, as one column left of the board, at the width the user
+   dragged it to (ui/SidebarHandle.tsx) or the default. On narrow screens it dissolves, so
+   the header and the sidebar are laid out in the page on their own (see .side). */
+.sideColumn {
+  display: contents;
 
-  /* Beside the board, at the width the user dragged it to (ui/SidebarHandle.tsx), or the
-     default */
   @variant b8 {
     position: relative;
+    display: flex;
     flex: none;
+    flex-direction: column;
     width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
       100vw - var(--tb-workspace-min)
     );
+    min-height: 0;
+  }
+}
+
+/* Below the board on narrow screens (the column's header stays first); beside it, under
+   the header. The edge line is the sidebar's, so the header runs over it, as wide as the
+   sidebar with its line. */
+.side {
+  order: 1;
+  border-top: var(--tb-line-width) solid var(--tb-line);
+  background: var(--tb-bar);
+
+  @variant b8 {
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
   }
 }
 
+/* The search field, with a search icon inside it that lights up with the field's focus
+   edge (globals.css) */
+.search {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+/* The text starts 8px past the icon's ink, not its box: Feather draws on a 24px grid whose
+   ink ends 2 units from the right (11/12 of the width). The padding is inside the field's
+   border, which the icon's position isn't. */
+.search input {
+  --icon-ink: calc(var(--tb-icon) * 11 / 12);
+
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding-block: var(--spacing-3);
+  padding-left: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
+}
+
+/* The search field is taller than other controls: its padding sets its height (8px above
+   and below the text), and the Search button stretches to match */
+.searchRow > button {
+  height: auto;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: var(--spacing-3);
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: var(--tb-icon-rest);
+  mask: url('/search.svg') center / contain no-repeat;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: background-color var(--duration-fade) ease-out;
+}
+
+.search:has(input:focus-visible) .searchIcon {
+  background: var(--tb-icon-lit);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchIcon {
+    transition: none;
+  }
+}
+
+/* No padding below: the panel's own 8px top padding is the gap to the content */
 .sideHead {
-  padding: var(--spacing-3);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
+  padding: var(--spacing-3) var(--spacing-3) 0;
 }
 
 /* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
@@ -69,6 +134,48 @@
   @variant b8 {
     max-height: none;
   }
+}
+
+/* A featured card pool in Add Cards: its name over a row of card placeholders, on the
+   field color */
+.pool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+}
+
+/* The pool's name with Feather's chevron-right after it, the size of the text */
+.poolName {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+.poolChevron {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: currentcolor;
+  mask: url('/chevron-right.svg') center / contain no-repeat;
+}
+
+.poolCards {
+  display: grid;
+  grid-template-columns: repeat(var(--pool-columns), 1fr);
+  gap: var(--spacing-2);
+}
+
+/* A card, or a placeholder in its shape (Editor.tsx sets the column count and the ratio
+   from the card size) */
+.poolCard {
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
+  border-radius: var(--tb-radius);
+  background: var(--color-petrel-850);
+  object-fit: cover;
 }
 
 .thumb {

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { Layer, Rect, Stage } from 'react-konva';
-import { BOARD_HEIGHT, BOARD_WIDTH, EXPORT_SCALE } from './canvas/size';
+import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH, EXPORT_SCALE } from './canvas/size';
 import {
   faceOf,
   loadImage,
@@ -58,6 +58,155 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
+// Card pools shown in Add Cards before a search: each previews up to POOL_PREVIEW_CARDS
+// cards in a row, or card-shaped placeholders while it has none. They don't open yet.
+// Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
+type Pool = { name: string; cards: CardResult[] };
+const FEATURED_POOLS: Pool[] = [
+  {
+    name: 'Best Decks of All Time',
+    cards: [
+      {
+        set: 'SLG',
+        number: '53',
+        name: 'Zoroark-GX',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_SM.png',
+      },
+      {
+        set: 'SVI',
+        number: '86',
+        name: 'Gardevoir ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_SM.png',
+      },
+      {
+        set: 'CEC',
+        number: '156',
+        name: 'Arceus & Dialga & Palkia-GX',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_SM.png',
+      },
+      {
+        set: 'FST',
+        number: '114',
+        name: 'Mew VMAX',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_SM.png',
+      },
+      {
+        set: 'SIT',
+        number: '139',
+        name: 'Lugia VSTAR',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_SM.png',
+      },
+      {
+        set: 'TWM',
+        number: '130',
+        name: 'Dragapult ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_SM.png',
+      },
+    ],
+  },
+  {
+    name: 'Delta Reign',
+    cards: [
+      {
+        set: 'DLR',
+        number: '84',
+        name: 'Mega Rayquaza ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_084_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_084_R_EN_SM.png',
+      },
+      {
+        set: 'DLR',
+        number: '88',
+        name: 'Talonflame ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_088_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_088_R_EN_SM.png',
+      },
+      {
+        set: 'DLR',
+        number: '11',
+        name: 'Mega Golisopod ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_SM.png',
+      },
+      {
+        set: 'DLR',
+        number: '69',
+        name: 'Mega Malamar ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_069_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_069_R_EN_SM.png',
+      },
+      {
+        set: 'DLR',
+        number: '47',
+        name: 'Mega Golurk ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_047_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_047_R_EN_SM.png',
+      },
+      {
+        set: 'DLR',
+        number: '33',
+        name: 'Raikou ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_SM.png',
+      },
+    ],
+  },
+  {
+    name: 'Mega Evolution Cards',
+    cards: [
+      {
+        set: 'MEG',
+        number: '104',
+        name: 'Mega Kangaskhan ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_SM.png',
+      },
+      {
+        set: 'PFL',
+        number: '13',
+        name: 'Mega Charizard X ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_SM.png',
+      },
+      {
+        set: 'MEG',
+        number: '77',
+        name: 'Mega Lucario ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_SM.png',
+      },
+      {
+        set: 'MEG',
+        number: '86',
+        name: 'Mega Absol ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_SM.png',
+      },
+      {
+        set: 'PBL',
+        number: '65',
+        name: 'Mega Excadrill ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_SM.png',
+      },
+      {
+        set: 'CRI',
+        number: '22',
+        name: 'Mega Greninja ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_SM.png',
+      },
+    ],
+  },
+];
+const POOL_PREVIEW_CARDS = 6;
+
 export default function Editor() {
   const [doc, setDoc] = React.useState<TierBinderDoc>(loadSaved);
   const graphic = currentGraphic(doc);
@@ -71,6 +220,7 @@ export default function Editor() {
   const [importing, setImporting] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<CardResult[]>([]);
+  const showingResults = results.length > 0 && !importing;
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -107,6 +257,16 @@ export default function Editor() {
 
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const workspaceRef = React.useRef<HTMLDivElement>(null);
+  // The sidebar's default width fits the main nav with every label showing and the same
+  // 8px (.sideHead) on both sides, plus the sidebar's edge line. It's measured from the
+  // nav, so it follows the labels and the font; a width the user dragged still wins.
+  const sideColumnRef = React.useRef<HTMLDivElement>(null);
+  const fitSidebarToNav = React.useCallback((navWidth: number) => {
+    sideColumnRef.current?.style.setProperty(
+      '--tb-sidebar-default',
+      `calc(${navWidth}px + 2 * var(--spacing-3) + var(--tb-line-width))`
+    );
+  }, []);
   const boardRef = React.useRef<HTMLDivElement>(null);
   const boardBoxRef = React.useRef<HTMLDivElement>(null);
   // The selection outline. Konva moves a dragged card itself, without React, so the
@@ -157,6 +317,11 @@ export default function Editor() {
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
+    // A cleared board starts Add Cards over too
+    if (clear) {
+      setQuery('');
+      setResults([]);
+    }
     if (kind !== doc.kind) {
       setTarget(0);
       setTool(DEFAULT_TOOL);
@@ -495,255 +660,237 @@ export default function Editor() {
   }
 
   return (
-    // The board, with the sidebar on its left (below it on narrow screens). On wide
-    // screens each scrolls on its own, so the search results stay beside the board.
-    <div className="tierbinder-page w-full b8:h-full flex flex-col text-body">
-      <header className={styles.top}>
-        <Link href="/" className={styles.brand}>
-          <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
-        </Link>
-      </header>
-      <div className="flex-1 min-h-0 flex flex-col b8:flex-row-reverse">
-        <div
-          ref={workspaceRef}
-          className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
-        >
-          <div
-            ref={boardRef}
-            className="flex flex-col gap-4"
-            style={{ width: BOARD_WIDTH * scale }}
+    // The sidebar column (the logo header, then the sidebar) on the left of the board. On
+    // narrow screens the column dissolves (Editor.module.css): the header stays at the top,
+    // then the board, then the sidebar. On wide screens each side scrolls on its own, so
+    // the search results stay beside the board.
+    <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
+      <div ref={sideColumnRef} className={styles.sideColumn}>
+        <header className={styles.top}>
+          <Link href="/" className={styles.brand}>
+            <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
+          </Link>
+        </header>
+        <SidebarHandle />
+        <aside className={`${styles.side} flex flex-col min-w-0 b8:flex-1 b8:min-h-0`}>
+          <div className={styles.sideHead}>
+            <RadioBar
+              label="Editor sections"
+              options={TABS}
+              value={tab}
+              onChange={setTab}
+              onFullWidth={fitSidebarToNav}
+            />
+          </div>
+
+          {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
+            so the results scroll instead of widening the sidebar; on wide screens they
+            fill the sidebar's height and scroll on their own, and the panel scrolls when
+            the pools and Advanced don't fit */}
+          <section
+            role="tabpanel"
+            hidden={tab !== 'add'}
+            className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
-            <div className="flex">
-              <Dropdown
-                hideLabel
-                label="Board type"
-                value={doc.kind}
-                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-                onChange={(kind) => {
-                  if (kind !== doc.kind) showBoard(kind);
+            {/* Grows to fill the sidebar while it shows search results */}
+            <div
+              className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
+            >
+              <h3 id="card-search-heading" className="tierbinder-heading">
+                Add a Card
+              </h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  search(query);
                 }}
-              />
-            </div>
-            <div ref={boardBoxRef} className="w-full relative">
-              <Stage
-                ref={(stage) => {
-                  stageRef.current = stage;
-                }}
-                width={BOARD_WIDTH * scale}
-                height={BOARD_HEIGHT * scale}
-                scaleX={scale}
-                scaleY={scale}
-                onMouseDown={(e) => {
-                  if (e.target === e.target.getStage() || e.target.name() === 'background') {
-                    setSelectedId(null);
-                  }
-                }}
-                onDragMove={moveOutline}
-                // After the card's own dragend has put it back at its laid-out spot; React only
-                // moves the outline when that spot changes
-                onDragEnd={moveOutline}
+                className={`${styles.searchRow} flex gap-3`}
               >
-                <type.Canvas
-                  graphic={graphic}
-                  fontFamily={fontFamily}
-                  onChange={(next) => setGraphic(() => next)}
-                  onSelect={setSelectedId}
-                  onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-                  onPickTarget={setTarget}
-                  onEditSetting={(key) => {
-                    setTab('customize');
-                    setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
-                  }}
-                  tool={tool}
-                />
-                {/* Editor-only layer: hidden while exporting */}
-                <Layer name="editor" listening={false}>
-                  {placements
-                    .filter((p) => p.item.id === selectedId)
-                    .map((p) => (
-                      <Rect
-                        key={p.item.id}
-                        ref={outlineRef}
-                        x={p.x - OUTLINE.width}
-                        y={p.y - OUTLINE.width}
-                        width={p.width + 2 * OUTLINE.width}
-                        height={p.height + 2 * OUTLINE.width}
-                        stroke={OUTLINE.color}
-                        strokeWidth={OUTLINE.width}
-                        cornerRadius={OUTLINE.radius}
-                      />
-                    ))}
-                </Layer>
-              </Stage>
-              {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
+                <label className={styles.search}>
+                  <span className={styles.searchIcon} aria-hidden />
+                  <input
+                    ref={searchInputRef}
+                    className="tierbinder-field"
+                    aria-labelledby="card-search-heading"
+                    // Card names aren't real words: don't let phones "fix" them
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    placeholder="Card name"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      // Emptying the field clears the results, bringing the other sections back
+                      if (!e.target.value.trim()) {
+                        setResults([]);
+                        setStatus('');
+                      }
+                    }}
+                  />
+                </label>
+                <Button variant="primary" disabled={busy}>
+                  Search
+                </Button>
+              </form>
+              {picking && pickingCard ? (
+                <p className="flex gap-3 items-center">
+                  {picking.part === 'top'
+                    ? pickingCard.split
+                      ? `Replacing the top half (${pickingCard.name})`
+                      : `Replacing ${pickingCard.name}`
+                    : pickingCard.split
+                      ? `Replacing the bottom half (${pickingCard.split.name})`
+                      : `Splitting ${pickingCard.name}: pick the bottom card`}
+                  <Button onClick={() => setPicking(null)}>Cancel</Button>
+                </p>
+              ) : (
+                // Only once a submitted search shows results to add, and when there's a
+                // choice (a blank canvas has one place for cards)
+                showingResults &&
+                targets.length > 1 && (
+                  <Dropdown
+                    label="Add to"
+                    value={targetIndex}
+                    options={targets.map((name, i) => ({
+                      value: i,
+                      label: name.replaceAll('\n', ' '),
+                    }))}
+                    onChange={setTarget}
+                  />
+                )
+              )}
+              {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
+              {showingResults && (
                 <div
-                  // A new element for each menu, so each one plays the opening animation
-                  key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
-                  ref={cardMenuRef}
-                  role="menu"
-                  onContextMenu={(e) => e.preventDefault()}
-                  className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
-                  // Kept inside the board's right edge
-                  style={{
-                    minWidth: MENU_WIDTH,
-                    left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
-                    top: shownMenu.y,
-                  }}
+                  className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
                 >
-                  {cardMenuItems(shownMenu).map((label) => (
-                    <button
-                      key={label}
-                      role="menuitem"
-                      className="tierbinder-option"
+                  {results.map((card) => (
+                    <div
+                      key={`${card.set}-${card.number}`}
+                      role="button"
+                      tabIndex={0}
+                      title={`${card.set} ${card.number}`}
+                      className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
+                      // Mouse and pen only: on touch, a press-and-move scrolls the results
+                      onPointerDown={(e) => {
+                        if (e.pointerType === 'touch' || e.button !== 0) return;
+                        e.preventDefault();
+                        resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
+                      }}
                       onClick={() => {
-                        runCardMenuItem(shownMenu, label);
-                        setCardMenu(null);
+                        if (!justDragged.current) pickResult(card);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          pickResult(card);
+                        }
                       }}
                     >
-                      {label}
-                    </button>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                      <img
+                        src={card.thumb}
+                        alt={`${card.set} ${card.number}`}
+                        className={`${styles.thumb} object-contain`}
+                        loading="lazy"
+                        draggable={false}
+                        // The CDN occasionally fails a load; retry once through the image proxy
+                        onError={(e) => {
+                          const proxy = proxied(card.thumb);
+                          if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                        }}
+                      />
+                      <span className="w-full truncate text-center">
+                        {card.set} {card.number}
+                      </span>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {type.Toolbar && (
-              <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
+            {/* Card pools to browse and Advanced, until a search shows results; they come
+              back when the search is emptied or the board is cleared. The pools are
+              placeholders for now: they don't open yet. */}
+            {!showingResults && !importing && (
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Featured Card Pools</h3>
+                {FEATURED_POOLS.map((pool) => (
+                  <div key={pool.name} className={styles.pool}>
+                    <span className={`${styles.poolName} text-caption font-semibold`}>
+                      {pool.name}
+                      <span className={styles.poolChevron} aria-hidden />
+                    </span>
+                    {/* A fixed number of columns, so every pool's cards are the same size */}
+                    <div
+                      className={styles.poolCards}
+                      style={
+                        {
+                          '--pool-columns': POOL_PREVIEW_CARDS,
+                          '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                        } as React.CSSProperties
+                      }
+                    >
+                      {pool.cards.length
+                        ? pool.cards.slice(0, POOL_PREVIEW_CARDS).map((card) => (
+                            // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                            <img
+                              key={`${card.set}-${card.number}`}
+                              src={card.thumb}
+                              alt={`${card.name} (${card.set} ${card.number})`}
+                              title={`${card.name} (${card.set} ${card.number})`}
+                              className={styles.poolCard}
+                              loading="lazy"
+                              draggable={false}
+                              // The CDN occasionally fails a load; retry once through the proxy
+                              onError={(e) => {
+                                const proxy = proxied(card.thumb);
+                                if (!e.currentTarget.src.endsWith(proxy))
+                                  e.currentTarget.src = proxy;
+                              }}
+                            />
+                          ))
+                        : Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
+                            <span key={i} className={styles.poolCard} aria-hidden />
+                          ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
-            {status && <p className="whitespace-pre-line">{status}</p>}
-          </div>
-        </div>
-
-        <aside className={`${styles.side} flex flex-col min-w-0 b8:min-h-0`}>
-          <SidebarHandle />
-          <div className={styles.sideHead}>
-            <RadioBar label="Editor sections" options={TABS} value={tab} onChange={setTab} />
-          </div>
-
-          {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
-            so the results scroll instead of widening the sidebar; on wide screens they
-            fill the sidebar's height */}
-          <section
-            role="tabpanel"
-            hidden={tab !== 'add'}
-            className="tierbinder-panel flex flex-col gap-3 min-w-0 b8:flex-1 b8:min-h-0"
-          >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                search(query);
-              }}
-              className="flex gap-3"
-            >
-              <input
-                ref={searchInputRef}
-                className="tierbinder-field flex-1 min-w-0"
-                // Card names aren't real words: don't let phones "fix" them
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                placeholder="Card name"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <Button variant="primary" disabled={busy}>
-                Search
-              </Button>
-            </form>
-            {picking && pickingCard ? (
-              <p className="flex gap-3 items-center">
-                {picking.part === 'top'
-                  ? pickingCard.split
-                    ? `Replacing the top half (${pickingCard.name})`
-                    : `Replacing ${pickingCard.name}`
-                  : pickingCard.split
-                    ? `Replacing the bottom half (${pickingCard.split.name})`
-                    : `Splitting ${pickingCard.name}: pick the bottom card`}
-                <Button onClick={() => setPicking(null)}>Cancel</Button>
-              </p>
-            ) : (
-              // Only when there's a choice (a blank canvas has one place for cards)
-              targets.length > 1 && (
-                <Dropdown
-                  label="Add to"
-                  value={targetIndex}
-                  options={targets.map((name, i) => ({
-                    value: i,
-                    label: name.replaceAll('\n', ' '),
-                  }))}
-                  onChange={setTarget}
-                />
-              )
-            )}
-            <Button className="self-start" onClick={() => setImporting((on) => !on)}>
-              {importing ? 'Back to search' : 'Bulk import'}
-            </Button>
-            {importing && (
-              <>
-                <textarea
-                  rows={10}
-                  aria-label="Cards to import"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  className="tierbinder-field font-mono"
-                  placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                />
-                <Button variant="primary" onClick={runImport} disabled={busy || !importText.trim()}>
-                  Import (adds to the board)
+            {!showingResults && (
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Advanced</h3>
+                <Button className="self-start" onClick={() => setImporting((on) => !on)}>
+                  {importing ? 'Back to search' : 'Bulk import'}
                 </Button>
-              </>
+                {importing && (
+                  <>
+                    <textarea
+                      rows={10}
+                      aria-label="Cards to import"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      className="tierbinder-field font-mono"
+                      placeholder={
+                        '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                      }
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={runImport}
+                      disabled={busy || !importText.trim()}
+                    >
+                      Import (adds to the board)
+                    </Button>
+                  </>
+                )}
+              </div>
             )}
-            {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
-            <div
-              hidden={importing}
-              className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden`}
-            >
-              {results.map((card) => (
-                <div
-                  key={`${card.set}-${card.number}`}
-                  role="button"
-                  tabIndex={0}
-                  title={`${card.set} ${card.number}`}
-                  className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
-                  // Mouse and pen only: on touch, a press-and-move scrolls the results
-                  onPointerDown={(e) => {
-                    if (e.pointerType === 'touch' || e.button !== 0) return;
-                    e.preventDefault();
-                    resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
-                  }}
-                  onClick={() => {
-                    if (!justDragged.current) pickResult(card);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      pickResult(card);
-                    }
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                  <img
-                    src={card.thumb}
-                    alt={`${card.set} ${card.number}`}
-                    className={`${styles.thumb} object-contain`}
-                    loading="lazy"
-                    draggable={false}
-                    // The CDN occasionally fails a load; retry once through the image proxy
-                    onError={(e) => {
-                      const proxy = proxied(card.thumb);
-                      if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
-                    }}
-                  />
-                  <span className="w-full truncate text-center">
-                    {card.set} {card.number}
-                  </span>
-                </div>
-              ))}
-            </div>
           </section>
 
           <section
@@ -792,6 +939,113 @@ export default function Editor() {
             </div>
           </section>
         </aside>
+      </div>
+
+      <div
+        ref={workspaceRef}
+        className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+      >
+        <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
+          <div className="flex">
+            <Dropdown
+              hideLabel
+              label="Board type"
+              value={doc.kind}
+              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+              onChange={(kind) => {
+                if (kind !== doc.kind) showBoard(kind);
+              }}
+            />
+          </div>
+          <div ref={boardBoxRef} className="w-full relative">
+            <Stage
+              ref={(stage) => {
+                stageRef.current = stage;
+              }}
+              width={BOARD_WIDTH * scale}
+              height={BOARD_HEIGHT * scale}
+              scaleX={scale}
+              scaleY={scale}
+              onMouseDown={(e) => {
+                if (e.target === e.target.getStage() || e.target.name() === 'background') {
+                  setSelectedId(null);
+                }
+              }}
+              onDragMove={moveOutline}
+              // After the card's own dragend has put it back at its laid-out spot; React only
+              // moves the outline when that spot changes
+              onDragEnd={moveOutline}
+            >
+              <type.Canvas
+                graphic={graphic}
+                fontFamily={fontFamily}
+                onChange={(next) => setGraphic(() => next)}
+                onSelect={setSelectedId}
+                onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                onPickTarget={setTarget}
+                onEditSetting={(key) => {
+                  setTab('customize');
+                  setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+                }}
+                tool={tool}
+              />
+              {/* Editor-only layer: hidden while exporting */}
+              <Layer name="editor" listening={false}>
+                {placements
+                  .filter((p) => p.item.id === selectedId)
+                  .map((p) => (
+                    <Rect
+                      key={p.item.id}
+                      ref={outlineRef}
+                      x={p.x - OUTLINE.width}
+                      y={p.y - OUTLINE.width}
+                      width={p.width + 2 * OUTLINE.width}
+                      height={p.height + 2 * OUTLINE.width}
+                      stroke={OUTLINE.color}
+                      strokeWidth={OUTLINE.width}
+                      cornerRadius={OUTLINE.radius}
+                    />
+                  ))}
+              </Layer>
+            </Stage>
+            {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
+              <div
+                // A new element for each menu, so each one plays the opening animation
+                key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
+                ref={cardMenuRef}
+                role="menu"
+                onContextMenu={(e) => e.preventDefault()}
+                className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                // Kept inside the board's right edge
+                style={{
+                  minWidth: MENU_WIDTH,
+                  left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
+                  top: shownMenu.y,
+                }}
+              >
+                {cardMenuItems(shownMenu).map((label) => (
+                  <button
+                    key={label}
+                    role="menuitem"
+                    className="tierbinder-option"
+                    onClick={() => {
+                      runCardMenuItem(shownMenu, label);
+                      setCardMenu(null);
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {type.Toolbar && (
+            <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
+          )}
+
+          {status && <p className="whitespace-pre-line">{status}</p>}
+        </div>
       </div>
 
       {dragGhost && (
