@@ -9,7 +9,8 @@
     "lint": "eslint",
     "stylelint": "stylelint \"src/**/*.{css,scss}\"",
     "format": "prettier --write .",
-    "design:tokens": "sh scripts/design-tokens.sh"
+    "design:tokens": "sh scripts/design-tokens.sh",
+    "tcgdex:sets": "node scripts/tcgdex-sets.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

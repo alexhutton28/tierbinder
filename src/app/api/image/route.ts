@@ -1,8 +1,10 @@
 // Serves card and sprite images from our own origin. Canvas export refuses to read
-// images from hosts that don't send CORS headers (Limitless doesn't), so TierBinder
-// loads every image through here. Only known image hosts are allowed, so this can't
+// images from hosts that don't send CORS headers, so TierBinder loads every image
+// through here, which also keeps one cache of them. Only known image hosts are allowed, so this can't
 // be used as an open proxy.
 const ALLOWED_HOSTS = new Set([
+  'assets.tcgdex.net',
+  // Boards saved before the move to TCGdex hold Limitless image URLs
   'limitlesstcg.nyc3.cdn.digitaloceanspaces.com',
   'r2.limitlesstcg.net',
   'images.pokemontcg.io',

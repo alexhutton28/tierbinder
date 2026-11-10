@@ -34,24 +34,24 @@ export type CardResult = {
   number: string;
   image: string;
   thumb: string;
-  name?: string;
+  name: string;
 };
 
-export function toFace(card: CardResult, name: string): CardFace {
-  return { name, set: card.set, number: card.number, image: card.image };
+export function toFace(card: CardResult): CardFace {
+  return { name: card.name, set: card.set, number: card.number, image: card.image };
 }
 
-export function toItem(card: CardResult, name: string): CardItem {
-  return { id: newId(), kind: 'card', ...toFace(card, name) };
+export function toItem(card: CardResult): CardItem {
+  return { id: newId(), kind: 'card', ...toFace(card) };
 }
 
 async function resolveFace(card: ImportCard): Promise<CardFace | null> {
   if (card.set && card.number) {
     const found = await fetchCard(card.set, card.number);
-    if (found) return toFace(found, found.name ?? card.name);
+    if (found) return toFace(found);
   }
   const pick = defaultPrint(await searchCards(card.name));
-  return pick ? toFace(pick, card.name) : null;
+  return pick ? toFace(pick) : null;
 }
 
 // Looks up a bulk import line. A split card needs both halves found.
@@ -64,7 +64,7 @@ export async function resolveCard(line: ImportLine): Promise<CardItem | null> {
   return { id: newId(), kind: 'card', ...top, ...(bottom ? { split: bottom } : {}) };
 }
 
-// Special sets of reprints, listed before regular sets in Limitless search results
+// Special sets of reprints, released alongside regular sets
 const SPECIAL_SETS = new Set(['30C', 'CEL']);
 
 // Search results come newest set first. Within a set, alt arts are numbered after the
@@ -114,7 +114,7 @@ export function loadImage(url: string) {
   return image;
 }
 
-// Runs tasks a few at a time so a big import doesn't hit Limitless all at once
+// Runs tasks a few at a time so a big import doesn't hit TCGdex all at once
 export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>) {
   const results: R[] = new Array(items.length);
   let next = 0;
