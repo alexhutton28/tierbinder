@@ -52,13 +52,14 @@ body {
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
   --tb-focus: var(--color-storm-200);
+  --tb-focus-line: var(--color-storm-300);
+  --tb-icon-rest: var(--color-petrel-600);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
      design/hutton-design-system.md). Everything else is sized by the layout. */
   --tb-line-width: 1px;
   --tb-focus-width: 2px;
-  --tb-focus-glow: 8px;
   --tb-top-height: 48px;
   --tb-control-height: 32px;
   --tb-icon: 16px;
@@ -119,9 +120,6 @@ body {
   border-radius: var(--tb-radius);
   background: var(--tb-field);
   color: var(--tb-text);
-  transition:
-    border-color var(--duration-fade) ease-out,
-    box-shadow var(--duration-fade) ease-out;
 
   /* iPhones zoom the page when a field under 16px is tapped */
   font-size: var(--text-field);
@@ -171,11 +169,25 @@ textarea.tierbinder-field {
 }
 
 /* Text fields are focused on every click, so they get a quieter sign than the ring: a
-   Storm 600 edge with a soft glow, darker than the ring so it stays in the background */
+   Storm 300 underline that grows out from the middle (a background, so it needs no extra
+   markup). The search field's icon lights up with it (.searchIcon in Editor.module.css). */
+.tierbinder-page .tierbinder-field {
+  background-image: linear-gradient(var(--tb-focus-line), var(--tb-focus-line));
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: 0 var(--tb-focus-width);
+  transition: background-size var(--duration-hover) ease-out;
+}
+
 .tierbinder-page .tierbinder-field:focus-visible {
   outline: none;
-  border-color: var(--color-storm-600);
-  box-shadow: 0 0 var(--tb-focus-glow) color-mix(in srgb, var(--color-storm-600) 60%, transparent);
+  background-size: 100% var(--tb-focus-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tierbinder-page .tierbinder-field {
+    transition: none;
+  }
 }
 
 /* Card menu and dropdowns (ui/Dropdown.tsx): stretches out from its edge

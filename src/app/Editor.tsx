@@ -531,17 +531,20 @@ export default function Editor() {
               }}
               className="flex gap-3"
             >
-              <input
-                ref={searchInputRef}
-                className="tierbinder-field flex-1 min-w-0"
-                // Card names aren't real words: don't let phones "fix" them
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                placeholder="Card name"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+              <label className={styles.search}>
+                <span className={styles.searchIcon} aria-hidden />
+                <input
+                  ref={searchInputRef}
+                  className="tierbinder-field"
+                  // Card names aren't real words: don't let phones "fix" them
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  placeholder="Card name"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
               <Button variant="primary" disabled={busy}>
                 Search
               </Button>

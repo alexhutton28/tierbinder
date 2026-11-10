@@ -61,6 +61,44 @@
   }
 }
 
+/* The search field, with a search icon inside it that lights up with the field's focus
+   underline (globals.css) */
+.search {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding-left: calc(var(--spacing-3) * 2 + var(--tb-icon));
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: var(--spacing-3);
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: var(--tb-icon-rest);
+  mask: url('/search.svg') center / contain no-repeat;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.search:has(input:focus-visible) .searchIcon {
+  background: var(--tb-focus-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchIcon {
+    transition: none;
+  }
+}
+
 .sideHead {
   padding: var(--spacing-3);
 }
