@@ -41,7 +41,7 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 
 | Name        | Hex       | Semantic roles | Used for                                         |
 | ----------- | --------- | -------------- | ------------------------------------------------ |
-| Petrel 50   | `#F2F5F6` |                | Not used yet                                     |
+| Petrel 50   | `#F2F5F6` |                | Section headings                                 |
 | Petrel 100  | `#E3E8EB` |                | Text, selected tool                              |
 | Petrel 200  | `#CCD4D8` |                | Not used yet                                     |
 | Petrel 300  | `#B3BEC4` |                | Not used yet                                     |
@@ -70,11 +70,11 @@ Board colors (tier colors, backgrounds, borders) are canvas colors that users ca
 
 Fonts are loaded with `next/font` in `src/app/layout.tsx`. The controls use Figtree (`--font-figtree`), with `system-ui` and `sans-serif` as fallbacks. Canvas text uses Inter Black (900, `--font-inter`). Hex fields and bulk import use the device's monospace (`font-mono`). The next/font variables are not generated, because next/font sets them.
 
-| Token          | Size | Weight | Used for                                                                           |
-| -------------- | ---- | ------ | ---------------------------------------------------------------------------------- |
-| `text-field`   | 16px | 400    | Fields on phones                                                                   |
-| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 400 (600 selected) |
-| `text-caption` | 12px | 400    | Search result captions, on a 16px line. Section headings at 600                    |
+| Token          | Size | Weight | Used for                                                                                                    |
+| -------------- | ---- | ------ | ----------------------------------------------------------------------------------------------------------- |
+| `text-field`   | 16px | 400    | Fields on phones                                                                                            |
+| `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 400 (600 selected), section headings at 600 |
+| `text-caption` | 12px | 400    | Search result captions, on a 16px line                                                                      |
 
 - Sizes are in `rem`, in the `@theme` block at the top of `globals.css`, because the token generator has no type scale yet. Tailwind utilities are `text-body` and so on.
 - Sizes stay on even numbers. Fields, including bulk import, are 16px below `b7`, because iPhones zoom the page when a field under 16px is tapped.
@@ -206,7 +206,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Settings
 
-- Section headings are 12px and muted. Rows put the label on the left and the value on the right.
+- Section headings are 14px semibold in Petrel 50 (`--tb-heading`), a step brighter than the text under them. Rows put the label on the left and the value on the right.
 - Color pickers are plain 24px swatches, next to their hex field.
 
 ### Sidebar resize handle
@@ -241,7 +241,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
-- **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav, and the main nav has 8px above it, below it and at its sides, with the tab's content lined up with it. Text fields have a Petrel 800 border at rest. The sidebar's default width became the nav's width with 8px each side, measured, instead of 368px chosen by eye. Text fields show focus with a Storm 600 edge instead of the focus ring, and the search field gained a search icon that lights up with it.
+- **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav, and the main nav has 8px above it, below it and at its sides, with the tab's content lined up with it. Text fields have a Petrel 800 border at rest. Section headings went from 12px muted to 14px Petrel 50, and the card search gained one. The sidebar's default width became the nav's width with 8px each side, measured, instead of 368px chosen by eye. Text fields show focus with a Storm 600 edge instead of the focus ring, and the search field gained a search icon that lights up with it.
 - **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added Consult best practices to the principles. The main nav hugs its tabs, in regular weight (400), with the selected tab semibold (600). The sidebar became resizable by dragging its edge or with the arrow keys, between 250px and the window less a 512px workspace, and the main nav names only the selected tab when it doesn't fit, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, sizes Alex chose by eye are allowed and listed in Exceptions, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).
 - **November 6, 2026 · v1.2:** Added a type scale: 16px for fields on phones, then 14 and 12px, up from 13px page text. The main nav went from 16px to 14px and gained stand-in Feather icons. Fields are 16px on phones, buttons are weight 500, and Figtree is now the chosen interface font ([#8](https://github.com/alexhutton28/tierbinder/issues/8)).
 - **November 6, 2026 · v1.1:** New tier colors, chosen for stronger contrast with dark text and better red-green separation: Goated `#F0392B`, Solid `#F78C1E`, Mid `#FFCB2E`, Fraud `#3CC65A`. Added the logo to a Storm 400 top bar, moved Export PNG and Copy PNG to the Save & Share tab, and moved the board type dropdown above the board.

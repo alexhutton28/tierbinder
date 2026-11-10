@@ -541,7 +541,7 @@ export default function Editor() {
             className="tierbinder-panel flex flex-col gap-3 min-w-0 b8:flex-1 b8:min-h-0"
           >
             <h3 id="card-search-heading" className="tierbinder-heading">
-              Search
+              Search for a card
             </h3>
             <form
               onSubmit={(e) => {

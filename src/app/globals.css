@@ -40,6 +40,7 @@ body {
   --tb-bar: var(--color-petrel-900);
   --tb-line: var(--color-petrel-800);
   --tb-text: var(--color-petrel-100);
+  --tb-heading: var(--color-petrel-50);
   --tb-muted: var(--color-petrel-400);
   --tb-control-hover: var(--color-petrel-800);
   --tb-control-text: var(--color-petrel-100);
@@ -105,8 +106,8 @@ body {
 }
 
 .tierbinder-heading {
-  color: var(--tb-muted);
-  font-size: var(--text-caption);
+  color: var(--tb-heading);
+  font-size: var(--text-body);
   font-weight: 600;
 }
 
