@@ -1,8 +1,8 @@
 import { fromParams } from '../../searchOptions';
 import { searchCards } from '../cardSource';
 
-// Card search by name, with optional filters and sort order (searchOptions.ts):
-// /api/search?q=dragapult+ex&format=standard&sort=name
+// Card search by name, optionally only some sets and oldest first (searchOptions.ts):
+// /api/search?q=dragapult+ex&sets=TWM,PRE&reverse=1
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;
   const query = params.get('q')?.trim() ?? '';

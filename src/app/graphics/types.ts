@@ -72,8 +72,9 @@ export type GraphicType<G extends { kind: string }> = {
   layout: (graphic: G) => CardPlacement[];
   // Changes cards, or removes them (null)
   mapCards: (graphic: G, change: (item: CardItem) => CardItem | null) => G;
-  // Where a search result can be added (the Add to choices), e.g. the tiers
-  targets: (graphic: G) => string[];
+  // Where a search result can be added (the Add to choices), e.g. the tiers, each with
+  // a color for its swatch in the picker if it has one
+  targets: (graphic: G) => { name: string; color?: string }[];
   addCard: (graphic: G, item: CardItem, target: number) => Placed<G>;
   // Adds a card dropped with the pointer at `point`
   dropCard: (graphic: G, item: CardItem, point: Point) => Placed<G>;

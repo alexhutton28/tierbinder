@@ -20,32 +20,33 @@ export async function lookupCard(set: string, number: string): Promise<CardResul
   return card && { ...card, name: card.name ?? `${card.set} ${card.number}` };
 }
 
-// Filtered and sorted as asked. The default order (newest set first, then by number) is
-// what import's default print (defaultPrint in cards.ts) relies on.
+// Newest set first unless reversed, only from the sets asked for. Newest first is what
+// import's default print (defaultPrint in cards.ts) relies on.
 export async function searchCards(
   query: string,
   options: SearchOptions = DEFAULT_SEARCH
 ): Promise<CardResult[]> {
+  const inSets = (card: { set: string }) => !options.sets.length || options.sets.includes(card.set);
   let found: tcgdex.Search | null = null;
   try {
-    found = await tcgdex.searchCards(query, options);
+    found = await tcgdex.searchCards(query);
     if (!found.results.length && !found.missing.size) {
       // Nothing at all, perhaps a set too new for TCGdex: every Limitless result
       found = null;
-    } else if (!found.missing.size) {
-      return arranged(found.results, options);
+    } else {
+      found = {
+        results: found.results.filter(inSets),
+        // Keyed by cardKey: the set code, a space, the number
+        missing: new Map([...found.missing].filter(([key]) => inSets({ set: key.split(' ')[0] }))),
+      };
+      if (!found.missing.size) return arranged(found.results, options);
     }
   } catch (e) {
     console.error('TCGdex search failed, trying Limitless:', e);
   }
 
   const fallback = found;
-  // Filling in TCGdex's missing images needs every print that passes the filters, in
-  // any order; on its own, Limitless filters, sorts and keeps one print per card itself
-  const limitlessOptions: SearchOptions = found
-    ? { ...options, sort: 'newest', newestOnly: false }
-    : options;
-  const extra = await limitless.searchCards(query, limitlessOptions).catch((e) => {
+  const extra = await limitless.searchCards(query).catch((e) => {
     // TCGdex's results are still worth showing
     if (!fallback) throw e;
     console.error('Limitless search failed:', e);
@@ -53,8 +54,9 @@ export async function searchCards(
   });
   if (!found) {
     // Limitless search results have no names; the search is the best guess. They're
-    // already in the order asked for.
-    return extra.map((card) => ({ ...card, name: query }));
+    // already newest first.
+    const named = extra.filter(inSets).map((card) => ({ ...card, name: query }));
+    return options.reverse ? named.toReversed() : named;
   }
   // Only the cards TCGdex lists without an image: a few older sets have other codes on
   // Limitless (UD for Undaunted, UND on TCGdex), so anything else could be a duplicate
@@ -70,38 +72,18 @@ export async function searchCards(
 
 const byNumber = (n: string) => parseInt(n, 10) || Infinity;
 
-// Newest set first, then by set code and number
-function newestFirst(a: CardResult & CardInfo, b: CardResult & CardInfo) {
-  return (
-    b.date.localeCompare(a.date) ||
-    a.set.localeCompare(b.set) ||
-    byNumber(a.number) - byNumber(b.number) ||
-    a.number.localeCompare(b.number)
-  );
-}
+type Found = CardResult & CardInfo;
 
-const ORDERS = {
-  newest: newestFirst,
-  name: (a, b) => a.name.localeCompare(b.name) || newestFirst(a, b),
-  // TCGdex's order when asked for Pokédex order (Trainers and Energy after Pokémon)
-  pokedex: (a, b) => a.rank - b.rank || newestFirst(a, b),
-} satisfies Record<
-  SearchOptions['sort'],
-  (a: CardResult & CardInfo, b: CardResult & CardInfo) => number
->;
-
-// Keeps the newest print of each name if asked, then sorts
-function arranged(results: (CardResult & CardInfo)[], options: SearchOptions): CardResult[] {
-  let cards = results;
-  if (options.newestOnly) {
-    const newest = new Map<string, CardResult & CardInfo>();
-    for (const card of results.toSorted(newestFirst)) {
-      const key = card.name.toLowerCase();
-      if (!newest.has(key)) newest.set(key, card);
-    }
-    cards = [...newest.values()];
-  }
-  return cards
-    .toSorted(ORDERS[options.sort])
+// By release date (newest first, or oldest when reversed), then by set code and number
+function arranged(results: Found[], options: SearchOptions): CardResult[] {
+  const dir = options.reverse ? -1 : 1;
+  return results
+    .toSorted(
+      (a, b) =>
+        dir * b.date.localeCompare(a.date) ||
+        a.set.localeCompare(b.set) ||
+        byNumber(a.number) - byNumber(b.number) ||
+        a.number.localeCompare(b.number)
+    )
     .map(({ set, number, image, thumb, name }) => ({ set, number, image, thumb, name }));
 }

@@ -1,7 +1,8 @@
 // Regenerates src/app/api/tcgdex-sets.json: every English TCGdex set's official code
-// (TWM, PRE, MEG) and release date, which TCGdex only gives one set at a time. Search
-// sorts by the date, and imports and saved boards use the codes. Sets released after
-// the last run still work: the API looks up any set missing here (see tcgdex.ts).
+// (TWM, PRE, MEG), name and release date, which TCGdex only gives one set at a time.
+// Search sorts by the date, its set filter lists the names, and imports and saved boards
+// use the codes. Sets released after the last run still work: the API looks up any set
+// missing here (see tcgdex.ts), though the set filter won't list them until the next run.
 // Run with `npm run tcgdex:sets` and commit the result.
 import { writeFile } from 'node:fs/promises';
 
@@ -24,6 +25,7 @@ for (let i = 0; i < list.length; i += 8) {
     sets[s.id] = {
       // Subsets (SIT:TG, CRZ:GG) share their main set's code, as on the cards
       code: (s.abbreviation?.official ?? s.tcgOnline ?? s.id.toUpperCase()).split(':')[0],
+      name: s.name,
       date: s.releaseDate ?? '',
     };
   }

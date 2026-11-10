@@ -1,11 +1,13 @@
 import type { ComponentProps } from 'react';
 import styles from './Button.module.css';
 
-// TierBinder's buttons; tools show as selected from aria-pressed.
+// TierBinder's buttons; tools show as selected from aria-pressed. An icon button is
+// square and holds only its icon, so it needs an aria-label (and a title for the tooltip).
 const VARIANTS = {
   default: '',
   primary: styles.primary,
   tool: styles.tool,
+  icon: styles.icon,
 };
 
 type Props = ComponentProps<'button'> & { variant?: keyof typeof VARIANTS };

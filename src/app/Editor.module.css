@@ -112,7 +112,7 @@
   }
 }
 
-/* No padding below: the panel's own 8px top padding is the gap to the content */
+/* No padding below: the panel's own 16px top padding is the gap to the content */
 .sideHead {
   padding: var(--spacing-3) var(--spacing-3) 0;
 }
@@ -181,4 +181,24 @@
 .thumb {
   width: var(--tb-thumb-width);
   height: var(--tb-thumb-height);
+}
+
+/* The sort button's arrow: down for the usual order, turning to point up when it's
+   reversed */
+.sortIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/arrow-down.svg') center / contain no-repeat;
+  transition: rotate var(--duration-move) var(--ease-spring);
+}
+
+.reversed {
+  rotate: 180deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sortIcon {
+    transition: none;
+  }
 }

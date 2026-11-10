@@ -6,7 +6,9 @@ import styles from './Dropdown.module.css';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
-// through the options, Enter or Space picks one, Escape closes.
+// through the options, Enter or Space picks one, Escape closes. An option with a color
+// shows it as a swatch before its name (the tiers); a hidden label is still the button's
+// tooltip.
 
 export default function Dropdown<T extends string | number>({
   label,
@@ -18,7 +20,7 @@ export default function Dropdown<T extends string | number>({
   label: string;
   hideLabel?: boolean;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; color?: string }[];
   onChange: (value: T) => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -91,6 +93,7 @@ export default function Dropdown<T extends string | number>({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-labelledby={`${id}-label ${id}-button`}
+          title={hideLabel ? label : undefined}
           className="flex gap-2 items-center"
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
@@ -100,6 +103,7 @@ export default function Dropdown<T extends string | number>({
             }
           }}
         >
+          <Swatch color={options[selected]?.color} />
           {options[selected]?.label}
           <span aria-hidden className={styles.chevron} />
         </Button>
@@ -120,12 +124,13 @@ export default function Dropdown<T extends string | number>({
                 role="option"
                 aria-selected={i === selected}
                 tabIndex={-1}
-                className="tierbinder-option whitespace-nowrap aria-selected:font-semibold"
+                className="tierbinder-option flex gap-2 items-center whitespace-nowrap aria-selected:font-semibold"
                 onClick={() => {
                   onChange(option.value);
                   close();
                 }}
               >
+                <Swatch color={option.color} />
                 {option.label}
               </button>
             ))}
@@ -134,4 +139,10 @@ export default function Dropdown<T extends string | number>({
       </div>
     </div>
   );
+}
+
+function Swatch({ color }: { color?: string }) {
+  return color ? (
+    <span aria-hidden className={styles.swatch} style={{ background: color }} />
+  ) : null;
 }

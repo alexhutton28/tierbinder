@@ -3,8 +3,6 @@
 // aren't predictable (MEG pads to three digits, TWM doesn't), so image URLs always
 // come from Limitless's own pages. Search results have no names.
 
-import type { SearchOptions } from '../searchOptions';
-
 export type CardResult = {
   set: string;
   number: string;
@@ -45,21 +43,10 @@ export async function lookupCard(set: string, number: string) {
   return card && { ...card, name: name ? decodeEntities(name) : undefined };
 }
 
-// Limitless's own search terms for the filters and sort orders
-// (limitlesstcg.com/cards/syntax). Its default order is newest set first.
-function searchTerms(options: SearchOptions) {
-  return [
-    options.type !== 'all' && `t:${options.type}`,
-    options.format !== 'all' && `f:${options.format}`,
-    options.sort !== 'newest' && `o:${options.sort}`,
-    options.newestOnly && 'u:cards',
-  ].filter(Boolean);
-}
-
-export async function searchCards(query: string, options: SearchOptions): Promise<CardResult[]> {
-  const q = [query, ...searchTerms(options)].join(' ');
+// Every card whose name contains the query, newest set first
+export async function searchCards(query: string): Promise<CardResult[]> {
   // show=all: every match on one page (otherwise 50 per page), same order
-  const page = await getPage(`${SITE}/cards?q=${encodeURIComponent(q)}&show=all`);
+  const page = await getPage(`${SITE}/cards?q=${encodeURIComponent(query)}&show=all`);
   if (!page) return [];
 
   // A search with exactly one match redirects to that card's page

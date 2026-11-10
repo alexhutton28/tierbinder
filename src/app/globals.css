@@ -106,16 +106,19 @@ body {
   color-scheme: dark;
 }
 
-/* The sidebar's tab panels: 8px under the main nav (as it is under the header) and at the
-   sides to line up with it (.sideHead in Editor.module.css), and 16px at the bottom */
+/* The sidebar's tab panels: 16px under the main nav, 8px at the sides to line up with it
+   (.sideHead in Editor.module.css), and 16px at the bottom */
 .tierbinder-panel {
-  padding: var(--spacing-3) var(--spacing-3) var(--spacing-4);
+  padding: var(--spacing-4) var(--spacing-3);
 }
 
+/* Trimmed to the capitals at the top, so the space above a heading (16px under the main
+   nav) reaches its letters rather than the font's empty ascender room */
 .tierbinder-heading {
   color: var(--tb-heading);
   font-size: var(--text-body);
   font-weight: 600;
+  text-box: trim-start cap alphabetic;
 }
 
 .tierbinder-prop {

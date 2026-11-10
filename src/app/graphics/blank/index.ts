@@ -24,7 +24,7 @@ const blank: GraphicType<BlankCanvas> = {
   layout: layoutCards,
   mapCards,
   // One place to add cards: the canvas
-  targets: () => ['Canvas'],
+  targets: () => [{ name: 'Canvas' }],
   addCard: (canvas, item) => addCard(canvas, item),
   dropCard,
   // Groups don't mean anything on a blank canvas: every card takes the next spot

@@ -1,19 +1,15 @@
 'use client';
 
 import React from 'react';
-import {
-  activeFilters,
-  CARD_TYPES,
-  DEFAULT_SEARCH,
-  FORMATS,
-  type SearchOptions,
-} from '../searchOptions';
+import { activeFilters, type SearchOptions } from '../searchOptions';
+import { CARD_SETS } from '../sets';
 import Button from './Button';
 import styles from './SearchFilters.module.css';
 
-// The card search's Filters button and its popup: format, card type and newest print
-// only. Each change applies at once. The popup opens and closes like a dropdown
-// (.tierbinder-menu.dropdown in globals.css); Escape or a press outside closes it.
+// The card search's Filter button and its popup: which sets to search, from a list of
+// every set (newest first) narrowed by a search of their names and codes. None ticked
+// means every set. Each change applies at once. The popup opens and closes like a
+// dropdown (.tierbinder-menu.dropdown in globals.css); Escape or a press outside closes it.
 
 export default function SearchFilters({
   options,
@@ -33,14 +29,15 @@ export default function SearchFilters({
     return () => clearTimeout(timer);
   }, [closing]);
 
+  const [query, setQuery] = React.useState('');
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
-  const popupRef = React.useRef<HTMLDivElement>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
 
-  // Opening focuses the first control
+  // Opening focuses the set search
   React.useEffect(() => {
-    if (open) popupRef.current?.querySelector<HTMLInputElement>('input:checked')?.focus();
+    if (open) searchRef.current?.focus();
   }, [open]);
 
   // Closes on any press outside it
@@ -54,7 +51,17 @@ export default function SearchFilters({
   }, [open]);
 
   const count = activeFilters(options);
-  const set = (change: Partial<SearchOptions>) => onChange({ ...options, ...change });
+  const term = query.trim().toLowerCase();
+  const sets = term
+    ? CARD_SETS.filter(
+        (s) => s.name.toLowerCase().includes(term) || s.code.toLowerCase().includes(term)
+      )
+    : CARD_SETS;
+  const toggle = (code: string, on: boolean) =>
+    onChange({
+      ...options,
+      sets: on ? [...options.sets, code] : options.sets.filter((c) => c !== code),
+    });
 
   return (
     <div ref={boxRef} className="relative">
@@ -67,14 +74,13 @@ export default function SearchFilters({
         onClick={() => setOpen((o) => !o)}
       >
         <span aria-hidden className={styles.icon} />
-        {count ? `Filters (${count})` : 'Filters'}
+        {count ? `Filter (${count})` : 'Filter'}
       </Button>
       {shown && (
         <div
-          ref={popupRef}
           id={`${id}-popup`}
           role="dialog"
-          aria-label="Search filters"
+          aria-label="Filter by set"
           onKeyDown={(e) => {
             // Kept from the page's own Escape handling, which would also deselect the card
             if (e.key === 'Escape') {
@@ -86,39 +92,37 @@ export default function SearchFilters({
           }}
           className={`tierbinder-menu dropdown tierbinder-popup ${styles.popup} ${closing ? 'closing pointer-events-none' : ''}`}
         >
-          <Choices
-            legend="Format"
-            name={`${id}-format`}
-            choices={FORMATS}
-            value={options.format}
-            onChange={(format) => set({ format })}
+          <input
+            ref={searchRef}
+            className="tierbinder-field"
+            aria-label="Search sets"
+            placeholder="Search sets"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <Choices
-            legend="Card type"
-            name={`${id}-type`}
-            choices={CARD_TYPES}
-            value={options.type}
-            onChange={(type) => set({ type })}
-          />
-          <label className={styles.choice}>
-            <input
-              type="checkbox"
-              checked={options.newestOnly}
-              onChange={(e) => set({ newestOnly: e.target.checked })}
-            />
-            Newest print only
-          </label>
+          <fieldset className={styles.sets}>
+            <legend className="sr-only">Sets</legend>
+            {sets.map((s) => (
+              <label key={s.code} className={styles.choice}>
+                <input
+                  type="checkbox"
+                  checked={options.sets.includes(s.code)}
+                  onChange={(e) => toggle(s.code, e.target.checked)}
+                />
+                <span className={styles.setName}>{s.name}</span>
+                <span className={styles.code}>{s.code}</span>
+              </label>
+            ))}
+            {!sets.length && <p className={styles.code}>No sets match.</p>}
+          </fieldset>
           {count > 0 && (
             <Button
               type="button"
               className="self-start"
-              onClick={() =>
-                set({
-                  format: DEFAULT_SEARCH.format,
-                  type: DEFAULT_SEARCH.type,
-                  newestOnly: DEFAULT_SEARCH.newestOnly,
-                })
-              }
+              onClick={() => onChange({ ...options, sets: [] })}
             >
               Clear filters
             </Button>
@@ -126,36 +130,5 @@ export default function SearchFilters({
         </div>
       )}
     </div>
-  );
-}
-
-function Choices<T extends string>({
-  legend,
-  name,
-  choices,
-  value,
-  onChange,
-}: {
-  legend: string;
-  name: string;
-  choices: readonly { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <fieldset className={styles.group}>
-      <legend className={styles.legend}>{legend}</legend>
-      {choices.map((choice) => (
-        <label key={choice.value} className={styles.choice}>
-          <input
-            type="radio"
-            name={name}
-            checked={value === choice.value}
-            onChange={() => onChange(choice.value)}
-          />
-          {choice.label}
-        </label>
-      ))}
-    </fieldset>
   );
 }

@@ -23,7 +23,12 @@ import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './docume
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
-import { activeFilters, DEFAULT_SEARCH, SORT_ORDERS, type SearchOptions } from './searchOptions';
+import {
+  activeFilters,
+  DEFAULT_SEARCH,
+  SORT_DIRECTIONS,
+  type SearchOptions,
+} from './searchOptions';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
@@ -228,6 +233,7 @@ export default function Editor() {
   const searchCount = React.useRef(0);
   const [results, setResults] = React.useState<CardResult[]>([]);
   const showingResults = results.length > 0 && !importing;
+  const sortDirection = SORT_DIRECTIONS[searchOptions.reverse ? 1 : 0];
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -353,7 +359,7 @@ export default function Editor() {
   }, [doc]);
 
   // The board fills the workspace: its width on narrow screens (where the page scrolls),
-  // and from b8 up as much as fits, leaving room for the board type, toolbar and status
+  // and from b8 up as much as fits, leaving room for the toolbar and status
   // around it. Exports are always full size.
   React.useEffect(() => {
     const workspace = workspaceRef.current;
@@ -758,16 +764,44 @@ export default function Editor() {
                   Search
                 </Button>
               </form>
-              <div className="flex flex-wrap gap-3 items-center">
-                <SearchFilters options={searchOptions} onChange={changeSearchOptions} />
-                <Dropdown
-                  label="Sort"
-                  value={searchOptions.sort}
-                  options={SORT_ORDERS.map((o) => ({ value: o.value, label: o.label }))}
-                  onChange={(sort) => changeSearchOptions({ ...searchOptions, sort })}
-                />
-              </div>
-              {picking && pickingCard ? (
+              {/* One row, once a search is submitted (and still when the filters match
+                nothing, so they can be loosened): Filters, Sort, and the Add to picker when
+                there are results to add and a choice (a blank canvas has one place for
+                cards) */}
+              {searched && !importing && (
+                <div className="flex flex-wrap gap-3 items-center">
+                  <SearchFilters options={searchOptions} onChange={changeSearchOptions} />
+                  {/* Flips the order: newest or oldest set first */}
+                  <Button
+                    type="button"
+                    variant="icon"
+                    aria-label={`Sort: ${sortDirection}`}
+                    title={`Sort: ${sortDirection}`}
+                    onClick={() =>
+                      changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
+                    }
+                  >
+                    <span
+                      aria-hidden
+                      className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                    />
+                  </Button>
+                  {!picking && showingResults && targets.length > 1 && (
+                    <Dropdown
+                      label="Add to"
+                      hideLabel
+                      value={targetIndex}
+                      options={targets.map((t, i) => ({
+                        value: i,
+                        label: t.name.replaceAll('\n', ' '),
+                        color: t.color,
+                      }))}
+                      onChange={setTarget}
+                    />
+                  )}
+                </div>
+              )}
+              {picking && pickingCard && (
                 <p className="flex gap-3 items-center">
                   {picking.part === 'top'
                     ? pickingCard.split
@@ -778,21 +812,6 @@ export default function Editor() {
                       : `Splitting ${pickingCard.name}: pick the bottom card`}
                   <Button onClick={() => setPicking(null)}>Cancel</Button>
                 </p>
-              ) : (
-                // Only once a submitted search shows results to add, and when there's a
-                // choice (a blank canvas has one place for cards)
-                showingResults &&
-                targets.length > 1 && (
-                  <Dropdown
-                    label="Add to"
-                    value={targetIndex}
-                    options={targets.map((name, i) => ({
-                      value: i,
-                      label: name.replaceAll('\n', ' '),
-                    }))}
-                    onChange={setTarget}
-                  />
-                )
               )}
               {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
               {showingResults && (
@@ -933,6 +952,14 @@ export default function Editor() {
             hidden={tab !== 'customize'}
             className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
+            <Dropdown
+              label="Board type"
+              value={doc.kind}
+              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+              onChange={(kind) => {
+                if (kind !== doc.kind) showBoard(kind);
+              }}
+            />
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
             {confirmingClear ? (
@@ -981,17 +1008,6 @@ export default function Editor() {
         className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
       >
         <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
-          <div className="flex">
-            <Dropdown
-              hideLabel
-              label="Board type"
-              value={doc.kind}
-              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-              onChange={(kind) => {
-                if (kind !== doc.kind) showBoard(kind);
-              }}
-            />
-          </div>
           <div ref={boardBoxRef} className="w-full relative">
             <Stage
               ref={(stage) => {

@@ -28,6 +28,14 @@
   color: var(--tb-primary-text);
 }
 
+/* Square, as tall as the other controls, with its icon centered */
+.icon {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  padding-inline: 0;
+}
+
 /* Tools show as selected from aria-pressed */
 .tool[aria-pressed='true'] {
   border-color: transparent;
