@@ -934,7 +934,7 @@ export default function Editor() {
             {/* Card pools to browse and Advanced, until a search shows results or finds none; they come
               back when the search is emptied or the board is cleared. The pools are
               placeholders for now: they don't open yet. */}
-            {!searchShown && !importing && (
+            {!searchShown && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Featured Card Pools</h3>
                 {FEATURED_POOLS.map((pool) => (
