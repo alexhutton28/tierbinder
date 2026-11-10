@@ -20,6 +20,13 @@ body {
   overflow: hidden;
 }
 
+/* Text sits on the font's own line height, not Tailwind's 1.5, so a line takes about the
+   room its letters do and gaps measure what they look like. Sizes that need a set line
+   (text-caption) keep it. */
+html {
+  line-height: normal;
+}
+
 /* Buttons, links and images are things to press, not text to select: no selection
    highlight from a double-click, drag or select-all, and images can't be dragged off */
 button,
