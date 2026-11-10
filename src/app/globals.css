@@ -53,7 +53,6 @@ body {
   --tb-popup: var(--color-petrel-850);
   --tb-focus: var(--color-storm-200);
   --tb-focus-line: var(--color-storm-300);
-  --tb-icon-rest: var(--color-petrel-600);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
@@ -170,7 +169,7 @@ textarea.tierbinder-field {
 
 /* Text fields are focused on every click, so they get a quieter sign than the ring: a
    Storm 300 underline that grows out from the middle (a background, so it needs no extra
-   markup). The search field's icon lights up with it (.searchIcon in Editor.module.css). */
+   markup). */
 .tierbinder-page .tierbinder-field {
   background-image: linear-gradient(var(--tb-focus-line), var(--tb-focus-line));
   background-position: center bottom;
