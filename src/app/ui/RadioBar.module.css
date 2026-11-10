@@ -44,7 +44,7 @@
 .option > span {
   display: flex;
   align-items: center;
-  padding: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-2);
   white-space: nowrap;
 
   @variant b3 {
