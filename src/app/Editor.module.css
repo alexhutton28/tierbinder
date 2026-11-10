@@ -164,15 +164,18 @@
 
 .poolCards {
   display: grid;
-  grid-auto-columns: 1fr;
-  grid-auto-flow: column;
+  grid-template-columns: repeat(var(--pool-columns), 1fr);
   gap: var(--spacing-2);
 }
 
-/* Card-shaped (Editor.tsx sets the ratio from the card size) */
+/* A card, or a placeholder in its shape (Editor.tsx sets the column count and the ratio
+   from the card size) */
 .poolCard {
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
   border-radius: var(--tb-radius);
   background: var(--color-petrel-850);
+  object-fit: cover;
 }
 
 .thumb {

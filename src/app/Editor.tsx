@@ -58,9 +58,60 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
-// Card pools shown in Add Cards before a search, each with a row of card placeholders.
-// They don't open yet.
-const FEATURED_POOLS = ['Mega Evolution Cards', 'Energy Cards'];
+// Card pools shown in Add Cards before a search: each previews up to POOL_PREVIEW_CARDS
+// cards in a row, or card-shaped placeholders while it has none. They don't open yet.
+// Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
+type Pool = { name: string; cards: CardResult[] };
+const FEATURED_POOLS: Pool[] = [
+  {
+    name: 'Mega Evolution Cards',
+    cards: [
+      {
+        set: 'MEG',
+        number: '104',
+        name: 'Mega Kangaskhan ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_SM.png',
+      },
+      {
+        set: 'PFL',
+        number: '13',
+        name: 'Mega Charizard X ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_SM.png',
+      },
+      {
+        set: 'MEG',
+        number: '77',
+        name: 'Mega Lucario ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_SM.png',
+      },
+      {
+        set: 'MEG',
+        number: '86',
+        name: 'Mega Absol ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_SM.png',
+      },
+      {
+        set: 'PBL',
+        number: '65',
+        name: 'Mega Excadrill ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_SM.png',
+      },
+      {
+        set: 'CRI',
+        number: '22',
+        name: 'Mega Greninja ex',
+        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_LG.png',
+        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_SM.png',
+      },
+    ],
+  },
+  { name: 'Energy Cards', cards: [] },
+];
 const POOL_PREVIEW_CARDS = 6;
 
 export default function Editor() {
@@ -675,19 +726,43 @@ export default function Editor() {
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Featured Card Pools</h3>
                 {FEATURED_POOLS.map((pool) => (
-                  <div key={pool} className={styles.pool}>
+                  <div key={pool.name} className={styles.pool}>
                     <span className={`${styles.poolName} text-caption font-semibold`}>
-                      {pool}
+                      {pool.name}
                       <span className={styles.poolChevron} aria-hidden />
                     </span>
-                    <div className={styles.poolCards} aria-hidden>
-                      {Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
-                        <span
-                          key={i}
-                          className={styles.poolCard}
-                          style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}
-                        />
-                      ))}
+                    {/* A fixed number of columns, so every pool's cards are the same size */}
+                    <div
+                      className={styles.poolCards}
+                      style={
+                        {
+                          '--pool-columns': POOL_PREVIEW_CARDS,
+                          '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                        } as React.CSSProperties
+                      }
+                    >
+                      {pool.cards.length
+                        ? pool.cards.slice(0, POOL_PREVIEW_CARDS).map((card) => (
+                            // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                            <img
+                              key={`${card.set}-${card.number}`}
+                              src={card.thumb}
+                              alt={`${card.name} (${card.set} ${card.number})`}
+                              title={`${card.name} (${card.set} ${card.number})`}
+                              className={styles.poolCard}
+                              loading="lazy"
+                              draggable={false}
+                              // The CDN occasionally fails a load; retry once through the proxy
+                              onError={(e) => {
+                                const proxy = proxied(card.thumb);
+                                if (!e.currentTarget.src.endsWith(proxy))
+                                  e.currentTarget.src = proxy;
+                              }}
+                            />
+                          ))
+                        : Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
+                            <span key={i} className={styles.poolCard} aria-hidden />
+                          ))}
                     </div>
                   </div>
                 ))}
