@@ -603,9 +603,9 @@ export default function Editor() {
                   <Button onClick={() => setPicking(null)}>Cancel</Button>
                 </p>
               ) : (
-                // Only while there's a search to add from, and a choice (a blank canvas has
-                // one place for cards)
-                query.trim() !== '' &&
+                // Only once a submitted search shows results to add, and when there's a
+                // choice (a blank canvas has one place for cards)
+                showingResults &&
                 targets.length > 1 && (
                   <Dropdown
                     label="Add to"
