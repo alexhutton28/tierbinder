@@ -149,6 +149,11 @@
   animation: view-fade var(--duration-fade) ease-out;
 }
 
+/* Focused for screen readers when it opens; the dimmed page already shows it's open */
+.viewer:focus {
+  outline: none;
+}
+
 .viewerClosing {
   pointer-events: none;
   animation: view-fade var(--duration-fold) ease-in reverse forwards;
@@ -171,7 +176,7 @@
   );
   aspect-ratio: var(--card-ratio);
   object-fit: cover;
-  box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
+  box-shadow: var(--tb-popup-shadow);
 }
 
 @keyframes view-fade {

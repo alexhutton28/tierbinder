@@ -88,6 +88,11 @@
   cursor: pointer;
 }
 
+.check:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .check:checked {
   border-color: var(--tick, var(--tb-primary));
   background: url('/check.svg') center / 75% no-repeat var(--tick, var(--tb-primary));

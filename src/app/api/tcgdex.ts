@@ -79,9 +79,15 @@ const setOf = (card: BriefCard) => card.id.slice(0, card.id.lastIndexOf('-'));
 const printed = (card: BriefCard) =>
   /^\d+$/.test(card.localId) ? String(Number(card.localId)) : card.localId;
 
-// A set code's release date (its first set's), for cards from Limitless
-export const codeDate = (code: string) =>
-  Object.values(known).find((set) => set?.code === code)?.date ?? '';
+// Each code's release date (its first set's), for cards from Limitless
+const CODE_DATES = new Map<string, string>();
+for (const set of Object.values(known)) {
+  if (set && !CODE_DATES.has(set.code)) CODE_DATES.set(set.code, set.date);
+}
+// After any real date: a code missing from tcgdex-sets.json is a set newer than it
+const NEWER_THAN_KNOWN = '9999';
+
+export const codeDate = (code: string) => CODE_DATES.get(code) ?? NEWER_THAN_KNOWN;
 
 // TCGdex images take a quality and format; high is 600×825, low 245×337
 function toResult(card: BriefCard, set: SetInfo): CardResult | null {

@@ -61,6 +61,7 @@ body {
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
   --tb-option-hover: var(--color-petrel-700);
+  --tb-popup-shadow: 0 8px 24px color-mix(in srgb, var(--color-petrel-950) 45%, transparent);
   --tb-focus: var(--color-storm-200);
   --tb-icon-rest: var(--color-petrel-600);
   --tb-icon-lit: var(--color-storm-300);
@@ -212,7 +213,7 @@ textarea.tierbinder-field {
   border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
   background: var(--tb-popup);
-  box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
+  box-shadow: var(--tb-popup-shadow);
 }
 
 /* A popup floating in the top layer (a popover) under its button, placed by useAnchored
@@ -235,6 +236,19 @@ textarea.tierbinder-field {
   max-height: calc(100dvh - var(--anchor-top, 0px) - var(--spacing-2) - var(--edge));
   margin: 0;
   color: var(--tb-text);
+}
+
+/* Above its button (useAnchored found more room there), growing up from it */
+.tierbinder-anchored.tierbinder-menu[data-side='above'] {
+  top: auto;
+  bottom: calc(var(--anchor-bottom, 0px) + var(--spacing-2));
+  max-height: calc(100dvh - var(--anchor-bottom, 0px) - var(--spacing-2) - var(--edge));
+  transform-origin: center bottom;
+}
+
+/* A dropdown's list scrolls when the window is too short for it */
+.tierbinder-anchored.tierbinder-list {
+  overflow-y: auto;
 }
 
 /* No specificity, so a popup's own padding wins */

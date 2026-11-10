@@ -1,11 +1,9 @@
-import { fromParams } from '../../searchOptions';
+import { fromParams, MAX_SETS } from '../../searchOptions';
 import { searchCards } from '../cardSource';
 
 // Card search by name, optionally only some sets and oldest first (searchOptions.ts):
 // /api/search?q=dragapult+ex&sets=TWM,PRE&reverse=1. With sets and no name, every card
 // in those sets.
-// Each set listed is a request or two to TCGdex and Limitless
-const MAX_SETS = 40;
 
 export async function GET(req: Request) {
   const params = new URL(req.url).searchParams;

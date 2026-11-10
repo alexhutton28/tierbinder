@@ -73,6 +73,9 @@ type Tab = (typeof TABS)[number]['value'];
 // cards in a row, or card-shaped placeholders while it has none. They don't open yet.
 // Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
 type Pool = { name: string; cards: CardResult[] };
+// How long the search options must stay unchanged before they rerun the search
+const SEARCH_DELAY = 300;
+
 // Placeholders shown while a search is under way: about three rows at most widths
 const SKELETON_TILES = 18;
 
@@ -238,6 +241,11 @@ export default function Editor() {
   const [searchOptions, setSearchOptions] = React.useState<SearchOptions>(DEFAULT_SEARCH);
   // Each search's number, so a slower earlier one can't replace a later one's results
   const searchCount = React.useRef(0);
+  // The search under way, and one waiting for the options to settle (changeSearchOptions)
+  const searchAbort = React.useRef<AbortController | null>(null);
+  const searchTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The last search failed: why, shown under the search
+  const [searchError, setSearchError] = React.useState<string | null>(null);
   const [results, setResults] = React.useState<CardResult[]>([]);
   // Results whose thumbnail wouldn't load even through the proxy (a source listing an
   // image it doesn't have): hidden, since there's no picture to show. Each set of results
@@ -257,7 +265,8 @@ export default function Editor() {
   const showingSkeleton = searching && !importing;
   const showingResults = results.length > 0 && !importing && !searching;
   // Results, placeholders or the no-results message, which hide the pools and Advanced
-  const searchShown = !importing && (results.length > 0 || noResults !== null || searching);
+  const searchShown =
+    !importing && (results.length > 0 || noResults !== null || searching || searchError !== null);
   // The results are scrolled, so a shade shows they go on under the controls above
   const [resultsScrolled, setResultsScrolled] = React.useState(false);
   const sortDirection = sortLabel(searchOptions);
@@ -349,6 +358,18 @@ export default function Editor() {
     const timer = setTimeout(() => setShownView(null), 220);
     return () => clearTimeout(timer);
   }, [viewClosing]);
+  // Opening moves focus to the view, so it's announced; closing puts focus back where it
+  // was, if that's still on the page
+  const viewerRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!viewing) return;
+    const before = document.activeElement;
+    viewerRef.current?.focus({ preventScroll: true });
+    return () => {
+      if (before instanceof HTMLElement && before.isConnected)
+        before.focus({ preventScroll: true });
+    };
+  }, [viewing]);
   React.useEffect(() => {
     if (!viewing) return;
     const close = () => setViewing(null);
@@ -380,7 +401,9 @@ export default function Editor() {
     const dy = y - (cards.offsetTop + cards.offsetHeight / 2);
     const shrink = (viewedPlace.height * scale) / cards.offsetHeight;
     cards.style.setProperty('--from', `translate(${dx}px, ${dy}px) scale(${shrink})`);
-  }, [viewedPlace, viewClosing, scale]);
+    // The card's place by value: placements are new objects every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewedPlace?.x, viewedPlace?.y, viewedPlace?.width, viewedPlace?.height, viewClosing, scale]);
   const targets = type.targets(graphic);
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
   // without them
@@ -545,42 +568,59 @@ export default function Editor() {
     );
   }
 
-  function clearSearch() {
+  // Stops the search under way and any waiting to start: a newer one replaces them
+  function cancelSearch() {
     searchCount.current++;
+    searchAbort.current?.abort();
+    clearTimeout(searchTimer.current);
+  }
+
+  function clearSearch() {
+    cancelSearch();
     setSearched('');
     setResults([]);
     setNoResults(null);
-    setStatus('');
-    setBusy(false);
+    setSearchError(null);
     setSearching(false);
   }
 
-  // A blank search lists the filter's sets whole, or clears the results if there are none
+  // A blank search lists the filter's sets whole, or clears the results if there are none.
+  // Starting one closes Bulk import, so its results show.
   async function search(text: string, options = searchOptions) {
     if (!text.trim() && !options.sets.length) {
       clearSearch();
       return;
     }
-    const count = ++searchCount.current;
+    cancelSearch();
+    const count = searchCount.current;
+    const abort = new AbortController();
+    searchAbort.current = abort;
     setSearched(text.trim());
-    setBusy(true);
     setSearching(true);
-    const found = await searchCards(text.trim(), options).finally(() => {
-      if (count === searchCount.current) {
-        setBusy(false);
-        setSearching(false);
-      }
-    });
-    if (count !== searchCount.current) return;
-    setResults(found);
-    setNoResults(found.length ? null : { query: text.trim(), sets: options.sets });
+    setImporting(false);
+    try {
+      const found = await searchCards(text.trim(), options, abort.signal);
+      if (count !== searchCount.current) return;
+      setResults(found);
+      setNoResults(found.length ? null : { query: text.trim(), sets: options.sets });
+      setSearchError(null);
+    } catch (e) {
+      if (count !== searchCount.current) return;
+      setResults([]);
+      setNoResults(null);
+      setSearchError(e instanceof Error ? e.message : 'Search failed.');
+    } finally {
+      if (count === searchCount.current) setSearching(false);
+    }
   }
 
   // New filters or a new sort order apply to the next search, and rerun the current one
-  // (with no search, ticking sets lists them)
+  // (with no search, ticking sets lists them) once they've stopped changing for a moment,
+  // so ticking several sets in a row runs one search
   function changeSearchOptions(options: SearchOptions) {
     setSearchOptions(options);
-    search(searched, options);
+    cancelSearch();
+    searchTimer.current = setTimeout(() => search(searched, options), SEARCH_DELAY);
   }
 
   const findCard = (id: string | undefined) => placements.find((p) => p.item.id === id)?.item;
@@ -859,9 +899,7 @@ export default function Editor() {
                     </button>
                   )}
                 </label>
-                <Button variant="primary" disabled={busy}>
-                  Search
-                </Button>
+                <Button variant="primary">Search</Button>
               </form>
               {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
                 picker when there's a choice (a blank canvas has one place for cards),
@@ -906,6 +944,11 @@ export default function Editor() {
                 )}
               </div>
               {/* What the search was for, and with sets ticked, a way to search them all */}
+              {searchError && !importing && !searching && (
+                <p role="alert" className="text-(--tb-muted)">
+                  {searchError}
+                </p>
+              )}
               {noResults && !importing && !searching && (
                 <div role="status" className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
@@ -1275,7 +1318,10 @@ export default function Editor() {
 
       {shownView && (
         <div
+          ref={viewerRef}
           role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
           aria-label={shownView.faces.map((f) => f.name).join(' / ')}
           className={`${styles.viewer} ${viewClosing ? styles.viewerClosing : ''}`}
         >

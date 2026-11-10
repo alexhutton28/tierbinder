@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { DEFAULT_TIERS } from '../graphics/tier-list/model';
-import { activeFilters, type SearchOptions } from '../searchOptions';
+import { activeFilters, MAX_SETS, type SearchOptions } from '../searchOptions';
 import { CARD_SETS } from '../sets';
 import { useAnchored } from './anchored';
 import Button from './Button';
@@ -21,6 +21,8 @@ import styles from './SearchFilters.module.css';
 // it's faint on yellow), and on any other color whichever of white and the page's
 // darkest color (petrel 950, as in check-dark.svg) contrasts more
 const DEFAULT_COLORS = new Set(DEFAULT_TIERS.map(([, color]) => color));
+// --color-petrel-950 in design/theme.css, which check-dark.svg also draws in (an SVG used
+// as a background can't read CSS variables, and the contrast is worked out here)
 const DARK = '#12171a';
 
 function checkOn(color: string): 'light' | 'dark' {
@@ -96,6 +98,7 @@ export default function SearchFilters({
   }, [open]);
 
   const count = activeFilters(options);
+  const full = count >= MAX_SETS;
   const term = query.trim().toLowerCase();
   const sets = term
     ? CARD_SETS.filter(
@@ -162,6 +165,8 @@ export default function SearchFilters({
                   <input
                     type="checkbox"
                     checked={ticked >= 0}
+                    // At the limit, only ticked sets can change
+                    disabled={ticked < 0 && full}
                     className={styles.check}
                     data-check={tick ? checkOn(tick) : undefined}
                     style={tick ? ({ '--tick': tick } as React.CSSProperties) : undefined}
@@ -174,6 +179,7 @@ export default function SearchFilters({
             })}
             {!sets.length && <p className={styles.code}>No sets match.</p>}
           </fieldset>
+          {full && <p className={styles.code}>Up to {MAX_SETS} sets at a time.</p>}
           {count > 0 && (
             <Button
               type="button"
