@@ -476,9 +476,9 @@ export default function Editor() {
     setBusy(false);
   }
 
+  // A blank search lists the filter's sets whole, or clears the results if there are none
   async function search(text: string, options = searchOptions) {
-    // A blank search clears the results
-    if (!text.trim()) {
+    if (!text.trim() && !options.sets.length) {
       clearSearch();
       return;
     }
@@ -499,9 +499,10 @@ export default function Editor() {
   }
 
   // New filters or a new sort order apply to the next search, and rerun the current one
+  // (with no search, ticking sets lists them)
   function changeSearchOptions(options: SearchOptions) {
     setSearchOptions(options);
-    if (searched) search(searched, options);
+    search(searched, options);
   }
 
   const findCard = (id: string | undefined) => placements.find((p) => p.item.id === id)?.item;
@@ -755,8 +756,9 @@ export default function Editor() {
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
-                      // Emptying the field clears the results, bringing the other sections back
-                      if (!e.target.value.trim()) clearSearch();
+                      // Emptying the field clears the results, bringing the other sections
+                      // back, or goes back to listing the filter's sets
+                      if (!e.target.value.trim()) search('');
                     }}
                   />
                 </label>
@@ -764,28 +766,29 @@ export default function Editor() {
                   Search
                 </Button>
               </form>
-              {/* One row, once a search is submitted (and still when the filters match
-                nothing, so they can be loosened): Filters, Sort, and the Add to picker when
-                there are results to add and a choice (a blank canvas has one place for
-                cards) */}
-              {searched && !importing && (
+              {/* One row: Filter, always (with no search, it lists the sets ticked); and
+                while there are results, Sort and the Add to picker when there's a choice
+                (a blank canvas has one place for cards) */}
+              {!importing && (
                 <div className="flex flex-wrap gap-3 items-center">
                   <SearchFilters options={searchOptions} onChange={changeSearchOptions} />
                   {/* Flips the order: newest or oldest set first */}
-                  <Button
-                    type="button"
-                    variant="icon"
-                    aria-label={`Sort: ${sortDirection}`}
-                    title={`Sort: ${sortDirection}`}
-                    onClick={() =>
-                      changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
-                    }
-                  >
-                    <span
-                      aria-hidden
-                      className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
-                    />
-                  </Button>
+                  {showingResults && (
+                    <Button
+                      type="button"
+                      variant="icon"
+                      aria-label={`Sort: ${sortDirection}`}
+                      title={`Sort: ${sortDirection}`}
+                      onClick={() =>
+                        changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
+                      }
+                    >
+                      <span
+                        aria-hidden
+                        className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                      />
+                    </Button>
+                  )}
                   {!picking && showingResults && targets.length > 1 && (
                     <Dropdown
                       label="Add to"

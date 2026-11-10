@@ -26,6 +26,7 @@ export async function searchCards(
   query: string,
   options: SearchOptions = DEFAULT_SEARCH
 ): Promise<CardResult[]> {
+  if (!query) return setCards(options);
   const inSets = (card: { set: string }) => !options.sets.length || options.sets.includes(card.set);
   let found: tcgdex.Search | null = null;
   try {
@@ -68,6 +69,41 @@ export async function searchCards(
     return [{ ...card, ...info }];
   });
   return arranged([...found.results, ...filled], options);
+}
+
+// Every card in the sets asked for (a search with no name): TCGdex's, with Limitless for
+// the cards it has no image for and the sets it doesn't have yet
+async function setCards(options: SearchOptions): Promise<CardResult[]> {
+  const codes = options.sets;
+  const found = await tcgdex.setCards(codes).catch((e) => {
+    console.error('TCGdex set listing failed, trying Limitless:', e);
+    return null;
+  });
+  const missingIn = new Set([...(found?.missing.keys() ?? [])].map((key) => key.split(' ')[0]));
+  const fromLimitless = codes.filter((code) => !found?.covered.has(code) || missingIn.has(code));
+  const extra = (
+    await Promise.all(
+      fromLimitless.map((code) =>
+        limitless.setCards(code).catch((e) => {
+          console.error(`Limitless set ${code} failed:`, e);
+          return [];
+        })
+      )
+    )
+  ).flat();
+
+  const cards: Found[] = [...(found?.results ?? [])];
+  for (const card of extra) {
+    if (found?.covered.has(card.set)) {
+      // Only the cards TCGdex lists without an image
+      const info = found.missing.get(cardKey(card));
+      if (info) cards.push({ ...card, ...info });
+    } else {
+      // A set TCGdex doesn't have yet: Limitless's set pages have no names or dates
+      cards.push({ ...card, name: card.name ?? `${card.set} ${card.number}`, date: '' });
+    }
+  }
+  return arranged(cards, options);
 }
 
 const byNumber = (n: string) => parseInt(n, 10) || Infinity;

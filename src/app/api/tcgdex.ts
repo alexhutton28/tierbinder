@@ -118,13 +118,33 @@ export async function searchCards(query: string): Promise<Search> {
   );
 
   const search: Search = { results: [], missing: new Map() };
-  cards.forEach((card) => {
+  for (const card of cards) {
     const set = sets.get(setOf(card));
-    if (!set) return;
-    const result = toResult(card, set);
-    const info = { name: card.name, date: set.date };
-    if (result) search.results.push({ ...result, ...info });
-    else search.missing.set(cardKey({ set: set.code, number: printed(card.localId) }), info);
+    if (set) addCard(search, card, set);
+  }
+  return search;
+}
+
+// Every card in the sets with these codes (a code's subsets too). `covered` holds the
+// codes TCGdex has; sets newer than tcgdex-sets.json aren't looked for.
+export async function setCards(codes: string[]): Promise<Search & { covered: Set<string> }> {
+  const ids = Object.keys(known).filter((id) => codes.includes(known[id]?.code ?? ''));
+  const sets = await Promise.all(
+    ids.map((id) => get<{ cards: BriefCard[] }>(`/sets/${encodeURIComponent(id)}`))
+  );
+  const search = { results: [], missing: new Map(), covered: new Set<string>() };
+  sets.forEach((found, i) => {
+    const set = known[ids[i]];
+    if (!found || !set) return;
+    search.covered.add(set.code);
+    for (const card of found.cards) addCard(search, card, set);
   });
   return search;
+}
+
+function addCard(search: Search, card: BriefCard, set: SetInfo) {
+  const result = toResult(card, set);
+  const info = { name: card.name, date: set.date };
+  if (result) search.results.push({ ...result, ...info });
+  else search.missing.set(cardKey({ set: set.code, number: printed(card.localId) }), info);
 }

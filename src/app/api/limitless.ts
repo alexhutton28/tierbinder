@@ -56,9 +56,21 @@ export async function searchCards(query: string): Promise<CardResult[]> {
     return card ? [card] : [];
   }
 
+  return gridCards(page.html);
+}
+
+// Every card in a set, in number order, from its set page
+export async function setCards(code: string): Promise<CardResult[]> {
+  const page = await getPage(`${SITE}/cards/${encodeURIComponent(code)}`);
+  return page ? gridCards(page.html) : [];
+}
+
+// The cards in a page's grid of thumbnails (search results, a set), skipping any whose
+// images aren't on Limitless's CDN
+function gridCards(html: string) {
   const results: CardResult[] = [];
   const grid = /<a href="\/cards\/([A-Z0-9-]+)\/([0-9A-Za-z-]+)"><img[^>]*?src="([^"]+_SM\.png)"/g;
-  for (const [, set, number, src] of page.html.matchAll(grid)) {
+  for (const [, set, number, src] of html.matchAll(grid)) {
     if (src.startsWith(IMAGE_HOST)) results.push({ set, number, ...sizes(src) });
   }
   return results;
