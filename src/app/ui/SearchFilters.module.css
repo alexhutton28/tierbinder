@@ -69,8 +69,9 @@
   font-size: var(--text-caption);
 }
 
-/* Drawn here so the check is always white: a box in the field's colors, filled when
-   ticked with --tick (its tier's color, from SearchFilters.tsx) under Feather's check */
+/* Drawn here to choose the check's color: a box in the field's colors, filled when
+   ticked with --tick (its tier's color, from SearchFilters.tsx) under Feather's check,
+   white unless SearchFilters.tsx marks it dark (data-check) */
 .check {
   flex: none;
   width: var(--tb-icon);
@@ -86,4 +87,8 @@
 .check:checked {
   border-color: var(--tick, var(--tb-primary));
   background: url('/check.svg') center / 75% no-repeat var(--tick, var(--tb-primary));
+}
+
+.check:checked[data-check='dark'] {
+  background-image: url('/check-dark.svg');
 }
