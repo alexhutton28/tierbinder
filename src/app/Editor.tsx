@@ -6,7 +6,7 @@ import Link from 'next/link';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { Layer, Rect, Stage } from 'react-konva';
-import { BOARD_HEIGHT, BOARD_WIDTH, EXPORT_SCALE } from './canvas/size';
+import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH, EXPORT_SCALE } from './canvas/size';
 import {
   faceOf,
   loadImage,
@@ -58,6 +58,11 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
+// Card pools shown in Add Cards before a search, each with a row of card placeholders.
+// They don't open yet.
+const FEATURED_POOLS = ['Mega Evolution Cards', 'Energy Cards'];
+const POOL_PREVIEW_CARDS = 6;
+
 export default function Editor() {
   const [doc, setDoc] = React.useState<TierBinderDoc>(loadSaved);
   const graphic = currentGraphic(doc);
@@ -71,6 +76,7 @@ export default function Editor() {
   const [importing, setImporting] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<CardResult[]>([]);
+  const showingResults = results.length > 0 && !importing;
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -538,129 +544,166 @@ export default function Editor() {
           <section
             role="tabpanel"
             hidden={tab !== 'add'}
-            className="tierbinder-panel flex flex-col gap-3 min-w-0 b8:flex-1 b8:min-h-0"
+            className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
           >
-            <h3 id="card-search-heading" className="tierbinder-heading">
-              Search for a card
-            </h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                search(query);
-              }}
-              className={`${styles.searchRow} flex gap-3`}
-            >
-              <label className={styles.search}>
-                <span className={styles.searchIcon} aria-hidden />
-                <input
-                  ref={searchInputRef}
-                  className="tierbinder-field"
-                  aria-labelledby="card-search-heading"
-                  // Card names aren't real words: don't let phones "fix" them
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  placeholder="Card name"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-              <Button variant="primary" disabled={busy}>
-                Search
-              </Button>
-            </form>
-            {picking && pickingCard ? (
-              <p className="flex gap-3 items-center">
-                {picking.part === 'top'
-                  ? pickingCard.split
-                    ? `Replacing the top half (${pickingCard.name})`
-                    : `Replacing ${pickingCard.name}`
-                  : pickingCard.split
-                    ? `Replacing the bottom half (${pickingCard.split.name})`
-                    : `Splitting ${pickingCard.name}: pick the bottom card`}
-                <Button onClick={() => setPicking(null)}>Cancel</Button>
-              </p>
-            ) : (
-              // Only when there's a choice (a blank canvas has one place for cards)
-              targets.length > 1 && (
-                <Dropdown
-                  label="Add to"
-                  value={targetIndex}
-                  options={targets.map((name, i) => ({
-                    value: i,
-                    label: name.replaceAll('\n', ' '),
-                  }))}
-                  onChange={setTarget}
-                />
-              )
-            )}
-            <Button className="self-start" onClick={() => setImporting((on) => !on)}>
-              {importing ? 'Back to search' : 'Bulk import'}
-            </Button>
-            {importing && (
-              <>
-                <textarea
-                  rows={10}
-                  aria-label="Cards to import"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  className="tierbinder-field font-mono"
-                  placeholder={'# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'}
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                />
-                <Button variant="primary" onClick={runImport} disabled={busy || !importText.trim()}>
-                  Import (adds to the board)
-                </Button>
-              </>
-            )}
-            {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
+            {/* Grows to fill the sidebar while it shows search results */}
             <div
-              hidden={importing}
-              className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden`}
+              className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
             >
-              {results.map((card) => (
-                <div
-                  key={`${card.set}-${card.number}`}
-                  role="button"
-                  tabIndex={0}
-                  title={`${card.set} ${card.number}`}
-                  className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
-                  // Mouse and pen only: on touch, a press-and-move scrolls the results
-                  onPointerDown={(e) => {
-                    if (e.pointerType === 'touch' || e.button !== 0) return;
-                    e.preventDefault();
-                    resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
-                  }}
-                  onClick={() => {
-                    if (!justDragged.current) pickResult(card);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      pickResult(card);
-                    }
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                  <img
-                    src={card.thumb}
-                    alt={`${card.set} ${card.number}`}
-                    className={`${styles.thumb} object-contain`}
-                    loading="lazy"
-                    draggable={false}
-                    // The CDN occasionally fails a load; retry once through the image proxy
-                    onError={(e) => {
-                      const proxy = proxied(card.thumb);
-                      if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
-                    }}
+              <h3 id="card-search-heading" className="tierbinder-heading">
+                Add a Card
+              </h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  search(query);
+                }}
+                className={`${styles.searchRow} flex gap-3`}
+              >
+                <label className={styles.search}>
+                  <span className={styles.searchIcon} aria-hidden />
+                  <input
+                    ref={searchInputRef}
+                    className="tierbinder-field"
+                    aria-labelledby="card-search-heading"
+                    // Card names aren't real words: don't let phones "fix" them
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    placeholder="Card name"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
                   />
-                  <span className="w-full truncate text-center">
-                    {card.set} {card.number}
-                  </span>
-                </div>
-              ))}
+                </label>
+                <Button variant="primary" disabled={busy}>
+                  Search
+                </Button>
+              </form>
+              {picking && pickingCard ? (
+                <p className="flex gap-3 items-center">
+                  {picking.part === 'top'
+                    ? pickingCard.split
+                      ? `Replacing the top half (${pickingCard.name})`
+                      : `Replacing ${pickingCard.name}`
+                    : pickingCard.split
+                      ? `Replacing the bottom half (${pickingCard.split.name})`
+                      : `Splitting ${pickingCard.name}: pick the bottom card`}
+                  <Button onClick={() => setPicking(null)}>Cancel</Button>
+                </p>
+              ) : (
+                // Only when there's a choice (a blank canvas has one place for cards)
+                targets.length > 1 && (
+                  <Dropdown
+                    label="Add to"
+                    value={targetIndex}
+                    options={targets.map((name, i) => ({
+                      value: i,
+                      label: name.replaceAll('\n', ' '),
+                    }))}
+                    onChange={setTarget}
+                  />
+                )
+              )}
+              {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
+              <div
+                hidden={importing}
+                className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden`}
+              >
+                {results.map((card) => (
+                  <div
+                    key={`${card.set}-${card.number}`}
+                    role="button"
+                    tabIndex={0}
+                    title={`${card.set} ${card.number}`}
+                    className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
+                    // Mouse and pen only: on touch, a press-and-move scrolls the results
+                    onPointerDown={(e) => {
+                      if (e.pointerType === 'touch' || e.button !== 0) return;
+                      e.preventDefault();
+                      resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
+                    }}
+                    onClick={() => {
+                      if (!justDragged.current) pickResult(card);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        pickResult(card);
+                      }
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                    <img
+                      src={card.thumb}
+                      alt={`${card.set} ${card.number}`}
+                      className={`${styles.thumb} object-contain`}
+                      loading="lazy"
+                      draggable={false}
+                      // The CDN occasionally fails a load; retry once through the image proxy
+                      onError={(e) => {
+                        const proxy = proxied(card.thumb);
+                        if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                      }}
+                    />
+                    <span className="w-full truncate text-center">
+                      {card.set} {card.number}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card pools to browse, until a search shows results. Placeholders for now:
+              the pools don't open yet. */}
+            {!showingResults && !importing && (
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Featured Card Pools</h3>
+                {FEATURED_POOLS.map((pool) => (
+                  <div key={pool} className={styles.pool}>
+                    <span className="text-caption font-semibold">{pool}</span>
+                    <div className={styles.poolCards} aria-hidden>
+                      {Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
+                        <span
+                          key={i}
+                          className={styles.poolCard}
+                          style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              <h3 className="tierbinder-heading">Advanced</h3>
+              <Button className="self-start" onClick={() => setImporting((on) => !on)}>
+                {importing ? 'Back to search' : 'Bulk import'}
+              </Button>
+              {importing && (
+                <>
+                  <textarea
+                    rows={10}
+                    aria-label="Cards to import"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    className="tierbinder-field font-mono"
+                    placeholder={
+                      '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                    }
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                  />
+                  <Button
+                    variant="primary"
+                    onClick={runImport}
+                    disabled={busy || !importText.trim()}
+                  >
+                    Import (adds to the board)
+                  </Button>
+                </>
+              )}
             </div>
           </section>
 

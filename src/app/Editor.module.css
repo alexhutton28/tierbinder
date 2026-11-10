@@ -136,6 +136,30 @@
   }
 }
 
+/* A featured card pool in Add Cards: its name over a row of card placeholders, on the
+   field color */
+.pool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+}
+
+.poolCards {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  gap: var(--spacing-2);
+}
+
+/* Card-shaped (Editor.tsx sets the ratio from the card size) */
+.poolCard {
+  border-radius: var(--tb-radius);
+  background: var(--color-petrel-850);
+}
+
 .thumb {
   width: var(--tb-thumb-width);
   height: var(--tb-thumb-height);
