@@ -95,9 +95,10 @@ body {
 }
 
 /* The sidebar's tab panels: 12px under the main nav (8 + 4, between the scale's steps,
-   chosen by eye), 16px on the other sides */
+   chosen by eye), 8px at the sides to line up with the main nav (.sideHead in
+   Editor.module.css), and 16px at the bottom */
 .tierbinder-panel {
-  padding: calc(var(--spacing-3) + var(--spacing-2)) var(--spacing-4) var(--spacing-4);
+  padding: calc(var(--spacing-3) + var(--spacing-2)) var(--spacing-3) var(--spacing-4);
 }
 
 .tierbinder-heading {
