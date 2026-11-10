@@ -146,9 +146,9 @@
   padding: var(--spacing-3) var(--spacing-3) 0;
 }
 
-/* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
-   screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. A row
-   is a thumbnail and one line of caption (1lh: the box sets the caption text). */
+/* Search results: thumbnail tiles, as many per row as fit (the set and number are the
+   tooltip). On narrow screens the box shows 3 rows and scrolls; beside the board it
+   fills the sidebar. */
 .results {
   --rows-shown: 3;
 
@@ -157,7 +157,7 @@
   align-content: start;
   gap: var(--spacing-2);
   max-height: calc(
-    var(--rows-shown) * (var(--tb-thumb-height) + 1lh) + (var(--rows-shown) - 1) * var(--spacing-2)
+    var(--rows-shown) * var(--tb-thumb-height) + (var(--rows-shown) - 1) * var(--spacing-2)
   );
 
   @variant b8 {

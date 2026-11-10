@@ -873,7 +873,7 @@ export default function Editor() {
               {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
               {showingResults && (
                 <div
-                  className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
+                  className={`${styles.results} b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
                 >
                   {shownResults.map((card) => (
                     <div
@@ -881,7 +881,7 @@ export default function Editor() {
                       role="button"
                       tabIndex={0}
                       title={`${card.set} ${card.number}`}
-                      className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
+                      className="cursor-grab select-none flex flex-col items-center"
                       // Mouse and pen only: on touch, a press-and-move scrolls the results
                       onPointerDown={(e) => {
                         if (e.pointerType === 'touch' || e.button !== 0) return;
@@ -920,9 +920,6 @@ export default function Editor() {
                           }));
                         }}
                       />
-                      <span className="w-full truncate text-center">
-                        {card.set} {card.number}
-                      </span>
                     </div>
                   ))}
                 </div>
