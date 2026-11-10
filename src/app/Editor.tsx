@@ -173,6 +173,11 @@ export default function Editor() {
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
+    // A cleared board starts Add Cards over too
+    if (clear) {
+      setQuery('');
+      setResults([]);
+    }
     if (kind !== doc.kind) {
       setTarget(0);
       setTool(DEFAULT_TOOL);
@@ -572,7 +577,14 @@ export default function Editor() {
                     spellCheck={false}
                     placeholder="Card name"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      // Emptying the field clears the results, bringing the other sections back
+                      if (!e.target.value.trim()) {
+                        setResults([]);
+                        setStatus('');
+                      }
+                    }}
                   />
                 </label>
                 <Button variant="primary" disabled={busy}>
@@ -605,56 +617,58 @@ export default function Editor() {
                 )
               )}
               {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
-              <div
-                hidden={importing}
-                className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden empty:hidden`}
-              >
-                {results.map((card) => (
-                  <div
-                    key={`${card.set}-${card.number}`}
-                    role="button"
-                    tabIndex={0}
-                    title={`${card.set} ${card.number}`}
-                    className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
-                    // Mouse and pen only: on touch, a press-and-move scrolls the results
-                    onPointerDown={(e) => {
-                      if (e.pointerType === 'touch' || e.button !== 0) return;
-                      e.preventDefault();
-                      resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
-                    }}
-                    onClick={() => {
-                      if (!justDragged.current) pickResult(card);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+              {showingResults && (
+                <div
+                  className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
+                >
+                  {results.map((card) => (
+                    <div
+                      key={`${card.set}-${card.number}`}
+                      role="button"
+                      tabIndex={0}
+                      title={`${card.set} ${card.number}`}
+                      className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
+                      // Mouse and pen only: on touch, a press-and-move scrolls the results
+                      onPointerDown={(e) => {
+                        if (e.pointerType === 'touch' || e.button !== 0) return;
                         e.preventDefault();
-                        pickResult(card);
-                      }
-                    }}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                    <img
-                      src={card.thumb}
-                      alt={`${card.set} ${card.number}`}
-                      className={`${styles.thumb} object-contain`}
-                      loading="lazy"
-                      draggable={false}
-                      // The CDN occasionally fails a load; retry once through the image proxy
-                      onError={(e) => {
-                        const proxy = proxied(card.thumb);
-                        if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                        resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
                       }}
-                    />
-                    <span className="w-full truncate text-center">
-                      {card.set} {card.number}
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      onClick={() => {
+                        if (!justDragged.current) pickResult(card);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          pickResult(card);
+                        }
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                      <img
+                        src={card.thumb}
+                        alt={`${card.set} ${card.number}`}
+                        className={`${styles.thumb} object-contain`}
+                        loading="lazy"
+                        draggable={false}
+                        // The CDN occasionally fails a load; retry once through the image proxy
+                        onError={(e) => {
+                          const proxy = proxied(card.thumb);
+                          if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                        }}
+                      />
+                      <span className="w-full truncate text-center">
+                        {card.set} {card.number}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Card pools to browse, until a search shows results. Placeholders for now:
-              the pools don't open yet. */}
+            {/* Card pools to browse and Advanced, until a search shows results; they come
+              back when the search is emptied or the board is cleared. The pools are
+              placeholders for now: they don't open yet. */}
             {!showingResults && !importing && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Featured Card Pools</h3>
@@ -675,36 +689,38 @@ export default function Editor() {
               </div>
             )}
 
-            <div className="flex flex-col gap-3">
-              <h3 className="tierbinder-heading">Advanced</h3>
-              <Button className="self-start" onClick={() => setImporting((on) => !on)}>
-                {importing ? 'Back to search' : 'Bulk import'}
-              </Button>
-              {importing && (
-                <>
-                  <textarea
-                    rows={10}
-                    aria-label="Cards to import"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    className="tierbinder-field font-mono"
-                    placeholder={
-                      '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
-                    }
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                  />
-                  <Button
-                    variant="primary"
-                    onClick={runImport}
-                    disabled={busy || !importText.trim()}
-                  >
-                    Import (adds to the board)
-                  </Button>
-                </>
-              )}
-            </div>
+            {!showingResults && (
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Advanced</h3>
+                <Button className="self-start" onClick={() => setImporting((on) => !on)}>
+                  {importing ? 'Back to search' : 'Bulk import'}
+                </Button>
+                {importing && (
+                  <>
+                    <textarea
+                      rows={10}
+                      aria-label="Cards to import"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      className="tierbinder-field font-mono"
+                      placeholder={
+                        '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                      }
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                    />
+                    <Button
+                      variant="primary"
+                      onClick={runImport}
+                      disabled={busy || !importText.trim()}
+                    >
+                      Import (adds to the board)
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </section>
 
           <section
