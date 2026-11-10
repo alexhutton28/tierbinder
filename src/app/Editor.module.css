@@ -147,6 +147,21 @@
   background: var(--tb-field);
 }
 
+/* The pool's name with Feather's chevron-right after it, the size of the text */
+.poolName {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+.poolChevron {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: currentcolor;
+  mask: url('/chevron-right.svg') center / contain no-repeat;
+}
+
 .poolCards {
   display: grid;
   grid-auto-columns: 1fr;

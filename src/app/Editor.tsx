@@ -676,7 +676,10 @@ export default function Editor() {
                 <h3 className="tierbinder-heading">Featured Card Pools</h3>
                 {FEATURED_POOLS.map((pool) => (
                   <div key={pool} className={styles.pool}>
-                    <span className="text-caption font-semibold">{pool}</span>
+                    <span className={`${styles.poolName} text-caption font-semibold`}>
+                      {pool}
+                      <span className={styles.poolChevron} aria-hidden />
+                    </span>
                     <div className={styles.poolCards} aria-hidden>
                       {Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
                         <span
