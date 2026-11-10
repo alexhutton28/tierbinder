@@ -97,28 +97,34 @@ export async function lookupCard(code: string, number: string): Promise<CardResu
   return null;
 }
 
-// Every card whose name contains the query, newest set first and then by number, which
-// import's default print (defaultPrint in cards.ts) relies on
-export async function searchCards(query: string): Promise<CardResult[]> {
+// A search's cards in the order TCGdex gives them, each with its set's release date.
+// `missing` holds the cards TCGdex has no image for, by `cardKey`, for the fallback.
+export type Search = {
+  results: (CardResult & { date: string })[];
+  missing: Map<string, { name: string; date: string }>;
+};
+
+export const cardKey = (card: { set: string; number: string }) => `${card.set} ${card.number}`;
+
+// Every card whose name contains the query
+export async function searchCards(query: string): Promise<Search> {
   const cards = (await get<BriefCard[]>(`/cards?name=${encodeURIComponent(query)}`)) ?? [];
-  const setIds = [...new Set(cards.map((c) => c.id.slice(0, c.id.lastIndexOf('-'))))];
+  const setOf = (card: BriefCard) => card.id.slice(0, card.id.lastIndexOf('-'));
+  const setIds = [...new Set(cards.map(setOf))];
   const sets = new Map(
     await Promise.all(setIds.map(async (id) => [id, await setInfo(id)] as const))
   );
 
-  const found = cards.flatMap((card) => {
-    const id = card.id.slice(0, card.id.lastIndexOf('-'));
-    const set = sets.get(id);
-    const result = set && toResult(card, set);
-    return result ? [{ result, id, date: set.date, localId: card.localId }] : [];
-  });
-  const number = (localId: string) => parseInt(localId, 10);
-  found.sort(
-    (a, b) =>
-      b.date.localeCompare(a.date) ||
-      a.id.localeCompare(b.id) ||
-      (number(a.localId) || Infinity) - (number(b.localId) || Infinity) ||
-      a.localId.localeCompare(b.localId)
-  );
-  return found.map((f) => f.result);
+  const search: Search = { results: [], missing: new Map() };
+  for (const card of cards) {
+    const set = sets.get(setOf(card));
+    if (!set) continue;
+    const result = toResult(card, set);
+    if (result) search.results.push({ ...result, date: set.date });
+    else {
+      const key = cardKey({ set: set.code, number: printed(card.localId) });
+      search.missing.set(key, { name: card.name, date: set.date });
+    }
+  }
+  return search;
 }

@@ -1,4 +1,4 @@
-import { searchCards } from '../tcgdex';
+import { searchCards } from '../cardSource';
 
 // Card search by name: /api/search?q=dragapult+ex
 export async function GET(req: Request) {

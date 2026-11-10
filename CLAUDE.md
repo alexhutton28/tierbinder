@@ -50,7 +50,7 @@ All paths are in `src/app/`.
 - `Loader.tsx`: loads `Editor` with `ssr: false` (Konva needs a browser canvas).
 - `layout.tsx`: the root layout: fonts (Inter Black for tier labels, Figtree for the controls), metadata, analytics and the scroll container.
 - Interface styles: a component's own CSS is a CSS Module beside it (`Editor.module.css`, `ui/RadioBar.module.css`, and so on), with camelCase class names used as `styles.name`; a module that uses a breakpoint (`@variant b8`) starts with `@reference` to `globals.css`. `globals.css` keeps the tokens, the `--tb-*` roles and sizes on `body` (change the look through those), base rules, and the `.tierbinder-*` rules more than one component uses (page, panel, heading, prop, field, popup, option, menu, focus ring).
-- `api/`: `card` (by set + number), `search` (by name), `image` (proxy), and `tcgdex.ts`, which calls the TCGdex API, with `tcgdex-sets.json` (set codes and dates, from `npm run tcgdex:sets`).
+- `api/`: `card` (by set + number), `search` (by name), `image` (proxy); `cardSource.ts`, which they call, combining `tcgdex.ts` (the TCGdex API, with `tcgdex-sets.json`: set codes and dates, from `npm run tcgdex:sets`) and `limitless.ts` (the fallback, reading limitlesstcg.com pages).
 
 ## Graphic types
 
@@ -122,13 +122,14 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - The type scale (`text-field`, `text-body`, `text-caption`) is in the `@theme` block at the top of `globals.css`, since the token generator has none. Fields are 16px on phones, because iPhones zoom the page on smaller ones.
 - Popups (the card menu, dropdowns) share `.tierbinder-menu` in `globals.css`.
 
-## Cards from TCGdex
+## Cards from TCGdex and Limitless
 
 - Card data and images come from the TCGdex API (tcgdex.dev: free, no key, open source), called from our API routes. Pokémon TCG Pocket sets are left out.
+- Limitless is the fallback (`api/cardSource.ts`), for cards TCGdex lists without an image (the newest set for a while after release, MEP and some SVP promos, basic energies, gallery subsets) and when TCGdex is down or finds nothing. A search only asks Limitless when TCGdex comes up short, and then takes just the cards TCGdex has no image for, matched by set code and number, with TCGdex's names and release dates; anything else could be a duplicate, since a few older sets have other codes there (`UD` for Undaunted, `UND` on TCGdex). A lookup tries Limitless when TCGdex has no card with an image. Limitless has no card API, so it reads pages; image numbers aren't predictable (MEG pads to 3 digits, TWM doesn't), so its image URLs always come from the page, and results whose images aren't on its CDN are skipped. Search uses `show=all` to get every match on one page. Its search results have no names, so when everything comes from Limitless they're named after the search.
 - Cards are saved and imported by their official set code and printed number (`TWM 130`, `SIT TG05`); TCGdex's own set ids (`sv06`) stay inside `api/tcgdex.ts`. `api/tcgdex-sets.json` maps ids to codes and release dates, since TCGdex only gives them one set at a time; sets released since it was generated are looked up when they first appear. Run `npm run tcgdex:sets` now and then and commit the result (in the cloud container it needs `NODE_USE_ENV_PROXY=1`). Subsets share their main set's code (`SIT:TG` → `SIT`), and one code can cover several TCGdex sets (30th Celebration and its Classic Collection are both `30C`).
 - TCGdex pads some numbers (`073`); they're saved as printed (`73`).
-- Every image is loaded through `/api/image`, which keeps canvas export working and caches images. The proxy only allows the hosts listed in its route; Limitless's image hosts stay there for boards saved before the move. Images are `high.webp` (600×825) on the board and `low.webp` in the results; search thumbnails load from TCGdex directly and retry once through the proxy if they fail.
-- Search matches names containing the query and skips cards TCGdex has no image for (some promo, energy and gallery sets, and the newest set for a while after release). Results are newest set first, then by number, and named from TCGdex. A name-only import picks the lowest number in the newest set, skipping special reprint sets (`SPECIAL_SETS` in `cards.ts`: 30th Celebration and Celebrations) and subset numbers like TG05 while a regular print exists.
+- Every image is loaded through `/api/image`, which keeps canvas export working and caches images. The proxy only allows the hosts listed in its route. TCGdex images are `high.webp` (600×825) on the board and `low.webp` in the results, Limitless's `_LG.png` and `_SM.png`; search thumbnails load from the source directly and retry once through the proxy if they fail.
+- Search matches names containing the query. Results are newest set first, then by set code and number, and named from TCGdex. A name-only import picks the lowest number in the newest set, skipping special reprint sets (`SPECIAL_SETS` in `cards.ts`: 30th Celebration and Celebrations) and subset numbers like TG05 while a regular print exists.
 
 ## Saving
 
