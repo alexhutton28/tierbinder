@@ -94,9 +94,10 @@ body {
   color-scheme: dark;
 }
 
-/* The sidebar's tab panels: 8px under the main nav, 16px on the other sides */
+/* The sidebar's tab panels: 12px under the main nav (8 + 4, between the scale's steps,
+   chosen by eye), 16px on the other sides */
 .tierbinder-panel {
-  padding: var(--spacing-3) var(--spacing-4) var(--spacing-4);
+  padding: calc(var(--spacing-3) + var(--spacing-2)) var(--spacing-4) var(--spacing-4);
 }
 
 .tierbinder-heading {

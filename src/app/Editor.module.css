@@ -104,7 +104,7 @@
   }
 }
 
-/* No padding below: the panel's own 8px top padding is the gap to the content */
+/* No padding below: the panel's own 12px top padding is the gap to the content */
 .sideHead {
   padding: var(--spacing-3) var(--spacing-3) 0;
 }
