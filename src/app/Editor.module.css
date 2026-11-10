@@ -62,7 +62,7 @@
 }
 
 /* The search field, with a search icon inside it that lights up with the field's focus
-   glow (globals.css) */
+   edge (globals.css) */
 .search {
   position: relative;
   display: flex;
