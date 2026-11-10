@@ -45,7 +45,7 @@ body {
   --tb-control-text: var(--color-petrel-100);
   --tb-control-border: var(--color-petrel-700);
   --tb-field: var(--color-petrel-950);
-  --tb-field-border: var(--color-petrel-850);
+  --tb-field-border: var(--color-petrel-800);
   --tb-primary: var(--color-storm-300);
   --tb-primary-hover: var(--color-storm-200);
   --tb-primary-text: var(--color-petrel-950);
