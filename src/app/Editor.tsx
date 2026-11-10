@@ -79,6 +79,11 @@ const SEARCH_DELAY = 300;
 // Placeholders shown while a search is under way: about three rows at most widths
 const SKELETON_TILES = 18;
 
+// Results drawn at a time (about 20 rows), and how far below the list's visible end the
+// next page starts drawing
+const RESULTS_PAGE = 120;
+const RESULTS_LOOKAHEAD = 400;
+
 const FEATURED_POOLS: Pool[] = [
   {
     name: 'Best Decks of All Time',
@@ -258,6 +263,28 @@ export default function Editor() {
   const shownResults = brokenKeys
     ? results.filter((card) => !brokenKeys.has(`${card.set} ${card.number}`))
     : results;
+  // How many results are drawn: a page at first, and another each time the list is
+  // scrolled near its end, so listing many whole sets can't put thousands of cards on the
+  // page at once. Each set of results starts again at one page.
+  const [resultsLimit, setResultsLimit] = React.useState({ of: results, count: RESULTS_PAGE });
+  const resultsCount = resultsLimit.of === results ? resultsLimit.count : RESULTS_PAGE;
+  const visibleResults = shownResults.slice(0, resultsCount);
+  const resultsRef = React.useRef<HTMLDivElement>(null);
+  const moreResultsRef = React.useRef<HTMLSpanElement>(null);
+  React.useEffect(() => {
+    const more = moreResultsRef.current;
+    if (!more) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting)
+          setResultsLimit({ of: results, count: resultsCount + RESULTS_PAGE });
+      },
+      // Starts drawing the next page a little before the end comes into view
+      { root: resultsRef.current, rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px` }
+    );
+    observer.observe(more);
+    return () => observer.disconnect();
+  }, [results, resultsCount, visibleResults.length]);
   // The last search found nothing: what it was for, shown under the search
   const [noResults, setNoResults] = React.useState<{ query: string; sets: string[] } | null>(null);
   // A search is under way: its results show as shimmering placeholders until it's back
@@ -991,6 +1018,7 @@ export default function Editor() {
               {(showingResults || showingSkeleton) && (
                 <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
                   <div
+                    ref={resultsRef}
                     className={`${styles.results} overflow-y-auto overflow-x-hidden`}
                     style={
                       { '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}` } as React.CSSProperties
@@ -1001,13 +1029,13 @@ export default function Editor() {
                       ? Array.from({ length: SKELETON_TILES }, (_, i) => (
                           <span key={i} aria-hidden className={styles.resultThumb} />
                         ))
-                      : shownResults.map((card) => (
+                      : visibleResults.map((card) => (
                           <div
                             key={`${card.set}-${card.number}`}
                             role="button"
                             tabIndex={0}
                             title={`${card.set} ${card.number}`}
-                            className="cursor-grab select-none flex flex-col items-center"
+                            className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
                             // Mouse and pen only: on touch, a press-and-move scrolls the results
                             onPointerDown={(e) => {
                               if (e.pointerType === 'touch' || e.button !== 0) return;
@@ -1057,6 +1085,10 @@ export default function Editor() {
                             />
                           </div>
                         ))}
+                    {/* Reaching it draws the next page */}
+                    {!showingSkeleton && visibleResults.length < shownResults.length && (
+                      <span ref={moreResultsRef} aria-hidden className="col-span-full" />
+                    )}
                   </div>
                   <span aria-hidden className={styles.resultsShade} data-shown={resultsScrolled} />
                 </div>
