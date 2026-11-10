@@ -65,6 +65,9 @@ type Tab = (typeof TABS)[number]['value'];
 // cards in a row, or card-shaped placeholders while it has none. They don't open yet.
 // Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
 type Pool = { name: string; cards: CardResult[] };
+// Placeholders shown while a search is under way: about three rows at most widths
+const SKELETON_TILES = 18;
+
 const FEATURED_POOLS: Pool[] = [
   {
     name: 'Best Decks of All Time',
@@ -241,9 +244,14 @@ export default function Editor() {
     : results;
   // The last search found nothing: what it was for, shown under the search
   const [noResults, setNoResults] = React.useState<{ query: string; sets: string[] } | null>(null);
-  const showingResults = results.length > 0 && !importing;
-  // Results or the no-results message, which hide the pools and Advanced
-  const searchShown = !importing && (results.length > 0 || noResults !== null);
+  // A search is under way: its results show as shimmering placeholders until it's back
+  const [searching, setSearching] = React.useState(false);
+  const showingSkeleton = searching && !importing;
+  const showingResults = results.length > 0 && !importing && !searching;
+  // Results, placeholders or the no-results message, which hide the pools and Advanced
+  const searchShown = !importing && (results.length > 0 || noResults !== null || searching);
+  // The results are scrolled, so a shade shows they go on under the controls above
+  const [resultsScrolled, setResultsScrolled] = React.useState(false);
   const sortDirection = sortLabel(searchOptions);
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
@@ -490,6 +498,7 @@ export default function Editor() {
     setNoResults(null);
     setStatus('');
     setBusy(false);
+    setSearching(false);
   }
 
   // A blank search lists the filter's sets whole, or clears the results if there are none
@@ -501,11 +510,16 @@ export default function Editor() {
     const count = ++searchCount.current;
     setSearched(text.trim());
     setBusy(true);
-    const found = await searchCards(text.trim(), options);
+    setSearching(true);
+    const found = await searchCards(text.trim(), options).finally(() => {
+      if (count === searchCount.current) {
+        setBusy(false);
+        setSearching(false);
+      }
+    });
     if (count !== searchCount.current) return;
     setResults(found);
     setNoResults(found.length ? null : { query: text.trim(), sets: options.sets });
-    setBusy(false);
   }
 
   // New filters or a new sort order apply to the next search, and rerun the current one
@@ -834,7 +848,7 @@ export default function Editor() {
                 )}
               </div>
               {/* What the search was for, and with sets ticked, a way to search them all */}
-              {noResults && !importing && (
+              {noResults && !importing && !searching && (
                 <div role="status" className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
                     <p className="font-semibold">No cards found</p>
@@ -870,58 +884,80 @@ export default function Editor() {
                   <Button onClick={() => setPicking(null)}>Cancel</Button>
                 </p>
               )}
-              {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
-              {showingResults && (
-                <div
-                  className={`${styles.results} b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
-                >
-                  {shownResults.map((card) => (
-                    <div
-                      key={`${card.set}-${card.number}`}
-                      role="button"
-                      tabIndex={0}
-                      title={`${card.set} ${card.number}`}
-                      className="cursor-grab select-none flex flex-col items-center"
-                      // Mouse and pen only: on touch, a press-and-move scrolls the results
-                      onPointerDown={(e) => {
-                        if (e.pointerType === 'touch' || e.button !== 0) return;
-                        e.preventDefault();
-                        resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
-                      }}
-                      onClick={() => {
-                        if (!justDragged.current) pickResult(card);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          pickResult(card);
-                        }
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                      <img
-                        src={card.thumb}
-                        alt={`${card.set} ${card.number}`}
-                        className={`${styles.thumb} object-contain`}
-                        loading="lazy"
-                        draggable={false}
-                        // The CDN occasionally fails a load; retry once through the image
-                        // proxy, and hide the result if that fails too
-                        onError={(e) => {
-                          const proxy = proxied(card.thumb);
-                          if (!e.currentTarget.src.endsWith(proxy)) {
-                            e.currentTarget.src = proxy;
-                            return;
-                          }
-                          const key = `${card.set} ${card.number}`;
-                          setUnshown((u) => ({
-                            of: results,
-                            keys: new Set([...(u.of === results ? u.keys : []), key]),
-                          }));
-                        }}
-                      />
-                    </div>
-                  ))}
+              {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
+                search is under way, then the results. A shade over the top shows when
+                they're scrolled. */}
+              {(showingResults || showingSkeleton) && (
+                <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
+                  <div
+                    className={`${styles.results} overflow-y-auto overflow-x-hidden`}
+                    style={
+                      { '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}` } as React.CSSProperties
+                    }
+                    onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
+                  >
+                    {showingSkeleton
+                      ? Array.from({ length: SKELETON_TILES }, (_, i) => (
+                          <span key={i} aria-hidden className={styles.resultThumb} />
+                        ))
+                      : shownResults.map((card) => (
+                          <div
+                            key={`${card.set}-${card.number}`}
+                            role="button"
+                            tabIndex={0}
+                            title={`${card.set} ${card.number}`}
+                            className="cursor-grab select-none flex flex-col items-center"
+                            // Mouse and pen only: on touch, a press-and-move scrolls the results
+                            onPointerDown={(e) => {
+                              if (e.pointerType === 'touch' || e.button !== 0) return;
+                              e.preventDefault();
+                              resultPress.current = {
+                                card,
+                                x: e.clientX,
+                                y: e.clientY,
+                                dragging: false,
+                              };
+                            }}
+                            onClick={() => {
+                              if (!justDragged.current) pickResult(card);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                pickResult(card);
+                              }
+                            }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                            <img
+                              src={card.thumb}
+                              alt={`${card.set} ${card.number}`}
+                              className={`${styles.resultThumb} object-contain`}
+                              // Shimmers until it's loaded (Editor.module.css)
+                              onLoad={(e) => {
+                                e.currentTarget.dataset.loaded = '';
+                              }}
+                              loading="lazy"
+                              draggable={false}
+                              // The CDN occasionally fails a load; retry once through the image
+                              // proxy, and hide the result if that fails too
+                              onError={(e) => {
+                                const proxy = proxied(card.thumb);
+                                if (!e.currentTarget.src.endsWith(proxy)) {
+                                  e.currentTarget.src = proxy;
+                                  return;
+                                }
+                                const key = `${card.set} ${card.number}`;
+                                setUnshown((u) => ({
+                                  of: results,
+                                  keys: new Set([...(u.of === results ? u.keys : []), key]),
+                                }));
+                              }}
+                            />
+                          </div>
+                        ))}
+                  </div>
+                  <span aria-hidden className={styles.resultsShade} data-shown={resultsScrolled} />
                 </div>
               )}
             </div>

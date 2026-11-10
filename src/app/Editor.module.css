@@ -135,6 +135,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .resultThumb:not([data-loaded]) {
+    animation: none;
+  }
+
   .clearSearch,
   .searchIcon {
     transition: none;
@@ -163,6 +167,35 @@
   @variant b8 {
     max-height: none;
   }
+}
+
+/* The results and the shade over their top */
+.resultsBox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.resultsBox > .results {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Fades in once the results are scrolled, as if they go under the controls above */
+.resultsShade {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: var(--spacing-3);
+  background: linear-gradient(var(--tb-scroll-shade), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fade) ease-out;
+}
+
+.resultsShade[data-shown='true'] {
+  opacity: 1;
 }
 
 /* A featured card pool in Add Cards: its name over a row of card placeholders, on the
@@ -210,6 +243,38 @@
 .thumb {
   width: var(--tb-thumb-width);
   height: var(--tb-thumb-height);
+}
+
+/* A result fills its column (at least --tb-thumb-width wide, stretching to share the
+   row), at the card's shape, so the cards sit 4px apart both ways */
+.resultThumb {
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
+}
+
+/* A result still loading, or a placeholder while the search runs: a dark card shape with
+   a lighter band sweeping across it, left to right */
+.resultThumb:not([data-loaded]) {
+  border-radius: var(--tb-radius);
+  background: linear-gradient(
+      100deg,
+      var(--tb-skeleton) 40%,
+      var(--tb-skeleton-shine) 50%,
+      var(--tb-skeleton) 60%
+    )
+    var(--tb-skeleton);
+  background-size: 300% 100%;
+  animation: shimmer var(--tb-shimmer) linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
 }
 
 /* The sort button's arrow: down for the usual order, turning to point up when it's

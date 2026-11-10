@@ -65,6 +65,9 @@ body {
   --tb-icon-lit: var(--color-storm-300);
   --tb-scroll-thumb: var(--color-petrel-700);
   --tb-scroll-thumb-hover: var(--color-petrel-600);
+  --tb-scroll-shade: color-mix(in srgb, var(--color-petrel-950) 60%, transparent);
+  --tb-skeleton: var(--color-petrel-850);
+  --tb-skeleton-shine: var(--color-petrel-800);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
@@ -75,6 +78,9 @@ body {
   --tb-control-height: 32px;
   --tb-icon: 16px;
   --tb-scrollbar: 8px;
+
+  /* One sweep of a loading placeholder's shimmer */
+  --tb-shimmer: 1.5s;
 
   /* The smallest comfortable thing to tap (Apple's guideline) */
   --tb-touch-target: 44px;
