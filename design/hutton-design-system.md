@@ -205,6 +205,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 - Three sections, 16px apart, each a heading with its contents 8px under it: Add a Card (the search), Featured Card Pools and Advanced (Bulk import).
 - A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold) over a row of six card-shaped placeholders in Petrel 850, 4px apart. They don't open yet.
+- The Add to picker shows only while the search field has text.
 - A search with results shows only Add a Card, with the results filling the sidebar. The pools and Advanced come back when the search field is emptied, the board is cleared or the page reloads.
 
 ### Top bar
