@@ -104,8 +104,9 @@
   }
 }
 
+/* No padding below: the panel's own 16px top padding is the gap to the content */
 .sideHead {
-  padding: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-3) 0;
 }
 
 /* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
