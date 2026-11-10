@@ -81,6 +81,9 @@
   height: auto;
   padding-block: var(--spacing-3);
   padding-left: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
+
+  /* The same on the right, for the clear button */
+  padding-right: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
 }
 
 /* The search field is taller than other controls: its padding sets its height (8px above
@@ -106,7 +109,33 @@
   background: var(--tb-icon-lit);
 }
 
+/* Feather's x-circle at the field's end, 8px in like the search icon, with the field's
+   height and that padding as its target; it lights up on hover */
+.clearSearch {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  padding-inline: var(--spacing-3);
+  color: var(--tb-icon-rest);
+  cursor: pointer;
+  transition: color var(--duration-fade) ease-out;
+}
+
+.clearSearch span {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/x-circle.svg') center / contain no-repeat;
+}
+
+.clearSearch:hover {
+  color: var(--tb-text);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .clearSearch,
   .searchIcon {
     transition: none;
   }
@@ -203,9 +232,49 @@
   }
 }
 
-/* The no-results message under the search: a box outlined like the controls */
-.noResults {
-  padding: var(--spacing-4);
-  border: var(--tb-line-width) solid var(--tb-control-border);
-  border-radius: var(--tb-radius);
+/* Bulk import's chevron, turning down while it's open */
+.disclosureChevron {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-right.svg') center / contain no-repeat;
+  transition: rotate var(--duration-move) var(--ease-spring);
+}
+
+[aria-expanded='true'] > .disclosureChevron {
+  rotate: 90deg;
+}
+
+/* Bulk import slides open below its button (its row grows from nothing to its height) as
+   the dropdowns open, and fades in. The content is clipped while it moves, with room for
+   focus rings; it starts 8px below the button (pt-3 in Editor.tsx), inside the clip. */
+.reveal {
+  --ring-room: calc(2 * var(--tb-focus-width));
+
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duration-drop) var(--ease-spring),
+    opacity var(--duration-fade) ease-out;
+}
+
+.reveal > * {
+  min-height: 0;
+  margin: calc(-1 * var(--ring-room));
+  padding: var(--ring-room);
+  overflow: hidden;
+}
+
+.revealed {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosureChevron,
+  .reveal {
+    transition: none;
+  }
 }

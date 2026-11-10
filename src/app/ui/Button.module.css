@@ -29,7 +29,7 @@
 }
 
 /* A button whose dropdown or popup is open keeps its hover color until it closes */
-.button[aria-expanded='true']:not(:disabled) {
+.button:not(.text)[aria-expanded='true']:not(:disabled) {
   background: var(--tb-control-hover);
 }
 
@@ -39,6 +39,17 @@
   place-items: center;
   aspect-ratio: 1;
   padding-inline: 0;
+}
+
+/* Just the words and an icon after them: no box, so no padding or height of its own */
+.text {
+  display: inline-flex;
+  gap: var(--spacing-2);
+  align-items: center;
+  height: auto;
+  padding: 0;
+  border-color: transparent;
+  background: none;
 }
 
 /* Tools show as selected from aria-pressed */
@@ -59,6 +70,11 @@
 
   .tool[aria-pressed='true']:hover {
     background: var(--tb-selected);
+  }
+
+  .text:hover:not(:disabled) {
+    background: none;
+    color: var(--tb-heading);
   }
 }
 

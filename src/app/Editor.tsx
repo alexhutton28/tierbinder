@@ -771,13 +771,28 @@ export default function Editor() {
                       if (!e.target.value.trim()) search('');
                     }}
                   />
+                  {query && (
+                    <button
+                      type="button"
+                      className={styles.clearSearch}
+                      aria-label="Clear search"
+                      title="Clear search"
+                      onClick={() => {
+                        setQuery('');
+                        search('');
+                        searchInputRef.current?.focus();
+                      }}
+                    >
+                      <span aria-hidden />
+                    </button>
+                  )}
                 </label>
                 <Button variant="primary" disabled={busy}>
                   Search
                 </Button>
               </form>
               {/* One row: Sets, always (with no search, it lists the sets ticked); and
-                while there are results, the Add to picker when there's a choice (a blank
+                while there are results (or none found), the Add to picker when there's a choice (a blank
                 canvas has one place for cards) and Sort, at the right */}
               {!importing && (
                 <div className="flex flex-wrap gap-3 items-center">
@@ -786,7 +801,7 @@ export default function Editor() {
                     colors={tickColors}
                     onChange={changeSearchOptions}
                   />
-                  {!picking && showingResults && targets.length > 1 && (
+                  {!picking && searchShown && targets.length > 1 && (
                     <Dropdown
                       label="Add to"
                       hideLabel
@@ -801,7 +816,7 @@ export default function Editor() {
                     />
                   )}
                   {/* Flips the order: newest or oldest set first, and each set's numbers */}
-                  {showingResults && (
+                  {searchShown && (
                     <Button
                       type="button"
                       variant="icon"
@@ -822,16 +837,18 @@ export default function Editor() {
               )}
               {/* What the search was for, and with sets ticked, a way to search them all */}
               {noResults && !importing && (
-                <div role="status" className={`${styles.noResults} flex flex-col gap-2`}>
-                  <p className="font-semibold">No cards found</p>
-                  {(noResults.query || noResults.sets.length > 0) && (
-                    <p className="text-(--tb-muted)">
-                      {noResults.query && `for “${noResults.query}”`}
-                      {noResults.query && noResults.sets.length > 0 && ' '}
-                      {noResults.sets.length > 0 &&
-                        `in ${new Intl.ListFormat('en').format(noResults.sets)}`}
-                    </p>
-                  )}
+                <div role="status" className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <p className="font-semibold">No cards found</p>
+                    {(noResults.query || noResults.sets.length > 0) && (
+                      <p className="text-(--tb-muted)">
+                        {noResults.query && `for “${noResults.query}”`}
+                        {noResults.query && noResults.sets.length > 0 && ' '}
+                        {noResults.sets.length > 0 &&
+                          `in ${new Intl.ListFormat('en').format(noResults.sets)}`}
+                      </p>
+                    )}
+                  </div>
                   {noResults.sets.length > 0 && (
                     <Button
                       type="button"
@@ -967,33 +984,50 @@ export default function Editor() {
             {!searchShown && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Advanced</h3>
-                <Button className="self-start" onClick={() => setImporting((on) => !on)}>
-                  {importing ? 'Back to search' : 'Bulk import'}
-                </Button>
-                {importing && (
-                  <>
-                    <textarea
-                      rows={10}
-                      aria-label="Cards to import"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      className="tierbinder-field font-mono"
-                      placeholder={
-                        '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
-                      }
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                    />
-                    <Button
-                      variant="primary"
-                      onClick={runImport}
-                      disabled={busy || !importText.trim()}
-                    >
-                      Import (adds to the board)
-                    </Button>
-                  </>
-                )}
+                {/* A disclosure: the button names the import below it, which slides open */}
+                <div className="flex flex-col">
+                  <Button
+                    id="bulk-import-label"
+                    variant="text"
+                    className="self-start"
+                    aria-expanded={importing}
+                    aria-controls="bulk-import"
+                    onClick={() => setImporting((on) => !on)}
+                  >
+                    Bulk import
+                    <span aria-hidden className={styles.disclosureChevron} />
+                  </Button>
+                  <div
+                    id="bulk-import"
+                    className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
+                    inert={!importing}
+                  >
+                    <div>
+                      <div className="flex flex-col gap-3 pt-3">
+                        <textarea
+                          rows={10}
+                          aria-labelledby="bulk-import-label"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          className="tierbinder-field font-mono"
+                          placeholder={
+                            '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                          }
+                          value={importText}
+                          onChange={(e) => setImportText(e.target.value)}
+                        />
+                        <Button
+                          variant="primary"
+                          onClick={runImport}
+                          disabled={busy || !importText.trim()}
+                        >
+                          Import (adds to the board)
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </section>

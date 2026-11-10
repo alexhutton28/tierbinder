@@ -63,6 +63,8 @@ body {
   --tb-focus: var(--color-storm-200);
   --tb-icon-rest: var(--color-petrel-600);
   --tb-icon-lit: var(--color-storm-300);
+  --tb-scroll-thumb: var(--color-petrel-700);
+  --tb-scroll-thumb-hover: var(--color-petrel-600);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
@@ -72,6 +74,7 @@ body {
   --tb-top-height: 48px;
   --tb-control-height: 32px;
   --tb-icon: 16px;
+  --tb-scrollbar: 8px;
   --tb-swatch: 24px;
   --tb-number-field: 64px;
 
@@ -104,6 +107,36 @@ body {
   font-family: var(--font-figtree), system-ui, sans-serif;
   accent-color: var(--tb-primary);
   color-scheme: dark;
+}
+
+/* Scrollbars, the page's own included: a thin, fully rounded thumb in the controls' border color, on no track.
+   Browsers with scrollbar-color (Chrome, Firefox) use it; Safari draws the WebKit
+   scrollbar, 8px wide with the thumb inset 2px, lighter on hover. */
+body * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tb-scroll-thumb) transparent;
+}
+
+@supports not (scrollbar-color: auto) {
+  body ::-webkit-scrollbar {
+    width: var(--tb-scrollbar);
+    height: var(--tb-scrollbar);
+    background: transparent;
+  }
+
+  body ::-webkit-scrollbar-thumb {
+    border: calc(var(--tb-scrollbar) / 4) solid transparent;
+    border-radius: var(--radius-full);
+    background: var(--tb-scroll-thumb) padding-box;
+  }
+
+  body ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--tb-scroll-thumb-hover);
+  }
+
+  body ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 }
 
 /* The sidebar's tab panels: 16px under the main nav, 8px at the sides to line up with it
