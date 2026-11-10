@@ -69,6 +69,16 @@ export default function SearchFilters({
 
   useAnchored(shown, buttonRef, popupRef);
 
+  // Opening scrolls the list to the first ticked set in it, at the top
+  const listRef = React.useRef<HTMLFieldSetElement>(null);
+  React.useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!open || !list) return;
+    const first = list.querySelector('input:checked')?.closest('label');
+    // Both measured from the popup (offsetTop isn't changed by its opening transform)
+    list.scrollTop = first instanceof HTMLElement ? first.offsetTop - list.offsetTop : 0;
+  }, [open]);
+
   // Opening focuses the set search
   React.useEffect(() => {
     if (open) searchRef.current?.focus();
@@ -141,7 +151,7 @@ export default function SearchFilters({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <fieldset className={styles.sets}>
+          <fieldset ref={listRef} className={styles.sets}>
             <legend className="sr-only">Sets</legend>
             {sets.map((s) => {
               const ticked = options.sets.indexOf(s.code);
