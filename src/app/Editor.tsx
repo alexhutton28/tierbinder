@@ -23,9 +23,11 @@ import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './docume
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
+import { activeFilters, DEFAULT_SEARCH, SORT_ORDERS, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
+import SearchFilters from './ui/SearchFilters';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 
@@ -219,6 +221,11 @@ export default function Editor() {
   const [importText, setImportText] = React.useState('');
   const [importing, setImporting] = React.useState(false);
   const [query, setQuery] = React.useState('');
+  // The search the results are for, rerun when the filters or sort order change
+  const [searched, setSearched] = React.useState('');
+  const [searchOptions, setSearchOptions] = React.useState<SearchOptions>(DEFAULT_SEARCH);
+  // Each search's number, so a slower earlier one can't replace a later one's results
+  const searchCount = React.useRef(0);
   const [results, setResults] = React.useState<CardResult[]>([]);
   const showingResults = results.length > 0 && !importing;
   // Where the next search result goes: one of the graphic's targets
@@ -320,7 +327,7 @@ export default function Editor() {
     // A cleared board starts Add Cards over too
     if (clear) {
       setQuery('');
-      setResults([]);
+      clearSearch();
     }
     if (kind !== doc.kind) {
       setTarget(0);
@@ -455,18 +462,40 @@ export default function Editor() {
     );
   }
 
-  async function search(text: string) {
+  function clearSearch() {
+    searchCount.current++;
+    setSearched('');
+    setResults([]);
+    setStatus('');
+    setBusy(false);
+  }
+
+  async function search(text: string, options = searchOptions) {
     // A blank search clears the results
     if (!text.trim()) {
-      setResults([]);
-      setStatus('');
+      clearSearch();
       return;
     }
+    const count = ++searchCount.current;
+    setSearched(text.trim());
     setBusy(true);
-    const found = await searchCards(text.trim());
+    const found = await searchCards(text.trim(), options);
+    if (count !== searchCount.current) return;
     setResults(found);
-    setStatus(found.length ? '' : 'No cards found.');
+    setStatus(
+      found.length
+        ? ''
+        : activeFilters(options)
+          ? 'No cards match these filters.'
+          : 'No cards found.'
+    );
     setBusy(false);
+  }
+
+  // New filters or a new sort order apply to the next search, and rerun the current one
+  function changeSearchOptions(options: SearchOptions) {
+    setSearchOptions(options);
+    if (searched) search(searched, options);
   }
 
   const findCard = (id: string | undefined) => placements.find((p) => p.item.id === id)?.item;
@@ -721,10 +750,7 @@ export default function Editor() {
                     onChange={(e) => {
                       setQuery(e.target.value);
                       // Emptying the field clears the results, bringing the other sections back
-                      if (!e.target.value.trim()) {
-                        setResults([]);
-                        setStatus('');
-                      }
+                      if (!e.target.value.trim()) clearSearch();
                     }}
                   />
                 </label>
@@ -732,6 +758,15 @@ export default function Editor() {
                   Search
                 </Button>
               </form>
+              <div className="flex flex-wrap gap-3 items-center">
+                <SearchFilters options={searchOptions} onChange={changeSearchOptions} />
+                <Dropdown
+                  label="Sort"
+                  value={searchOptions.sort}
+                  options={SORT_ORDERS.map((o) => ({ value: o.value, label: o.label }))}
+                  onChange={(sort) => changeSearchOptions({ ...searchOptions, sort })}
+                />
+              </div>
               {picking && pickingCard ? (
                 <p className="flex gap-3 items-center">
                   {picking.part === 'top'

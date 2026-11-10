@@ -2,6 +2,7 @@
 // source). Cards are saved and imported by their official set code and number (TWM 130),
 // as printed on the card, so this maps those to TCGdex's own set ids (sv06) through
 // tcgdex-sets.json, and looks up any set released since that file was made.
+import type { SearchOptions } from '../searchOptions';
 import SETS from './tcgdex-sets.json';
 
 export type CardResult = {
@@ -97,18 +98,30 @@ export async function lookupCard(code: string, number: string): Promise<CardResu
   return null;
 }
 
-// A search's cards in the order TCGdex gives them, each with its set's release date.
-// `missing` holds the cards TCGdex has no image for, by `cardKey`, for the fallback.
+// A search's cards, each with its set's release date and its place in TCGdex's order
+// (`rank`: by Pokédex number when that's the sort). `missing` holds the cards TCGdex has
+// no image for, by `cardKey`, for the fallback.
+export type CardInfo = { name: string; date: string; rank: number };
 export type Search = {
-  results: (CardResult & { date: string })[];
-  missing: Map<string, { name: string; date: string }>;
+  results: (CardResult & CardInfo)[];
+  missing: Map<string, CardInfo>;
 };
+
+// TCGdex filters on its side: category, and legality in a format
+const CATEGORIES = { pokemon: 'Pokemon', trainer: 'Trainer', energy: 'Energy' } as const;
 
 export const cardKey = (card: { set: string; number: string }) => `${card.set} ${card.number}`;
 
-// Every card whose name contains the query
-export async function searchCards(query: string): Promise<Search> {
-  const cards = (await get<BriefCard[]>(`/cards?name=${encodeURIComponent(query)}`)) ?? [];
+// Every card whose name contains the query, filtered by type and format
+export async function searchCards(query: string, options: SearchOptions): Promise<Search> {
+  const params = new URLSearchParams({ name: query });
+  if (options.type !== 'all') params.set('category', CATEGORIES[options.type]);
+  if (options.format !== 'all') params.set(`legal.${options.format}`, 'true');
+  if (options.sort === 'pokedex') {
+    params.set('sort:field', 'dexId');
+    params.set('sort:order', 'ASC');
+  }
+  const cards = (await get<BriefCard[]>(`/cards?${params}`)) ?? [];
   const setOf = (card: BriefCard) => card.id.slice(0, card.id.lastIndexOf('-'));
   const setIds = [...new Set(cards.map(setOf))];
   const sets = new Map(
@@ -116,15 +129,13 @@ export async function searchCards(query: string): Promise<Search> {
   );
 
   const search: Search = { results: [], missing: new Map() };
-  for (const card of cards) {
+  cards.forEach((card, rank) => {
     const set = sets.get(setOf(card));
-    if (!set) continue;
+    if (!set) return;
     const result = toResult(card, set);
-    if (result) search.results.push({ ...result, date: set.date });
-    else {
-      const key = cardKey({ set: set.code, number: printed(card.localId) });
-      search.missing.set(key, { name: card.name, date: set.date });
-    }
-  }
+    const info = { name: card.name, date: set.date, rank };
+    if (result) search.results.push({ ...result, ...info });
+    else search.missing.set(cardKey({ set: set.code, number: printed(card.localId) }), info);
+  });
   return search;
 }

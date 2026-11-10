@@ -159,7 +159,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 - A spring that goes 1.5% past (3% looked like too much live). 450ms for things that move, with plain `ease-out` fades of about 120ms alongside. Use it for new TierBinder animations.
 - Button hover colors ease over `duration-hover`.
 - Popups share `.tierbinder-menu`: stretch open, fold closed. Dropdowns open faster, over `duration-drop`, because people use them constantly. The card menu goes left to right, dropdowns top to bottom.
-- Closing folds back over `duration-fold` on `ease-fold`, speeding up as it goes. The timers in `Editor.tsx` and `ui/Dropdown.tsx` wait for it.
+- Closing folds back over `duration-fold` on `ease-fold`, speeding up as it goes. The timers in `Editor.tsx`, `ui/Dropdown.tsx` and `ui/SearchFilters.tsx` wait for it.
 - Reduced motion: fades only, closing over `duration-fold-fade`.
 - Every animation respects `prefers-reduced-motion`.
 - New UI elements, animations and visual options start as a few different options, each published as an Artifact or shown side by side. Alex picks one, it gets refined from there, and then it is built.
@@ -203,6 +203,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Add Cards
 
+- Under the search field, a row with a Filters button (Feather `filter` icon, and the number of filters set, as in "Filters (2)") and the Sort dropdown (Newest set, Name, Pokédex number). Filters opens a popup below it, like a dropdown: Format (All, Standard, Expanded) and Card type (All, Pokémon, Trainer, Energy) as radios under 12px muted headings, a Newest print only checkbox, and Clear filters while any is set. Changes apply at once and rerun the current search.
 - Three sections, 16px apart, each a heading with its contents 8px under it: Add a Card (the search), Featured Card Pools and Advanced (Bulk import).
 - A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. A pool with no cards yet shows card-shaped placeholders in Petrel 850. In order: Best Decks of All Time previews SLG 53, SVI 86, CEC 156, FST 114, SIT 139 and TWM 130. Delta Reign previews DLR 84, 88, 11, 69, 47 and 33. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. They don't open yet.
 - The Add to picker shows only once a submitted search has results.

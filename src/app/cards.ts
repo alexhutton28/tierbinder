@@ -3,6 +3,7 @@
 // the same-origin proxy so canvas export works).
 
 import type { ImportCard, ImportLine } from './importText';
+import { DEFAULT_SEARCH, toParams, type SearchOptions } from './searchOptions';
 
 // One printed card
 export type CardFace = {
@@ -84,8 +85,11 @@ export async function fetchCard(set: string, number: string): Promise<CardResult
   return res.ok ? res.json() : null;
 }
 
-export async function searchCards(query: string): Promise<CardResult[]> {
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+export async function searchCards(
+  query: string,
+  options: SearchOptions = DEFAULT_SEARCH
+): Promise<CardResult[]> {
+  const res = await fetch(`/api/search?${toParams(query, options)}`);
   if (!res.ok) return [];
   return (await res.json()).results;
 }
