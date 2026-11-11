@@ -72,7 +72,6 @@ type Tab = (typeof TABS)[number]['value'];
 
 // Card pools shown in Add Cards before a search: each previews up to POOL_PREVIEW_CARDS
 // cards in a row, or card-shaped placeholders while it has none. They don't open yet.
-// Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
 type Pool = { name: string; cards: CardResult[] };
 // How long the search options must stay unchanged before they rerun the search
 const SEARCH_DELAY = 300;
@@ -85,146 +84,37 @@ const SKELETON_TILES = 18;
 const RESULTS_PAGE = 120;
 const RESULTS_LOOKAHEAD = 400;
 
+// A pool's card, from its TCGdex image path (series/set id/number as TCGdex pads it)
+const poolCard = (set: string, number: string, name: string, path: string): CardResult => ({
+  set,
+  number,
+  name,
+  image: `https://assets.tcgdex.net/en/${path}/high.webp`,
+  thumb: `https://assets.tcgdex.net/en/${path}/low.webp`,
+});
+
 const FEATURED_POOLS: Pool[] = [
   {
     name: 'Best Decks of All Time',
     cards: [
-      {
-        set: 'SLG',
-        number: '53',
-        name: 'Zoroark-GX',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_SM.png',
-      },
-      {
-        set: 'SVI',
-        number: '86',
-        name: 'Gardevoir ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_SM.png',
-      },
-      {
-        set: 'CEC',
-        number: '156',
-        name: 'Arceus & Dialga & Palkia-GX',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_SM.png',
-      },
-      {
-        set: 'FST',
-        number: '114',
-        name: 'Mew VMAX',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_SM.png',
-      },
-      {
-        set: 'SIT',
-        number: '139',
-        name: 'Lugia VSTAR',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_SM.png',
-      },
-      {
-        set: 'TWM',
-        number: '130',
-        name: 'Dragapult ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_SM.png',
-      },
+      poolCard('SVI', '86', 'Gardevoir ex', 'sv/sv01/086'),
+      poolCard('CEC', '156', 'Arceus & Dialga & Palkia-GX', 'sm/sm12/156'),
+      poolCard('FST', '114', 'Mew VMAX', 'swsh/swsh8/114'),
+      poolCard('SIT', '139', 'Lugia VSTAR', 'swsh/swsh12/139'),
+      poolCard('TWM', '130', 'Dragapult ex', 'sv/sv06/130'),
     ],
   },
-  {
-    name: 'Delta Reign',
-    cards: [
-      {
-        set: 'DLR',
-        number: '84',
-        name: 'Mega Rayquaza ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_084_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_084_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '88',
-        name: 'Talonflame ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_088_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_088_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '11',
-        name: 'Mega Golisopod ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '69',
-        name: 'Mega Malamar ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_069_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_069_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '47',
-        name: 'Mega Golurk ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_047_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_047_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '33',
-        name: 'Raikou ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_SM.png',
-      },
-    ],
-  },
+  // Placeholders until TCGdex has Delta Reign's images
+  { name: 'Delta Reign', cards: [] },
   {
     name: 'Mega Evolution Cards',
     cards: [
-      {
-        set: 'MEG',
-        number: '104',
-        name: 'Mega Kangaskhan ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_SM.png',
-      },
-      {
-        set: 'PFL',
-        number: '13',
-        name: 'Mega Charizard X ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_SM.png',
-      },
-      {
-        set: 'MEG',
-        number: '77',
-        name: 'Mega Lucario ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_SM.png',
-      },
-      {
-        set: 'MEG',
-        number: '86',
-        name: 'Mega Absol ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_SM.png',
-      },
-      {
-        set: 'PBL',
-        number: '65',
-        name: 'Mega Excadrill ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_SM.png',
-      },
-      {
-        set: 'CRI',
-        number: '22',
-        name: 'Mega Greninja ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_SM.png',
-      },
+      poolCard('MEG', '104', 'Mega Kangaskhan ex', 'me/me01/104'),
+      poolCard('PFL', '13', 'Mega Charizard X ex', 'me/me02/013'),
+      poolCard('MEG', '77', 'Mega Lucario ex', 'me/me01/077'),
+      poolCard('MEG', '86', 'Mega Absol ex', 'me/me01/086'),
+      poolCard('PBL', '65', 'Mega Excadrill ex', 'me/me05/065'),
+      poolCard('CRI', '22', 'Mega Greninja ex', 'me/me04/022'),
     ],
   },
 ];

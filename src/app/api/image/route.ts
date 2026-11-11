@@ -2,13 +2,7 @@
 // images from hosts that don't send CORS headers, so TierBinder loads every image
 // through here, which also keeps one cache of them. Only known image hosts are allowed, so this can't
 // be used as an open proxy.
-const ALLOWED_HOSTS = new Set([
-  'assets.tcgdex.net',
-  // Boards saved before the move to TCGdex hold Limitless image URLs
-  'limitlesstcg.nyc3.cdn.digitaloceanspaces.com',
-  'r2.limitlesstcg.net',
-  'images.pokemontcg.io',
-]);
+const ALLOWED_HOSTS = new Set(['assets.tcgdex.net', 'images.pokemontcg.io']);
 
 const MAX_BYTES = 5_000_000;
 
