@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.6 · November 10, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.7 · November 11, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -106,12 +106,12 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ## 6. Border radius
 
-| Token           | Value  | Used for                                                         |
-| --------------- | ------ | ---------------------------------------------------------------- |
-| `radius-small`  | 4px    | Buttons, fields, popups                                          |
-| `radius-medium` | 8px    | The card menu: its rows' `radius-small` plus the 4px around them |
-| `radius-large`  | 16px   | Not used yet                                                     |
-| `radius-full`   | 9999px | Scrollbar thumbs                                                 |
+| Token           | Value  | Used for                                                                                  |
+| --------------- | ------ | ----------------------------------------------------------------------------------------- |
+| `radius-small`  | 4px    | Buttons, fields, popups                                                                   |
+| `radius-medium` | 8px    | The card menu: its rows' `radius-small` plus the 4px around them; the card tray's corners |
+| `radius-large`  | 16px   | Not used yet                                                                              |
+| `radius-full`   | 9999px | Scrollbar thumbs                                                                          |
 
 - The values come from the spacing scale, but radius keeps its own tokens.
 - The names avoid Tailwind's `sm`, `md` and `lg`.
@@ -213,6 +213,14 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 - Results are thumbnails 4px apart, filling their columns, with a shade fading in over their top once scrolled. While a search runs they're card-shaped placeholders in Petrel 850 with a lighter shimmer, and each thumbnail shimmers until it loads. A search that finds nothing says so under the search ("No cards found", what for and in which sets, and Search all sets while sets are ticked). A failed search says why in the same place.
 - A search with results (or none), or sets ticked, shows only Add a Card, with the results filling the sidebar. The pools and Advanced come back when the search field is emptied, the board is cleared or the page reloads.
 
+### Card tray
+
+- An optional box under the board, turned on in Customize (Card Tray: "Show card tray under the board", then "Tray color"), for holding cards that aren't ranked yet. As wide as the board and as tall as a tier, `space-4` (16px on screen) below it, with `radius-medium` corners, in its own color: by default the tier list's border shade (`#16303C`) or light gray (`#E8E8E8`) on the white blank canvas.
+- Up to 48 cards: full size in one row up to 10, then smaller to fit the row, then two even rows; it never grows taller.
+- It acts like a tier: "Card tray" is the last Add to choice, cards drag in, out and within it, and the card menu opens upward on it, since it's at the board's foot.
+- Only from `b8` up. Narrower, it isn't shown, but its cards are kept.
+- Save & Share's "Include card tray in export" (off by default) puts it flush and square under the board in the image (2400×1690), so the graphic reads as one piece.
+
 ### Credits
 
 - At the foot of the sidebar under every tab, with no dividing line: one line of 12px muted text, 8px padding, "Cards from TCGdex". TCGdex links to tcgdex.dev in a new tab (the text color, underlined). 4px after it, Feather's `info` icon at the text's size, in the text color, opens a popup like the dropdowns (lined up with the credits line and as wide as it, above it when there's no room below) with the full credits and "Pokémon is a trademark of Nintendo, Creatures, GAME FREAK and The Pokémon Company. TierBinder isn't affiliated with them." The link and icon brighten to Petrel 50 on hover over `duration-hover`, and the icon stays bright while its popup is open; on touch screens it has a 44px-tall touch target reaching right, not over the link. The popup closes when focus moves on past it. A stand-in until the credits get a better home.
@@ -251,17 +259,19 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 Places where the token rules do not apply. Keep raw values in named constants, matching a palette color when one exists.
 
-| Where                                                                                                                             | Allowed                         | Why                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Canvas drawing: Konva boards                                                                                                      | Named color and size constants  | Canvas drawing does not take CSS variables, and exported images must match the screen                        |
-| User-chosen colors, including saved board colors                                                                                  | Any value                       | They belong to the user's content, not the design system                                                     |
-| Exported images                                                                                                                   | Values the artwork needs        | They are images, not interface                                                                               |
-| Sizes chosen by eye: search result thumbnails (at least 80px wide), the sidebar's minimum width (250px), the shimmer's 1.5s sweep | A chosen fixed size, named once | Alex picked them by looking at them; nothing in the layout derives them, and deriving them would add nothing |
-| The sidebar's width once someone drags it                                                                                         | Any width, smoothly             | It's the user's choice, like their colors                                                                    |
-| `themeColor` in metadata                                                                                                          | Hex matching the top bar        | Browsers read it as a plain value                                                                            |
+| Where                                                                                                                                                                           | Allowed                         | Why                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Canvas drawing: Konva boards                                                                                                                                                    | Named color and size constants  | Canvas drawing does not take CSS variables, and exported images must match the screen                        |
+| User-chosen colors, including saved board colors                                                                                                                                | Any value                       | They belong to the user's content, not the design system                                                     |
+| Exported images                                                                                                                                                                 | Values the artwork needs        | They are images, not interface                                                                               |
+| Sizes chosen by eye: search result thumbnails (at least 80px wide), the sidebar's minimum width (250px), the shimmer's 1.5s sweep                                               | A chosen fixed size, named once | Alex picked them by looking at them; nothing in the layout derives them, and deriving them would add nothing |
+| The sidebar's width once someone drags it                                                                                                                                       | Any width, smoothly             | It's the user's choice, like their colors                                                                    |
+| The card tray: its padding (15) and card gaps (a tenth of a card) in design pixels, and its gap and corners (16 and 8 on-screen pixels, matching `space-4` and `radius-medium`) | Named canvas constants          | Canvas drawing can't read the tokens; the gap and corners stay the same on screen whatever the board's scale |
+| `themeColor` in metadata                                                                                                                                                        | Hex matching the top bar        | Browsers read it as a plain value                                                                            |
 
 ## 15. Changelog
 
+- **November 11, 2026 · v1.7:** The card tray: an optional box under the board for unranked cards, up to 48, shrinking to fit, with its own color, from `b8` up, and optionally in the export.
 - **November 10, 2026 · v1.6:** Credits at the foot of the sidebar: one line with an info button that opens the full credits. Placeholders fill a featured pool's row past its cards, and its cards shimmer while they load.
 - **November 10, 2026 · v1.5:** Card search gained the Sets filter and sort row, a clear button in the search field, no-results and error messages under the search, skeleton placeholders with a shimmer, and results that fill their columns 4px apart with no captions. Bulk import became a text button that slides open. The card menu and dropdown lists hold inset rounded rows, and View shows a card large over a dimmed page. Popups float over the board. Scrollbars are thin. New roles: `--tb-option-hover` (Petrel 700), `--tb-popup-shadow` and `--tb-scroll-shade` (Petrel 950), `--tb-scroll-thumb` (Petrel 700, 600 on hover), `--tb-skeleton` (Petrel 850) and `--tb-skeleton-shine` (Petrel 800), `--tb-view-backdrop` (Petrel 950), `--tb-touch-target` (44px), `--tb-view-height` and `--tb-shimmer`.
 - **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav, and the main nav has 8px above it, below it and at its sides, with the tab's content lined up with it. Text fields have a Petrel 700 border at rest, like buttons. Section headings went from 12px muted to 14px Petrel 50. Add Cards gained sections: Add a Card, Featured Card Pools (placeholders for now) and Advanced. Text went back to the font's normal line height from Tailwind's 1.5, and the main nav's block gained 4px top and bottom. The sidebar's default width became the nav's width with 8px each side, measured, instead of 368px chosen by eye. Text fields show focus with a Storm 600 edge instead of the focus ring, and the search field gained a search icon that lights up with it.

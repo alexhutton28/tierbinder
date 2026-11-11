@@ -4,6 +4,7 @@
 import { newId, type CardItem } from '../../cards';
 import type { ResolvedGroup } from '../../importText';
 import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH } from '../../canvas/size';
+import { defaultTray, parseTray, type Tray } from '../../canvas/tray';
 import type { CardPlacement } from '../types';
 
 export type Tier = {
@@ -21,6 +22,8 @@ export type TierList = {
   // Each card gets an inside stroke in its tier's color
   tierCardBorders: boolean;
   tiers: Tier[];
+  // The card tray under the board (canvas/tray.ts)
+  tray: Tray;
 };
 
 export const TIER_COUNT = 4;
@@ -43,13 +46,17 @@ export const DEFAULT_TIERS: [string, string][] = [
   ['Fraud', '#3cc65a'],
 ];
 
+// The tray starts in the border's shade, a step darker than the background
+const DEFAULT_BORDER = '#16303c';
+
 export function defaultTierList(): TierList {
   return {
     kind: 'tier-list',
     background: '#1f3d4b',
-    border: '#16303c',
+    border: DEFAULT_BORDER,
     tierCardBorders: false,
     tiers: DEFAULT_TIERS.map(([name, color]) => ({ id: newId(), name, color, items: [] })),
+    tray: defaultTray(DEFAULT_BORDER),
   };
 }
 
@@ -156,8 +163,9 @@ export function parseTierList(value: unknown): TierList | null {
   return {
     kind: 'tier-list',
     background: list.background,
-    border: typeof list.border === 'string' ? list.border : defaultTierList().border,
+    border: typeof list.border === 'string' ? list.border : DEFAULT_BORDER,
     tierCardBorders: list.tierCardBorders === true,
     tiers: list.tiers,
+    tray: parseTray(list.tray, DEFAULT_BORDER),
   };
 }

@@ -25,6 +25,7 @@ export default function TierListCanvas({
   onChange,
   onSelect,
   onCardMenu,
+  onCardDrop,
   onPickTarget,
   onEditSetting,
 }: CanvasProps<TierList>) {
@@ -83,6 +84,7 @@ export default function TierListCanvas({
           onSelect={() => onSelect(item.id)}
           onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
           onDragEnd={(cardX, cardY) => {
+            if (onCardDrop(item.id, cardX, cardY)) return;
             const target = dropTarget(
               list,
               item.id,

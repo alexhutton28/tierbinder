@@ -42,6 +42,7 @@ All paths are in `src/app/`.
 - `graphics/tier-list/`: `model.ts` (document, layout, edits, import, parse), `TierListCanvas.tsx`, `TierListSettings.tsx`, and `index.ts` (its `GraphicType`).
 - `graphics/blank/`: the same for the blank canvas (`BlankCanvasView.tsx`, `BlankSettings.tsx`).
 - `canvas/CardNode.tsx`: a card on the board for every graphic (image or split card, rounded clip, placeholder, dragging, menu clicks). `canvas/size.ts`: board, export and card sizes.
+- `canvas/tray.ts`: the card tray's model (`Tray`, saved as each graphic's `tray`; layout, drop index, edits); `canvas/CardTray.tsx` draws it. The editor owns it for every graphic (see Card tray).
 - `cards.ts`: card types saved in documents (`CardFace`, `CardItem`), `newId`, client calls to the API routes, bulk import lookups (`resolveCard`, `defaultPrint`), and image loading through the proxy.
 - `importText.ts`: the bulk import format (documented at the top of the file).
 - `ui/Button.tsx`: the page's buttons, with a `variant` (`default`, `primary`, `tool`, `icon`: square, holding only an icon, so it needs an `aria-label` and a `title`; `text`: just its words and an icon after them, brightening on hover).
@@ -62,7 +63,8 @@ All paths are in `src/app/`.
 A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, its settings and where cards go; the editor owns everything else. What the editor asks of a type:
 
 - `create`, `parse` (a saved graphic of its kind, with later settings filled in), `label` (in the board type dropdown), `targetNoun` (as in "Add to tier").
-- `Canvas`: Konva layers drawn inside the editor's stage, with a `Rect` named `background` (pressing it deselects) and cards drawn with `CardNode`. It gets callbacks to change the graphic, select cards, open the card menu, pick a target and open a setting.
+- `Canvas`: Konva layers drawn inside the editor's stage, with a `Rect` named `background` (pressing it deselects) and cards drawn with `CardNode`. It gets callbacks to change the graphic, select cards, open the card menu, pick a target and open a setting, and `onCardDrop`, which a dragged card's drop goes through first: it returns true when the editor took the card into the card tray, and the graphic leaves it be.
+- Every graphic's document has a `tray` (`parseTray` in its `parse`, `defaultTray` in `create`, with the type's own default color), and a `border` the tray uses for split cards.
 - `Toolbar` (optional): tools beyond moving cards, shown under the board. The editor keeps the active tool (`DEFAULT_TOOL`, `move`, until the toolbar picks another; reset when the board type changes) and passes it to the canvas as `tool`.
 - `Settings`: its part of the Customize tab. `onEditSetting(key)` from the canvas switches to the Customize tab and passes `focus` to it (the tier list uses `tier:<index>`).
 - Cards: `layout` (every card with its top-left corner and box, drawing order; the editor uses it for selection, hit-testing drops and export), `mapCards` (change or remove), `targets` (the Add to choices, each a name and an optional color for its swatch; hidden when there's only one), `addCard` (to a target), `dropCard` (at a point), `importCards` (bulk import's `#` groups). Adding returns the new graphic or `{ error }`, shown as the status.
@@ -75,7 +77,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 
 ## The board
 
-- 1200×675 for every graphic; export is 2× (2400×1350 PNG), downloaded (named after the graphic's kind) or copied.
+- 1200×675 for every graphic; export is 2× (2400×1350 PNG, or 2400×1690 with the card tray), downloaded (named after the graphic's kind) or copied.
 - On screen the stage scales to fill the workspace, larger or smaller than 1200 (`scale` in `Editor.tsx`): its width on narrow screens, and from `b8` up as much as fits beside the sidebar, with room left for the toolbar and status, which it measures rather than assumes.
 - Cards are 100×140, clipped to the card images' rounded corners (`CARD_CORNER_RADIUS`, ~4.5px).
 - Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline), and any a graphic adds (the eraser's circle).
@@ -97,10 +99,19 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 
 - Cards placed anywhere: each item is a `CardItem` with its top-left `x`, `y`, kept wholly on the board. Later cards draw on top, and a moved card goes on top.
 - Cards added from search or import fill a grid of as many spots as fit at the card size (10 × 4 at the default), by how many cards there are, starting over once full; a dropped result is centered on the pointer. Import groups mean nothing here.
+- Ink is clipped to the board, so it never draws over the card tray.
 - Settings: `cardWidth` (Card size, 40–400px wide; the field applies once a typed number is in range), `topHalf` (Show only top half of cards), `background` (white by default), and `border` for split cards' divider and stroke. Changing the size or top halves moves cards that would hang off the board back onto it.
 - Tools (`BlankToolbar.tsx`, under the board): Move (the default: drag and click cards), Pen (color, size; default near-black `#1b1b1b`, 12px) and Eraser (size; default 24px). Pen and eraser settings are saved with the board.
 - Ink: `strokes` (pen or eraser, with Konva `Line` points rounded to 0.1px) on their own layer above the cards. Eraser strokes use `destination-out`, so they remove only ink, never cards or the background. While drawing, a transparent rect on the ink layer takes every press (cards don't move or open menus), the stroke stays in component state until the pointer is released anywhere, and a click leaves a dot (the point is doubled). The pen shows a crosshair; the eraser hides the pointer and draws its size as a circle in an editor-only layer. Clear board clears the ink.
 - `CardNode` draws every card at 100×140 and scales it (`width`), so borders and corners scale too; `topHalf` clips to the top half. Split cards always show both halves, at full height, since their top half would hide the bottom card. `cardBox` gives the box a card takes, which the canvas reports in `layout` for the selection outline and drop hit-testing.
+
+## Card tray
+
+- An optional holding area under the board, for every graphic, each board keeping its own (`tray`: `enabled`, `color`, `items`). Turned on in Customize ("Show card tray under the board", then "Tray color"); turned off, its cards stay saved and come back. It only shows from `b8` up: under it there's no tray, no setting and no Add to option, but the cards are kept.
+- Drawn in the same stage as the board, `TRAY_GAP` (16 on-screen px) under it, as wide as the board and as tall as a tier with full-size cards (`TRAY_HEIGHT`, 170), with `TRAY_RADIUS` (8 on-screen px) corners. The stage grows to hold it, and the board's scale fits both.
+- Up to 48 cards (`MAX_TRAY_CARDS`), left to right: up to 10 at full size in one row, then shrinking to fit the row, then from 23 two even rows (48 are two rows of 24); never taller. Fewer cards than fill the height are centered top to bottom.
+- It works like a tier: "Card tray" is the last Add to choice (with its color as the swatch), clicking its empty space picks it, results dropped on it go in by position, and cards drag between it and the board (into the tray by their center; out of it, the graphic's `dropCard` at the card's center) and reorder within it. While a card is dragged its layer is moved to the top, so it shows over both. A result dropped on a tray card offers "Add to card tray". The card menu opens upward from tray cards, at the board's foot. While the pen or eraser is active the tray takes no presses. Bulk import never fills it. Clear board empties it but keeps it on (its confirmation then says "Clear the board and card tray?").
+- Save & Share's "Include card tray in export" (off by default, not saved) exports it flush and square under the board: 2400×1690. The export moves the `tray` group up and squares its `trayBox` just while drawing.
 
 ## Split cards
 

@@ -27,6 +27,17 @@ import {
   type CardItem,
   type CardResult,
 } from './cards';
+import CardTray from './canvas/CardTray';
+import {
+  TRAY_GAP,
+  TRAY_HEIGHT,
+  insertTrayCard,
+  layoutTray,
+  mapTray,
+  moveTrayCard,
+  trayDropIndex,
+  type Tray,
+} from './canvas/tray';
 import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './document';
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TIERS } from './graphics/tier-list/model';
@@ -34,6 +45,7 @@ import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
+import ColorField from './ui/ColorField';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
@@ -50,6 +62,16 @@ const STORAGE_KEY = 'tierbinder-doc';
 // The selection outline, drawn just outside the card (canvas values; see Exceptions in
 // design/hutton-design-system.md)
 const OUTLINE = { width: 3, radius: 8, color: '#ffffff' };
+
+// Changes every card on a graphic, on the board and in the card tray (null removes it)
+function mapEveryCard(g: Graphic, change: (item: CardItem) => CardItem | null): Graphic {
+  return { ...typeOf(g.kind).mapCards(g, change), tray: mapTray(g.tray, change) } as Graphic;
+}
+
+// A graphic with a changed tray, or why the tray couldn't take the card
+function withTray(g: Graphic, tray: Tray | { error: string }): Placed<Graphic> {
+  return 'error' in tray ? tray : ({ ...g, tray } as Graphic);
+}
 
 // The card menu's narrowest width; it opens left of the pointer when this wouldn't fit
 // inside the board's right edge
@@ -280,10 +302,14 @@ export default function Editor() {
   // The selection outline. Konva moves a dragged card itself, without React, so the
   // outline is moved the same way to stay on it (cards carry their item's id).
   const outlineRef = React.useRef<Konva.Rect>(null);
+  // The layer of the card being dragged, and its place to go back to (see onDragStart)
+  const draggedLayer = React.useRef<{ layer: Konva.Layer; zIndex: number } | null>(null);
   const moveOutline = (e: Konva.KonvaEventObject<DragEvent>) => {
     const card = e.target;
     if (card.name() !== 'card' || card.id() !== selectedId) return;
-    outlineRef.current?.position({ x: card.x() - 3, y: card.y() - 3 });
+    // On the stage, not in its parent: the card tray's cards are in a group under the board
+    const { x, y } = card.getAbsolutePosition(card.getStage() ?? undefined);
+    outlineRef.current?.position({ x: x - OUTLINE.width, y: y - OUTLINE.width });
   };
   // Search result pressed with a mouse or pen: where the press started, and whether it
   // has moved far enough to be a drag. A drag shows the card under the pointer
@@ -302,7 +328,32 @@ export default function Editor() {
   // Set from a drag's release until the click that follows it, so the drag doesn't also add the card
   const justDragged = React.useRef(false);
 
-  const placements = type.layout(graphic);
+  // From b8 up, where the board has the room beside the sidebar; the card tray only
+  // shows there
+  const [wide, setWide] = React.useState(false);
+  React.useEffect(() => {
+    const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
+    const query = matchMedia(`(width >= ${b8.trim()})`);
+    const update = () => setWide(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  // The card tray, under the board: its top edge in design pixels sits TRAY_GAP on-screen
+  // pixels below the board, whatever the scale
+  const trayShown = wide && graphic.tray.enabled;
+  const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
+  // Exported under the board when ticked in Save & Share
+  const [includeTray, setIncludeTray] = React.useState(false);
+  const exportTray = trayShown && includeTray;
+  const exportHeight = BOARD_HEIGHT + (exportTray ? TRAY_HEIGHT : 0);
+
+  // Every card and where it's drawn: the board's, then the tray's
+  const boardPlacements = type.layout(graphic);
+  const trayPlacements = trayShown
+    ? layoutTray(graphic.tray).map((p) => ({ ...p, y: p.y + trayTop }))
+    : [];
+  const placements = [...boardPlacements, ...trayPlacements];
 
   // A card shown large in the middle of the window (View, in the card menu; a split card
   // shows both its cards), grown from its place on the board and shrunk back to it when
@@ -361,12 +412,17 @@ export default function Editor() {
     // The card's place by value: placements are new objects every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewedPlace?.x, viewedPlace?.y, viewedPlace?.width, viewedPlace?.height, viewClosing, scale]);
-  const targets = type.targets(graphic);
+  // The graphic's targets, then the card tray while it shows
+  const boardTargets = type.targets(graphic);
+  const targets = trayShown
+    ? [...boardTargets, { name: 'Card tray', color: graphic.tray.color }]
+    : boardTargets;
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
   // without them
-  const targetColors = targets.flatMap((t) => (t.color ? [t.color] : []));
+  const targetColors = boardTargets.flatMap((t) => (t.color ? [t.color] : []));
   const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
   const targetIndex = Math.min(target, targets.length - 1);
+  const trayTargeted = trayShown && targetIndex === boardTargets.length;
 
   // Changes the board showing
   const setGraphic = React.useCallback(
@@ -378,12 +434,14 @@ export default function Editor() {
   // Shows another board type's board (kept from when it was last used, or new), or
   // replaces the board showing with a new one
   function showBoard(kind: GraphicKind, clear = false) {
-    setDoc((d) => ({
-      ...d,
-      kind,
-      graphics:
-        clear || !d.graphics[kind] ? { ...d.graphics, [kind]: typeOf(kind).create() } : d.graphics,
-    }));
+    setDoc((d) => {
+      const old = d.graphics[kind];
+      if (old && !clear) return { ...d, kind };
+      // Clearing empties the card tray but keeps it on, in its color
+      const fresh = typeOf(kind).create();
+      const next = old ? { ...fresh, tray: { ...old.tray, items: [] } } : fresh;
+      return { ...d, kind, graphics: { ...d.graphics, [kind]: next } };
+    });
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
@@ -423,18 +481,19 @@ export default function Editor() {
     const board = boardRef.current;
     const box = boardBoxRef.current;
     if (!workspace || !board || !box) return;
-    const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
-    const wide = matchMedia(`(width >= ${b8.trim()})`);
     const fit = () => {
       const style = getComputedStyle(workspace);
       const width =
         workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
       let next = width / BOARD_WIDTH;
-      if (wide.matches) {
+      if (wide) {
         const height =
           workspace.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
         const around = board.offsetHeight - box.offsetHeight;
-        next = Math.min(next, (height - around) / BOARD_HEIGHT);
+        // The card tray and the gap above it, when it shows
+        const tray = trayShown ? TRAY_GAP : 0;
+        const designHeight = BOARD_HEIGHT + (trayShown ? TRAY_HEIGHT : 0);
+        next = Math.min(next, (height - around - tray) / designHeight);
       }
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
       setScale(Math.max(0, Math.floor(next * 1000) / 1000));
@@ -443,12 +502,10 @@ export default function Editor() {
     const observer = new ResizeObserver(fit);
     observer.observe(workspace);
     observer.observe(board);
-    wide.addEventListener('change', fit);
     return () => {
       observer.disconnect();
-      wide.removeEventListener('change', fit);
     };
-  }, []);
+  }, [wide, trayShown]);
 
   // Canvas text needs the font loaded first; next/font gives it a generated family name,
   // set on this route's layout
@@ -461,16 +518,18 @@ export default function Editor() {
 
   const removeCard = React.useCallback(
     (id: string) => {
-      setGraphic((g) => typeOf(g.kind).mapCards(g, (i) => (i.id === id ? null : i)));
+      setGraphic((g) => mapEveryCard(g, (i) => (i.id === id ? null : i)));
       setSelectedId((selected) => (selected === id ? null : selected));
     },
     [setGraphic]
   );
 
+  // Only a card that shows: not one in a card tray hidden on a narrow screen
+  const selectedShown = placements.some((p) => p.item.id === selectedId);
   const removeSelected = React.useCallback(() => {
-    if (!selectedId) return;
+    if (!selectedId || !selectedShown) return;
     removeCard(selectedId);
-  }, [selectedId, removeCard]);
+  }, [selectedId, selectedShown, removeCard]);
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
   // board's background does; the card menu is on the board, so using it keeps the card.
@@ -598,7 +657,7 @@ export default function Editor() {
   const findCard = (id: string | undefined) => placements.find((p) => p.item.id === id)?.item;
 
   const updateCard = (id: string, change: (item: CardItem) => CardItem) =>
-    setGraphic((g) => typeOf(g.kind).mapCards(g, (i) => (i.id === id ? change(i) : i)));
+    setGraphic((g) => mapEveryCard(g, (i) => (i.id === id ? change(i) : i)));
 
   // Puts the search in picking mode for a card's top or bottom face. Replacing searches
   // that face's name (its other prints); a new split card starts with an empty search.
@@ -621,22 +680,71 @@ export default function Editor() {
   const pickingCard = findCard(picking?.id);
 
   type CardMenu = NonNullable<typeof cardMenu>;
-  const addToTarget = `Add to ${type.targetNoun}`;
+  // A result dropped on a card goes where it was dropped: the board, or the card tray
+  const addToTarget = ({ dropped }: CardMenu) =>
+    dropped && dropped.point.y > BOARD_HEIGHT ? 'Add to card tray' : `Add to ${type.targetNoun}`;
+
+  // Adds a card where it was dropped: in the card tray (or the gap above it) by position,
+  // or where the graphic puts it
+  const dropAt = (item: CardItem, point: Point): Placed<Graphic> =>
+    trayShown && point.y > BOARD_HEIGHT
+      ? withTray(
+          graphic,
+          insertTrayCard(
+            graphic.tray,
+            item,
+            trayDropIndex(graphic.tray, '', { x: point.x, y: point.y - trayTop })
+          )
+        )
+      : type.dropCard(graphic, item, point);
+
+  // A board card dropped in the card tray moves there; the graphic moves it otherwise
+  const boardCardDrop = (id: string, x: number, y: number) => {
+    const place = boardPlacements.find((p) => p.item.id === id);
+    if (!trayShown || !place || y + place.height / 2 <= BOARD_HEIGHT) return false;
+    const point = { x: x + place.width / 2, y: y + place.height / 2 - trayTop };
+    const placed = withTray(
+      typeOf(graphic.kind).mapCards(graphic, (i) => (i.id === id ? null : i)),
+      insertTrayCard(graphic.tray, place.item, trayDropIndex(graphic.tray, '', point))
+    );
+    applyPlaced(placed);
+    return true;
+  };
+
+  // A tray card dropped in the tray moves within it; dropped on the board, the graphic
+  // places it at its center, as it would a search result
+  const trayCardDrop = (id: string, x: number, y: number) => {
+    const place = trayPlacements.find((p) => p.item.id === id);
+    if (!place) return;
+    const center = { x: x + place.width / 2, y: y + place.height / 2 };
+    if (center.y > BOARD_HEIGHT) {
+      const point = { x: center.x, y: center.y - trayTop };
+      setGraphic((g) => ({
+        ...g,
+        tray: moveTrayCard(g.tray, id, trayDropIndex(g.tray, id, point)),
+      }));
+      return;
+    }
+    const without = { ...graphic, tray: mapTray(graphic.tray, (i) => (i.id === id ? null : i)) };
+    applyPlaced(type.dropCard(without, place.item, center));
+  };
 
   // The card menu's items: for a clicked card, or for a search result dropped on it
-  const cardMenuItems = ({ id, dropped }: CardMenu) => {
+  const cardMenuItems = (menu: CardMenu) => {
+    const { id, dropped } = menu;
     const split = findCard(id)?.split;
     if (dropped) {
       return split
-        ? ['Replace top half', 'Replace bottom half', addToTarget]
-        : ['Add as split card', addToTarget];
+        ? ['Replace top half', 'Replace bottom half', addToTarget(menu)]
+        : ['Add as split card', addToTarget(menu)];
     }
     return split
       ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
       : ['View', 'Remove card', 'Replace card', 'Make split card'];
   };
 
-  function runCardMenuItem({ id, dropped }: CardMenu, label: string) {
+  function runCardMenuItem(menu: CardMenu, label: string) {
+    const { id, dropped } = menu;
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
     // dropped
     if (dropped) {
@@ -645,9 +753,7 @@ export default function Editor() {
       if (label === 'Replace bottom half' || label === 'Add as split card') {
         updateCard(id, (i) => ({ ...i, split: face }));
       }
-      if (label === addToTarget) {
-        applyPlaced(type.dropCard(graphic, toItem(dropped.card), dropped.point));
-      }
+      if (label === addToTarget(menu)) applyPlaced(dropAt(toItem(dropped.card), dropped.point));
       return;
     }
     if (label === 'View') {
@@ -673,7 +779,11 @@ export default function Editor() {
       setPicking(null);
       return;
     }
-    applyPlaced(type.addCard(graphic, toItem(card), targetIndex));
+    applyPlaced(
+      trayTargeted
+        ? withTray(graphic, insertTrayCard(graphic.tray, toItem(card)))
+        : type.addCard(graphic, toItem(card), targetIndex)
+    );
   }
 
   // A search result dropped on the board goes where the graphic puts it. Dropped on a
@@ -701,7 +811,7 @@ export default function Editor() {
       });
       return;
     }
-    applyPlaced(type.dropCard(graphic, toItem(card), point));
+    applyPlaced(dropAt(toItem(card), point));
   });
 
   // Dragging a search result: follows the pointer once it has moved a few pixels;
@@ -749,7 +859,7 @@ export default function Editor() {
     if (!stage) return null;
     setSelectedId(null);
     await Promise.allSettled(
-      placements
+      [...boardPlacements, ...(exportTray ? trayPlacements : [])]
         .flatMap(({ item }) => [item.image, ...(item.split ? [item.split.image] : [])])
         .map(loadImage)
     );
@@ -759,10 +869,28 @@ export default function Editor() {
     // The editor's own layer, and any a graphic adds (e.g. the eraser's circle)
     const editorOnly = stage.find('.editor');
     editorOnly.forEach((node) => node.hide());
+    // An exported card tray sits flush and square under the board
+    const tray = stage.findOne('.tray');
+    const trayBox = stage.findOne<Konva.Rect>('.trayBox');
+    // Put back as they are now
+    const trayY = tray?.y();
+    const trayRadius = trayBox?.cornerRadius();
+    if (exportTray) {
+      tray?.y(BOARD_HEIGHT);
+      trayBox?.cornerRadius(0);
+    }
     try {
-      return (await stage.toBlob({ pixelRatio: EXPORT_SCALE / scale })) as Blob;
+      return (await stage.toBlob({
+        pixelRatio: EXPORT_SCALE / scale,
+        x: 0,
+        y: 0,
+        width: BOARD_WIDTH * scale,
+        height: exportHeight * scale,
+      })) as Blob;
     } finally {
       editorOnly.forEach((node) => node.show());
+      if (trayY !== undefined) tray?.y(trayY);
+      if (trayRadius !== undefined) trayBox?.cornerRadius(trayRadius);
     }
   }
 
@@ -1173,10 +1301,38 @@ export default function Editor() {
               }}
             />
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+            {/* Not on narrow screens, where the board is under the top bar */}
+            {wide && (
+              <>
+                <h3 className="tierbinder-heading">Card Tray</h3>
+                <label className="flex gap-3 items-center">
+                  <input
+                    type="checkbox"
+                    checked={graphic.tray.enabled}
+                    onChange={(e) =>
+                      setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled: e.target.checked } }))
+                    }
+                  />
+                  Show card tray under the board
+                </label>
+                {graphic.tray.enabled && (
+                  <div className="tierbinder-prop">
+                    Tray color
+                    <ColorField
+                      label="Card tray color"
+                      value={graphic.tray.color}
+                      onChange={(color) =>
+                        setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))
+                      }
+                    />
+                  </div>
+                )}
+              </>
+            )}
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
             {confirmingClear ? (
               <div className="flex flex-wrap gap-3 items-center">
-                Clear the board?
+                {graphic.tray.items.length ? 'Clear the board and card tray?' : 'Clear the board?'}
                 <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
                 <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
               </div>
@@ -1196,13 +1352,23 @@ export default function Editor() {
             <div className="tierbinder-prop">
               Size
               <span className="text-(--tb-text)">
-                {BOARD_WIDTH * EXPORT_SCALE} × {BOARD_HEIGHT * EXPORT_SCALE}
+                {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
               </span>
             </div>
             <div className="tierbinder-prop">
               Format
               <span className="text-(--tb-text)">PNG</span>
             </div>
+            {trayShown && (
+              <label className="flex gap-3 items-center">
+                <input
+                  type="checkbox"
+                  checked={includeTray}
+                  onChange={(e) => setIncludeTray(e.target.checked)}
+                />
+                Include card tray in export
+              </label>
+            )}
             <div className="flex flex-wrap gap-3">
               <Button variant="primary" onClick={exportPng} disabled={busy}>
                 Export PNG
@@ -1232,18 +1398,31 @@ export default function Editor() {
                 stageRef.current = stage;
               }}
               width={BOARD_WIDTH * scale}
-              height={BOARD_HEIGHT * scale}
+              height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + TRAY_HEIGHT * scale : 0)}
               scaleX={scale}
               scaleY={scale}
               onMouseDown={(e) => {
-                if (e.target === e.target.getStage() || e.target.name() === 'background') {
+                if (e.target === e.target.getStage() || e.target.hasName('background')) {
                   setSelectedId(null);
                 }
+              }}
+              // A dragged card's layer goes on top while it's dragged, so a card dragged
+              // between the board and the card tray stays above both
+              onDragStart={(e) => {
+                const layer = e.target.getLayer();
+                if (!layer) return;
+                draggedLayer.current = { layer, zIndex: layer.zIndex() };
+                layer.moveToTop();
               }}
               onDragMove={moveOutline}
               // After the card's own dragend has put it back at its laid-out spot; React only
               // moves the outline when that spot changes
-              onDragEnd={moveOutline}
+              onDragEnd={(e) => {
+                moveOutline(e);
+                const dragged = draggedLayer.current;
+                dragged?.layer.zIndex(dragged.zIndex);
+                draggedLayer.current = null;
+              }}
             >
               <type.Canvas
                 graphic={graphic}
@@ -1251,6 +1430,7 @@ export default function Editor() {
                 onChange={(next) => setGraphic(() => next)}
                 onSelect={setSelectedId}
                 onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                onCardDrop={boardCardDrop}
                 onPickTarget={setTarget}
                 onEditSetting={(key) => {
                   setTab('customize');
@@ -1258,6 +1438,21 @@ export default function Editor() {
                 }}
                 tool={tool}
               />
+              {trayShown && (
+                <CardTray
+                  tray={graphic.tray}
+                  top={trayTop}
+                  scale={scale}
+                  border={graphic.border}
+                  fontFamily={fontFamily}
+                  onSelect={setSelectedId}
+                  onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                  onCardDrop={trayCardDrop}
+                  onPick={() => setTarget(boardTargets.length)}
+                  // Ignores presses while drawing (pen, eraser), as the board does
+                  listening={tool === DEFAULT_TOOL}
+                />
+              )}
               {/* Editor-only layer: hidden while exporting */}
               <Layer name="editor" listening={false}>
                 {placements
@@ -1289,7 +1484,10 @@ export default function Editor() {
                 style={{
                   minWidth: MENU_WIDTH,
                   left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
-                  top: shownMenu.y,
+                  // In the card tray, at the board's foot, it opens upward from the pointer
+                  ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
+                    ? { bottom: `calc(100% - ${shownMenu.y}px)` }
+                    : { top: shownMenu.y }),
                 }}
               >
                 {cardMenuItems(shownMenu).map((label) => (
