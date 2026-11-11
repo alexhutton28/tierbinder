@@ -17,3 +17,8 @@ npm run dev
 ```
 
 Project notes are in `CLAUDE.md`, and the design system is in `design/hutton-design-system.md`.
+
+## License
+
+© Alex Hutton. All rights reserved: the code is public to read, but not licensed for reuse.
+Third-party material keeps its own licenses (see `THIRD_PARTY_NOTICES.md`).
