@@ -215,7 +215,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Card tray
 
-- An optional box under the board, turned on in Customize (Card Tray: "Show card tray under the board", then "Tray color"), for holding cards that aren't ranked yet. As wide as the board and as tall as a tier, `space-4` (16px on screen) below it, with `radius-medium` corners, in its own color: by default the tier list's border shade (`#16303C`) or light gray (`#E8E8E8`) on the white blank canvas.
+- An optional box under the board, turned on in Customize (Card Tray: "Show card tray under the board", then "Tray color"), for holding cards that aren't ranked yet. As wide as the board and as tall as a tier, `space-4` (16px on screen) below it, with `radius-medium` corners, in its own color: by default a shade just darker than the tier list's background (`#1B3744`) or light gray (`#E8E8E8`) on the white blank canvas.
 - Up to 48 cards: full size in one row up to 10, then smaller to fit the row, then two even rows; it never grows taller.
 - It acts like a tier: "Card tray" is the last Add to choice, cards drag in, out and within it, and the card menu opens upward on it, since it's at the board's foot.
 - Only from `b8` up. Narrower, it isn't shown, but its cards are kept.

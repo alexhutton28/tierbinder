@@ -46,8 +46,9 @@ export const DEFAULT_TIERS: [string, string][] = [
   ['Fraud', '#3cc65a'],
 ];
 
-// The tray starts in the border's shade, a step darker than the background
 const DEFAULT_BORDER = '#16303c';
+// The tray starts just a little darker than the background (#1f3d4b)
+const DEFAULT_TRAY_COLOR = '#1b3744';
 
 export function defaultTierList(): TierList {
   return {
@@ -56,7 +57,7 @@ export function defaultTierList(): TierList {
     border: DEFAULT_BORDER,
     tierCardBorders: false,
     tiers: DEFAULT_TIERS.map(([name, color]) => ({ id: newId(), name, color, items: [] })),
-    tray: defaultTray(DEFAULT_BORDER),
+    tray: defaultTray(DEFAULT_TRAY_COLOR),
   };
 }
 
@@ -166,6 +167,6 @@ export function parseTierList(value: unknown): TierList | null {
     border: typeof list.border === 'string' ? list.border : DEFAULT_BORDER,
     tierCardBorders: list.tierCardBorders === true,
     tiers: list.tiers,
-    tray: parseTray(list.tray, DEFAULT_BORDER),
+    tray: parseTray(list.tray, DEFAULT_TRAY_COLOR),
   };
 }
