@@ -24,7 +24,8 @@ export default function Credits() {
   const boxRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const popupRef = React.useRef<HTMLDivElement>(null);
-  useAnchored(shown, buttonRef, popupRef);
+  // Lined up with the whole credits line, so it starts where the line's text does
+  useAnchored(shown, boxRef, popupRef);
 
   // Opening moves focus into the popup, so screen readers read it and Escape closes it
   React.useEffect(() => {
@@ -47,7 +48,16 @@ export default function Credits() {
   );
 
   return (
-    <div ref={boxRef} className={`${styles.credits} text-caption`}>
+    <div
+      ref={boxRef}
+      className={`${styles.credits} text-caption`}
+      // Closes when focus moves on past it, as a disclosure does
+      onBlur={(e) => {
+        if (!(e.relatedTarget instanceof Node && boxRef.current?.contains(e.relatedTarget))) {
+          setOpen(false);
+        }
+      }}
+    >
       Cards from{' '}
       <span className={styles.source}>
         {tcgdex}

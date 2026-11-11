@@ -306,7 +306,7 @@
   width: 100%;
   aspect-ratio: var(--card-ratio);
   border-radius: var(--tb-radius);
-  background: var(--color-petrel-850);
+  background: var(--tb-skeleton);
   object-fit: cover;
 }
 

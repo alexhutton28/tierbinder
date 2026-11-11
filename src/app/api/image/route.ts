@@ -4,7 +4,7 @@
 // be used as an open proxy.
 const ALLOWED_HOSTS = new Set([
   'assets.tcgdex.net',
-  // pokemon-tcg-data's images, for cards TCGdex has none for (fill-images.json)
+  // pokemon-tcg-data's images, for cards TCGdex has none for (extra-images.json)
   'images.scrydex.com',
   'images.pokemontcg.io',
 ]);

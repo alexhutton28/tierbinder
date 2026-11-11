@@ -11,7 +11,8 @@
 // Scrydex and pokemontcg.io), matched by set code, number and name. Every image is checked
 // to load. Codes with no cards to show are marked `empty` and left out of the set filter:
 // no card with an image anywhere, or a code the search can't take (EX5.5).
-// Run with `npm run tcgdex:sets` and commit both files.
+// It also lists the sets it leaves out (TCG Pocket's) in src/app/api/tcgdex-skipped.json.
+// Run with `npm run tcgdex:sets` and commit the three files.
 import { writeFile } from 'node:fs/promises';
 
 const API = 'https://api.tcgdex.net/v2/en';
@@ -100,11 +101,16 @@ const sets = {};
 // Images for cards the API gives none, by set id and card id; codes with a card that has
 // an image; and the cards still without one, by set
 const extra = {};
+// Sets left out (TCG Pocket's), so the API doesn't take them for sets newer than this file
+const skipped = [];
 const withImages = new Set();
 const stillMissing = [];
 let fromTcgdex = 0;
 for (const s of details) {
-  if (SKIP_SERIES.has(s.serie?.id)) continue;
+  if (SKIP_SERIES.has(s.serie?.id)) {
+    skipped.push(s.id);
+    continue;
+  }
   // Subsets (SIT:TG, CRZ:GG) share their main set's code, as on the cards
   const [code, part] = official(s).split(':');
   sets[s.id] = { code, name: s.name, date: s.releaseDate ?? '' };
@@ -171,6 +177,8 @@ const extraSorted = sortedKeys(
   Object.fromEntries(Object.entries(extra).map(([id, cards]) => [id, sortedKeys(cards)]))
 );
 await writeFile(extraOut, JSON.stringify(extraSorted, null, 2) + '\n');
+const skippedOut = new URL('../src/app/api/tcgdex-skipped.json', import.meta.url);
+await writeFile(skippedOut, JSON.stringify(skipped.sort(), null, 2) + '\n');
 const left = stillMissing.reduce((n, m) => n + m.missing.length, 0) - fromFill;
 console.log(
   `Wrote ${Object.keys(sorted).length} sets (${empty.size} codes empty), and images for ${fromTcgdex} cards from TCGdex's asset host and ${fromFill} from pokemon-tcg-data (${left} cards still without one).`

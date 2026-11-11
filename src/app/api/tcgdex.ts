@@ -6,6 +6,7 @@
 // asset host anyway, or pokemon-tcg-data's), or are left out.
 import EXTRA from './extra-images.json';
 import SETS from './tcgdex-sets.json';
+import SKIPPED from './tcgdex-skipped.json';
 
 export type CardResult = {
   set: string;
@@ -104,11 +105,16 @@ export async function lookupCard(code: string, number: string): Promise<CardResu
   let ids = Object.keys(known).filter((id) => known[id]?.code === upper && !MISNUMBERED.has(id));
   // A set newer than tcgdex-sets.json: look through the sets missing from it
   if (!ids.length) {
+    const skipped = new Set<string>(SKIPPED);
     const unknown = ((await get<{ id: string }[]>('/sets')) ?? [])
       .map((s) => s.id)
-      .filter((id) => !(id in known));
-    const infos = await Promise.all(unknown.map(setInfo));
-    ids = unknown.filter((_, i) => infos[i]?.code === upper);
+      .filter((id) => !(id in known) && !skipped.has(id));
+    // One set failing to load doesn't fail the lookup
+    const infos = await Promise.allSettled(unknown.map(setInfo));
+    ids = unknown.filter((_, i) => {
+      const info = infos[i];
+      return info.status === 'fulfilled' && info.value?.code === upper;
+    });
   }
   for (const id of ids) {
     const card = await get<BriefCard>(

@@ -94,7 +94,7 @@ const poolCard = (set: string, number: string, name: string, path: string): Card
   thumb: `https://assets.tcgdex.net/en/${path}/low.webp`,
 });
 
-// One TCGdex has no image for, from pokemon-tcg-data's image hosts (as fill-images.json
+// One TCGdex has no image for, from pokemon-tcg-data's image hosts (as extra-images.json
 // has it): Scrydex's by card id (me6-84), or pokemontcg.io's by path (sm35/53). Switch it
 // to poolCard once TCGdex has the image.
 const scrydexCard = (set: string, number: string, name: string, id: string): CardResult => ({
@@ -157,6 +157,13 @@ export default function Editor() {
   const [scale, setScale] = React.useState(1);
   const [fontFamily, setFontFamily] = React.useState('sans-serif');
   const [status, setStatus] = React.useState('');
+  // Featured pool cards whose thumbnail failed both ways, by set and number, and the cards
+  // each pool shows without them
+  const [failedPoolCards, setFailedPoolCards] = React.useState<Set<string>>(new Set());
+  const poolPreview = (pool: Pool) =>
+    pool.cards
+      .filter((card) => !failedPoolCards.has(`${card.set} ${card.number}`))
+      .slice(0, POOL_PREVIEW_CARDS);
   const [busy, setBusy] = React.useState(false);
   const [importText, setImportText] = React.useState('');
   const [importing, setImporting] = React.useState(false);
@@ -1062,7 +1069,7 @@ export default function Editor() {
                         } as React.CSSProperties
                       }
                     >
-                      {pool.cards.slice(0, POOL_PREVIEW_CARDS).map((card) => (
+                      {poolPreview(pool).map((card) => (
                         // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
                         <img
                           key={`${card.set}-${card.number}`}
@@ -1072,16 +1079,21 @@ export default function Editor() {
                           className={styles.poolCard}
                           loading="lazy"
                           draggable={false}
-                          // The CDN occasionally fails a load; retry once through the proxy
+                          // The CDN occasionally fails a load; retry once through the proxy, and
+                          // if that fails too, a placeholder takes its place
                           onError={(e) => {
                             const proxy = proxied(card.thumb);
                             if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                            else
+                              setFailedPoolCards((failed) =>
+                                new Set(failed).add(`${card.set} ${card.number}`)
+                              );
                           }}
                         />
                       ))}
                       {/* Card-shaped placeholders fill the rest of the row */}
                       {Array.from(
-                        { length: Math.max(0, POOL_PREVIEW_CARDS - pool.cards.length) },
+                        { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
                         (_, i) => (
                           <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
                         )

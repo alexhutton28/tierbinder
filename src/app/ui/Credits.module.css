@@ -43,22 +43,24 @@
   mask: url('/info.svg') center / contain no-repeat;
 }
 
-/* A touch target around the small icon on touch screens */
+/* A touch target around the small icon on touch screens, reaching up, down and right but
+   not left, so it doesn't cover the link before it */
 @media (pointer: coarse) {
   .info::before {
     position: absolute;
-    inset: calc((1em - var(--tb-touch-target)) / 2);
+    inset-block: calc((1em - var(--tb-touch-target)) / 2);
+    inset-inline: 0 calc(1em - var(--tb-touch-target));
     content: '';
   }
 }
 
-/* The full credits: caption text, as wide as the sidebar at its narrowest. Its link takes
-   .credits a, since the popup is inside it */
+/* The full credits: caption text, as wide as the credits line it opens from (useAnchored
+   gives it the line's width). Its link takes .credits a, since the popup is inside it */
 .popup {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  width: var(--tb-sidebar-min);
+  width: var(--anchor-width);
   padding: var(--spacing-3);
   color: var(--tb-muted);
 }
