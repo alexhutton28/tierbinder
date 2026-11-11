@@ -61,6 +61,24 @@
   }
 }
 
+/* Credits at the sidebar's foot: quiet caption text, with the source's name as a link */
+.credits {
+  padding: var(--spacing-3);
+  border-top: var(--tb-line-width) solid var(--tb-line);
+  color: var(--tb-muted);
+
+  & a {
+    color: var(--tb-text);
+    text-decoration: underline;
+    transition: color var(--duration-hover);
+  }
+
+  /* Plain :hover, so it brightens on every device, as text buttons do */
+  & a:hover {
+    color: var(--tb-heading);
+  }
+}
+
 /* The search field, with a search icon inside it that lights up with the field's focus
    edge (globals.css) */
 .search {

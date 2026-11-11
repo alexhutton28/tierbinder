@@ -1033,28 +1033,30 @@ export default function Editor() {
                         } as React.CSSProperties
                       }
                     >
-                      {pool.cards.length
-                        ? pool.cards.slice(0, POOL_PREVIEW_CARDS).map((card) => (
-                            // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
-                            <img
-                              key={`${card.set}-${card.number}`}
-                              src={card.thumb}
-                              alt={`${card.name} (${card.set} ${card.number})`}
-                              title={`${card.name} (${card.set} ${card.number})`}
-                              className={styles.poolCard}
-                              loading="lazy"
-                              draggable={false}
-                              // The CDN occasionally fails a load; retry once through the proxy
-                              onError={(e) => {
-                                const proxy = proxied(card.thumb);
-                                if (!e.currentTarget.src.endsWith(proxy))
-                                  e.currentTarget.src = proxy;
-                              }}
-                            />
-                          ))
-                        : Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
-                            <span key={i} className={styles.poolCard} aria-hidden />
-                          ))}
+                      {pool.cards.slice(0, POOL_PREVIEW_CARDS).map((card) => (
+                        // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                        <img
+                          key={`${card.set}-${card.number}`}
+                          src={card.thumb}
+                          alt={`${card.name} (${card.set} ${card.number})`}
+                          title={`${card.name} (${card.set} ${card.number})`}
+                          className={styles.poolCard}
+                          loading="lazy"
+                          draggable={false}
+                          // The CDN occasionally fails a load; retry once through the proxy
+                          onError={(e) => {
+                            const proxy = proxied(card.thumb);
+                            if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                          }}
+                        />
+                      ))}
+                      {/* Card-shaped placeholders fill the rest of the row */}
+                      {Array.from(
+                        { length: Math.max(0, POOL_PREVIEW_CARDS - pool.cards.length) },
+                        (_, i) => (
+                          <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
+                        )
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1165,6 +1167,16 @@ export default function Editor() {
               </Button>
             </div>
           </section>
+
+          {/* At the sidebar's foot under every tab, until the credits find a better home */}
+          <footer className={`${styles.credits} text-caption`}>
+            Card data and images from{' '}
+            <a href="https://tcgdex.dev" target="_blank" rel="noopener noreferrer">
+              TCGdex<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+            . Pokémon is a trademark of Nintendo, Creatures, GAME FREAK and The Pokémon Company;
+            TierBinder isn&apos;t affiliated with them.
+          </footer>
         </aside>
       </div>
 
