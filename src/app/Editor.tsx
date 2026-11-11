@@ -60,6 +60,9 @@ import { FOLD_CLEARANCE } from './ui/motion';
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+// How long a toast (a tier or the card tray being full) stays before it fades
+const TOAST_DURATION = 3000;
+
 // sessionStorage: the card tray's hint has done its job (a card has been in a tray)
 const TRAY_HINT_KEY = 'tierbinder-tray-hint-seen';
 
@@ -211,6 +214,39 @@ export default function Editor() {
   // card tray's hint)
   const [interfaceFont, setInterfaceFont] = React.useState('sans-serif');
   const [status, setStatus] = React.useState('');
+  // A short message at the top of the window (a tier or the card tray is full) that fades
+  // after TOAST_DURATION. Only one shows: another message replaces it, and the same one
+  // again keeps it up longer without replaying its entrance, so repeated clicks can't
+  // pile them up. `id` changes with the message (replaying the entrance), `n` with every
+  // showing (restarting the timer); `closing` while it fades, like the card menu.
+  const [toast, setToast] = React.useState<{
+    message: string;
+    id: number;
+    n: number;
+    closing: boolean;
+  } | null>(null);
+  const showToast = (message: string) =>
+    setToast((t) => ({
+      message,
+      id: t && t.message === message && !t.closing ? t.id : (t?.id ?? 0) + 1,
+      n: (t?.n ?? 0) + 1,
+      closing: false,
+    }));
+  React.useEffect(() => {
+    if (!toast || toast.closing) return;
+    const timer = setTimeout(
+      () => setToast((t) => (t ? { ...t, closing: true } : t)),
+      TOAST_DURATION
+    );
+    return () => clearTimeout(timer);
+    // Restarts with each showing (`n`), not on closing
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toast?.n]);
+  React.useEffect(() => {
+    if (!toast?.closing) return;
+    const timer = setTimeout(() => setToast(null), FOLD_CLEARANCE);
+    return () => clearTimeout(timer);
+  }, [toast?.closing]);
   // Featured pool cards whose thumbnail failed both ways, by set and number, and the cards
   // each pool shows without them
   const [failedPoolCards, setFailedPoolCards] = React.useState<Set<string>>(new Set());
@@ -596,7 +632,7 @@ export default function Editor() {
   // Applies a placed card, or shows why it couldn't be placed
   const applyPlaced = (placed: Placed<Graphic>) => {
     if ('error' in placed) {
-      setStatus(placed.error);
+      showToast(placed.error);
       return;
     }
     setGraphic(() => placed);
@@ -1128,6 +1164,16 @@ export default function Editor() {
             />
           </span>
         </button>
+      )}
+      {toast && (
+        <div
+          // A new element for each new message, so it plays its entrance
+          key={toast.id}
+          role="status"
+          className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
+        >
+          {toast.message}
+        </div>
       )}
       {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
       {sidebarCollapsed && (

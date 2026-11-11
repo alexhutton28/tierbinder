@@ -121,6 +121,49 @@
   opacity: 0;
 }
 
+/* A toast: one short message at the top of the window, centered, above everything (a tier
+   or the card tray is full). It drops in on the spring over duration-drop and folds away
+   (fades up) over duration-fold, like the popups; reduced motion: it fades. */
+.toast {
+  position: fixed;
+  top: calc(var(--spacing-4) + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 40;
+  max-width: calc(100vw - 2 * var(--spacing-4));
+  padding: var(--spacing-3) var(--spacing-4);
+  translate: -50% 0;
+  color: var(--tb-text);
+  font-weight: 500;
+  pointer-events: none;
+  animation:
+    toast-in var(--duration-drop) var(--ease-spring),
+    view-fade var(--duration-fade) ease-out;
+}
+
+.toastClosing {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--spacing-3)));
+  transition:
+    opacity var(--duration-fold) var(--ease-fold),
+    transform var(--duration-fold) var(--ease-fold);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(calc(-1 * var(--spacing-3)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: view-fade var(--duration-fade) ease-out;
+  }
+
+  .toastClosing {
+    transform: none;
+  }
+}
+
 /* The sidebar's foot: the credits, then the sidebar toggle at the other end */
 .foot {
   display: flex;

@@ -215,6 +215,10 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 - Results are thumbnails 4px apart, filling their columns, with a shade fading in over their top once scrolled. While a search runs they're card-shaped placeholders in Petrel 850 with a lighter shimmer, and each thumbnail shimmers until it loads. A search that finds nothing says so under the search ("No cards found", what for and in which sets, and Search all sets while sets are ticked). A failed search says why in the same place.
 - A search with results (or none), or sets ticked, shows only Add a Card, with the results filling the sidebar. The pools and Advanced come back when the search field is emptied, the board is cleared or the page reloads.
 
+### Toast
+
+- One short message at the top of the window, centered, 16px down: when a tier or the card tray is full. A popup box (`tierbinder-popup`) with 8px by 16px padding and 500-weight text. It drops in on the spring over `duration-drop`, stays 3 seconds, then folds up and fades over `duration-fold`; reduced motion: it fades. Only one shows: a new message replaces it, and the same message again keeps it up without replaying its entrance. It's read out politely (`role="status"`).
+
 ### Card tray
 
 - An optional box under the board, turned on in Customize (Card Tray: "Show card tray under the board", then "Tray color"), for holding cards that aren't ranked yet. As wide as the board and as tall as its cards with 15px padding around them (a full-size row makes it about a tier tall), `space-4` (16px on screen) between the board and it, with `radius-medium` corners, in its own color: by default Petrel 850 on the tier list, a step darker than its Storm 800 board, or Petrel 100 on the white blank canvas. Empty, it says "Drag cards here to hold them" in its middle, after Feather's `info` icon at the text's size and 4px before it: 14px Figtree, faint (45% white, or Petrel 950 on a light tray), on screen only, never in the export, and not read out. Once a card has been in a tray, the hint stays hidden for the rest of the tab's session.
