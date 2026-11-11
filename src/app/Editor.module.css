@@ -149,6 +149,12 @@
   animation: view-fade var(--duration-fade) ease-out;
 }
 
+/* Focused when View closes, to hand focus back to the board and its selected card; the
+   selection outline already shows where it is */
+.boardBox:focus-visible {
+  outline: none;
+}
+
 /* Focused for screen readers when it opens; the dimmed page already shows it's open */
 .viewer:focus {
   outline: none;

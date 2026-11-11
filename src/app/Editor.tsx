@@ -385,17 +385,14 @@ export default function Editor() {
     const timer = setTimeout(() => setShownView(null), 220);
     return () => clearTimeout(timer);
   }, [viewClosing]);
-  // Opening moves focus to the view, so it's announced; closing puts focus back where it
-  // was, if that's still on the page
+  // Opening moves focus to the view, so it's announced; closing puts focus back on the
+  // board, where the viewed card stays selected (the menu it was opened from has closed)
   const viewerRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!viewing) return;
-    const before = document.activeElement;
+    const board = boardBoxRef.current;
     viewerRef.current?.focus({ preventScroll: true });
-    return () => {
-      if (before instanceof HTMLElement && before.isConnected)
-        before.focus({ preventScroll: true });
-    };
+    return () => board?.focus({ preventScroll: true });
   }, [viewing]);
   React.useEffect(() => {
     if (!viewing) return;
@@ -1274,7 +1271,7 @@ export default function Editor() {
         inert={viewing !== null}
       >
         <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
-          <div ref={boardBoxRef} className="w-full relative">
+          <div ref={boardBoxRef} tabIndex={-1} className={`${styles.boardBox} w-full relative`}>
             <Stage
               ref={(stage) => {
                 stageRef.current = stage;
