@@ -4,9 +4,8 @@
 // be used as an open proxy.
 const ALLOWED_HOSTS = new Set([
   'assets.tcgdex.net',
-  // Boards saved before the move to TCGdex hold Limitless image URLs
-  'limitlesstcg.nyc3.cdn.digitaloceanspaces.com',
-  'r2.limitlesstcg.net',
+  // pokemon-tcg-data's images, for cards TCGdex has none for (extra-images.json)
+  'images.scrydex.com',
   'images.pokemontcg.io',
 ]);
 

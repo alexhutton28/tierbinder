@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.5 · November 10, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.6 · November 10, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -41,8 +41,8 @@ Petrel and storm are for the interface, and the tier colors are the brand's colo
 
 | Name        | Hex       | Semantic roles | Used for                                                                                                   |
 | ----------- | --------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
-| Petrel 50   | `#F2F5F6` |                | Section headings                                                                                           |
-| Petrel 100  | `#E3E8EB` |                | Text, selected tool                                                                                        |
+| Petrel 50   | `#F2F5F6` |                | Section headings, the credits link and icon on hover                                                       |
+| Petrel 100  | `#E3E8EB` |                | Text, selected tool, links                                                                                 |
 | Petrel 200  | `#CCD4D8` |                | Not used yet                                                                                               |
 | Petrel 300  | `#B3BEC4` |                | Not used yet                                                                                               |
 | Petrel 400  | `#94A2AA` |                | Muted text                                                                                                 |
@@ -74,7 +74,7 @@ Fonts are loaded with `next/font` in `src/app/layout.tsx`. The controls use Figt
 | -------------- | ---- | ------ | ----------------------------------------------------------------------------------------------------------- |
 | `text-field`   | 16px | 400    | Fields on phones                                                                                            |
 | `text-body`    | 14px | 400    | Page text, and fields from `b7` up. Buttons at 500, main nav at 400 (600 selected), section headings at 600 |
-| `text-caption` | 12px | 400    | Set codes and notes in the Sets popup, on a 16px line                                                       |
+| `text-caption` | 12px | 400    | Set codes and notes in the Sets popup, pool names, credits; on a 16px line                                  |
 
 - Sizes are in `rem`, in the `@theme` block at the top of `globals.css`, because the token generator has no type scale yet. Tailwind utilities are `text-body` and so on.
 - Text uses the font's normal line height (about 1.2 for Figtree), not Tailwind's 1.5, so a line takes about the room its letters do and spacing measures what it looks like. `text-caption` keeps its set 16px line.
@@ -209,9 +209,13 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 - Under the search field (Feather `search` at its start, and `x-circle` at its end to clear it while it has text), one row: the Sets button (Feather `filter`, then "Sets", the ticked set's code, or the first one's and how many more, as in "TWM +2"), the Add to picker (the tier's color as a rounded swatch the size of Feather's square icon, and its name, no chevron), and at the right, while there's a search, the sort button (Feather `arrow-down`, turning to point up when reversed). Sets opens a popup like a dropdown, floating over the board: a "Search sets" field over a scrolling list of every set to tick (up to 40), the ticked boxes filled in their tier's colors in the order they were ticked, and Clear sets while any is ticked. Changes rerun the current search once they settle. On phones (touch, under `b7`) its rows are 44px tall (`--tb-touch-target`), as are text buttons on touch screens.
 - Three sections, 16px apart, each a heading with its contents 8px under it: Add a Card (the search), Featured Card Pools and Advanced. Advanced holds Bulk import: a text button (its words and a `chevron-right` 4px after them, brightening on hover) that slides the import open below it, the chevron turning down.
-- A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. A pool with no cards yet shows card-shaped placeholders in Petrel 850. In order: Best Decks of All Time previews SLG 53, SVI 86, CEC 156, FST 114, SIT 139 and TWM 130. Delta Reign previews DLR 84, 88, 11, 69, 47 and 33. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. They don't open yet.
+- A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. Each card shimmers until its image loads, as search results do. Card-shaped placeholders in Petrel 850 fill a pool's row past its cards, and take the place of a card whose image doesn't load. In order: Best Decks of All Time previews SLG 53, SVI 86, CEC 156, FST 114, SIT 139 and TWM 130. Delta Reign previews DLR 84, 88, 11, 69, 47 and 33. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. They don't open yet.
 - Results are thumbnails 4px apart, filling their columns, with a shade fading in over their top once scrolled. While a search runs they're card-shaped placeholders in Petrel 850 with a lighter shimmer, and each thumbnail shimmers until it loads. A search that finds nothing says so under the search ("No cards found", what for and in which sets, and Search all sets while sets are ticked). A failed search says why in the same place.
 - A search with results (or none), or sets ticked, shows only Add a Card, with the results filling the sidebar. The pools and Advanced come back when the search field is emptied, the board is cleared or the page reloads.
+
+### Credits
+
+- At the foot of the sidebar under every tab, with no dividing line: one line of 12px muted text, 8px padding, "Cards from TCGdex". TCGdex links to tcgdex.dev in a new tab (the text color, underlined). 4px after it, Feather's `info` icon at the text's size, in the text color, opens a popup like the dropdowns (lined up with the credits line and as wide as it, above it when there's no room below) with the full credits and "Pokémon is a trademark of Nintendo, Creatures, GAME FREAK and The Pokémon Company. TierBinder isn't affiliated with them." The link and icon brighten to Petrel 50 on hover over `duration-hover`, and the icon stays bright while its popup is open; on touch screens it has a 44px-tall touch target reaching right, not over the link. The popup closes when focus moves on past it. A stand-in until the credits get a better home.
 
 ### Scrollbars
 
@@ -258,6 +262,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 10, 2026 · v1.6:** Credits at the foot of the sidebar: one line with an info button that opens the full credits. Placeholders fill a featured pool's row past its cards, and its cards shimmer while they load.
 - **November 10, 2026 · v1.5:** Card search gained the Sets filter and sort row, a clear button in the search field, no-results and error messages under the search, skeleton placeholders with a shimmer, and results that fill their columns 4px apart with no captions. Bulk import became a text button that slides open. The card menu and dropdown lists hold inset rounded rows, and View shows a card large over a dimmed page. Popups float over the board. Scrollbars are thin. New roles: `--tb-option-hover` (Petrel 700), `--tb-popup-shadow` and `--tb-scroll-shade` (Petrel 950), `--tb-scroll-thumb` (Petrel 700, 600 on hover), `--tb-skeleton` (Petrel 850) and `--tb-skeleton-shine` (Petrel 800), `--tb-view-backdrop` (Petrel 950), `--tb-touch-target` (44px), `--tb-view-height` and `--tb-shimmer`.
 - **November 9, 2026 · v1.4:** The top bar became the sidebar's header: from `b8` up it sits above the main nav, as wide as the sidebar including its edge line, and the board's workspace runs the full height of the window. Removed the lines under the top bar and under the main nav, and the main nav has 8px above it, below it and at its sides, with the tab's content lined up with it. Text fields have a Petrel 700 border at rest, like buttons. Section headings went from 12px muted to 14px Petrel 50. Add Cards gained sections: Add a Card, Featured Card Pools (placeholders for now) and Advanced. Text went back to the font's normal line height from Tailwind's 1.5, and the main nav's block gained 4px top and bottom. The sidebar's default width became the nav's width with 8px each side, measured, instead of 368px chosen by eye. Text fields show focus with a Storm 600 edge instead of the focus ring, and the search field gained a search icon that lights up with it.
 - **November 7, 2026 · v1.3:** The main layout change moved from `b7` to `b8`: below 896px the sidebar sits under the board. Breakpoints in CSS use `@variant` instead of raw widths. Added Consult best practices to the principles. The main nav hugs its tabs, in regular weight (400), with the selected tab semibold (600). The sidebar became resizable by dragging its edge or with the arrow keys, between 250px and the window less a 512px workspace, and the main nav names only the selected tab when it doesn't fit, in place of growing with the window. Added No magic numbers: layouts are responsive and sized by the layout, each fixed size is named once, sizes Alex chose by eye are allowed and listed in Exceptions, and real layout choices go to Alex. Component sizes are no longer raw values written in place ([#10](https://github.com/alexhutton28/tierbinder/issues/10)).

@@ -2,14 +2,12 @@
   "2011bw": {
     "code": "MCD11",
     "name": "McDonald's Collection 2011",
-    "date": "2011-06-17",
-    "empty": true
+    "date": "2011-06-17"
   },
   "2012bw": {
     "code": "MCD12",
     "name": "McDonald's Collection 2012",
-    "date": "2012-06-15",
-    "empty": true
+    "date": "2012-06-15"
   },
   "2014xy": {
     "code": "MCD14",
@@ -26,8 +24,7 @@
   "2016xy": {
     "code": "MCD16",
     "name": "McDonald's Collection 2016",
-    "date": "2016-08-20",
-    "empty": true
+    "date": "2016-08-20"
   },
   "2017sm": {
     "code": "MCD17",
@@ -44,20 +41,17 @@
   "2019sm": {
     "code": "MCD19",
     "name": "McDonald's Collection 2019",
-    "date": "2019-10-15",
-    "empty": true
+    "date": "2019-10-15"
   },
   "2021swsh": {
     "code": "MCD21",
     "name": "McDonald's Collection 2021",
-    "date": "2021-02-09",
-    "empty": true
+    "date": "2021-02-09"
   },
   "2022swsh": {
     "code": "MCD22",
     "name": "McDonald's Collection 2022",
-    "date": "2022-08-03",
-    "empty": true
+    "date": "2022-08-03"
   },
   "2023sv": {
     "code": "MCD23",
@@ -448,7 +442,8 @@
   "mee": {
     "code": "MEE",
     "name": "Mega Evolution Energy",
-    "date": "2025-09-25"
+    "date": "2025-09-25",
+    "empty": true
   },
   "mep": {
     "code": "MEP",

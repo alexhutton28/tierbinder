@@ -37,6 +37,7 @@ import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
+import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
@@ -72,7 +73,6 @@ type Tab = (typeof TABS)[number]['value'];
 
 // Card pools shown in Add Cards before a search: each previews up to POOL_PREVIEW_CARDS
 // cards in a row, or card-shaped placeholders while it has none. They don't open yet.
-// Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
 type Pool = { name: string; cards: CardResult[] };
 // How long the search options must stay unchanged before they rerun the search
 const SEARCH_DELAY = 300;
@@ -85,146 +85,65 @@ const SKELETON_TILES = 18;
 const RESULTS_PAGE = 120;
 const RESULTS_LOOKAHEAD = 400;
 
+// A pool's card, from its TCGdex image path (series/set id/number as TCGdex pads it)
+const poolCard = (set: string, number: string, name: string, path: string): CardResult => ({
+  set,
+  number,
+  name,
+  image: `https://assets.tcgdex.net/en/${path}/high.webp`,
+  thumb: `https://assets.tcgdex.net/en/${path}/low.webp`,
+});
+
+// One TCGdex has no image for, from pokemon-tcg-data's image hosts (as extra-images.json
+// has it): Scrydex's by card id (me6-84), or pokemontcg.io's by path (sm35/53). Switch it
+// to poolCard once TCGdex has the image.
+const scrydexCard = (set: string, number: string, name: string, id: string): CardResult => ({
+  set,
+  number,
+  name,
+  image: `https://images.scrydex.com/pokemon/${id}/large`,
+  thumb: `https://images.scrydex.com/pokemon/${id}/small`,
+});
+const pokemontcgCard = (set: string, number: string, name: string, path: string): CardResult => ({
+  set,
+  number,
+  name,
+  image: `https://images.pokemontcg.io/${path}_hires.png`,
+  thumb: `https://images.pokemontcg.io/${path}.png`,
+});
+
 const FEATURED_POOLS: Pool[] = [
   {
     name: 'Best Decks of All Time',
     cards: [
-      {
-        set: 'SLG',
-        number: '53',
-        name: 'Zoroark-GX',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SLG/SLG_053_R_EN_SM.png',
-      },
-      {
-        set: 'SVI',
-        number: '86',
-        name: 'Gardevoir ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVI/SVI_086_R_EN_SM.png',
-      },
-      {
-        set: 'CEC',
-        number: '156',
-        name: 'Arceus & Dialga & Palkia-GX',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CEC/CEC_156_R_EN_SM.png',
-      },
-      {
-        set: 'FST',
-        number: '114',
-        name: 'Mew VMAX',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/FST/FST_114_R_EN_SM.png',
-      },
-      {
-        set: 'SIT',
-        number: '139',
-        name: 'Lugia VSTAR',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SIT/SIT_139_R_EN_SM.png',
-      },
-      {
-        set: 'TWM',
-        number: '130',
-        name: 'Dragapult ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_130_R_EN_SM.png',
-      },
+      pokemontcgCard('SLG', '53', 'Zoroark-GX', 'sm35/53'),
+      poolCard('SVI', '86', 'Gardevoir ex', 'sv/sv01/086'),
+      poolCard('CEC', '156', 'Arceus & Dialga & Palkia-GX', 'sm/sm12/156'),
+      poolCard('FST', '114', 'Mew VMAX', 'swsh/swsh8/114'),
+      poolCard('SIT', '139', 'Lugia VSTAR', 'swsh/swsh12/139'),
+      poolCard('TWM', '130', 'Dragapult ex', 'sv/sv06/130'),
     ],
   },
   {
     name: 'Delta Reign',
     cards: [
-      {
-        set: 'DLR',
-        number: '84',
-        name: 'Mega Rayquaza ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_084_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_084_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '88',
-        name: 'Talonflame ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_088_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_088_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '11',
-        name: 'Mega Golisopod ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_011_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '69',
-        name: 'Mega Malamar ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_069_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_069_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '47',
-        name: 'Mega Golurk ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_047_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_047_R_EN_SM.png',
-      },
-      {
-        set: 'DLR',
-        number: '33',
-        name: 'Raikou ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/DLR/DLR_033_R_EN_SM.png',
-      },
+      scrydexCard('DLR', '84', 'Mega Rayquaza ex', 'me6-84'),
+      scrydexCard('DLR', '88', 'Talonflame ex', 'me6-88'),
+      scrydexCard('DLR', '11', 'Mega Golisopod ex', 'me6-11'),
+      scrydexCard('DLR', '69', 'Mega Malamar ex', 'me6-69'),
+      scrydexCard('DLR', '47', 'Mega Golurk ex', 'me6-47'),
+      scrydexCard('DLR', '33', 'Raikou ex', 'me6-33'),
     ],
   },
   {
     name: 'Mega Evolution Cards',
     cards: [
-      {
-        set: 'MEG',
-        number: '104',
-        name: 'Mega Kangaskhan ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_104_R_EN_SM.png',
-      },
-      {
-        set: 'PFL',
-        number: '13',
-        name: 'Mega Charizard X ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PFL/PFL_013_R_EN_SM.png',
-      },
-      {
-        set: 'MEG',
-        number: '77',
-        name: 'Mega Lucario ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_077_R_EN_SM.png',
-      },
-      {
-        set: 'MEG',
-        number: '86',
-        name: 'Mega Absol ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEG/MEG_086_R_EN_SM.png',
-      },
-      {
-        set: 'PBL',
-        number: '65',
-        name: 'Mega Excadrill ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/PBL/PBL_065_R_EN_SM.png',
-      },
-      {
-        set: 'CRI',
-        number: '22',
-        name: 'Mega Greninja ex',
-        image: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_LG.png',
-        thumb: 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/CRI/CRI_022_R_EN_SM.png',
-      },
+      poolCard('MEG', '104', 'Mega Kangaskhan ex', 'me/me01/104'),
+      poolCard('PFL', '13', 'Mega Charizard X ex', 'me/me02/013'),
+      poolCard('MEG', '77', 'Mega Lucario ex', 'me/me01/077'),
+      poolCard('MEG', '86', 'Mega Absol ex', 'me/me01/086'),
+      poolCard('PBL', '65', 'Mega Excadrill ex', 'me/me05/065'),
+      poolCard('CRI', '22', 'Mega Greninja ex', 'me/me04/022'),
     ],
   },
 ];
@@ -238,6 +157,13 @@ export default function Editor() {
   const [scale, setScale] = React.useState(1);
   const [fontFamily, setFontFamily] = React.useState('sans-serif');
   const [status, setStatus] = React.useState('');
+  // Featured pool cards whose thumbnail failed both ways, by set and number, and the cards
+  // each pool shows without them
+  const [failedPoolCards, setFailedPoolCards] = React.useState<Set<string>>(new Set());
+  const poolPreview = (pool: Pool) =>
+    pool.cards
+      .filter((card) => !failedPoolCards.has(`${card.set} ${card.number}`))
+      .slice(0, POOL_PREVIEW_CARDS);
   const [busy, setBusy] = React.useState(false);
   const [importText, setImportText] = React.useState('');
   const [importing, setImporting] = React.useState(false);
@@ -1143,28 +1069,39 @@ export default function Editor() {
                         } as React.CSSProperties
                       }
                     >
-                      {pool.cards.length
-                        ? pool.cards.slice(0, POOL_PREVIEW_CARDS).map((card) => (
-                            // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
-                            <img
-                              key={`${card.set}-${card.number}`}
-                              src={card.thumb}
-                              alt={`${card.name} (${card.set} ${card.number})`}
-                              title={`${card.name} (${card.set} ${card.number})`}
-                              className={styles.poolCard}
-                              loading="lazy"
-                              draggable={false}
-                              // The CDN occasionally fails a load; retry once through the proxy
-                              onError={(e) => {
-                                const proxy = proxied(card.thumb);
-                                if (!e.currentTarget.src.endsWith(proxy))
-                                  e.currentTarget.src = proxy;
-                              }}
-                            />
-                          ))
-                        : Array.from({ length: POOL_PREVIEW_CARDS }, (_, i) => (
-                            <span key={i} className={styles.poolCard} aria-hidden />
-                          ))}
+                      {poolPreview(pool).map((card) => (
+                        // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                        <img
+                          key={`${card.set}-${card.number}`}
+                          src={card.thumb}
+                          alt={`${card.name} (${card.set} ${card.number})`}
+                          title={`${card.name} (${card.set} ${card.number})`}
+                          className={styles.poolCard}
+                          // Shimmers until it's loaded, as search results do
+                          onLoad={(e) => {
+                            e.currentTarget.dataset.loaded = '';
+                          }}
+                          loading="lazy"
+                          draggable={false}
+                          // The CDN occasionally fails a load; retry once through the proxy, and
+                          // if that fails too, a placeholder takes its place
+                          onError={(e) => {
+                            const proxy = proxied(card.thumb);
+                            if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                            else
+                              setFailedPoolCards((failed) =>
+                                new Set(failed).add(`${card.set} ${card.number}`)
+                              );
+                          }}
+                        />
+                      ))}
+                      {/* Card-shaped placeholders fill the rest of the row */}
+                      {Array.from(
+                        { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
+                        (_, i) => (
+                          <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
+                        )
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1275,6 +1212,11 @@ export default function Editor() {
               </Button>
             </div>
           </section>
+
+          {/* At the sidebar's foot under every tab, until the credits find a better home */}
+          <footer>
+            <Credits />
+          </footer>
         </aside>
       </div>
 
