@@ -60,6 +60,8 @@ import { FOLD_CLEARANCE } from './ui/motion';
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+// sessionStorage: the card tray's hint has done its job (a card has been in a tray)
+const TRAY_HINT_KEY = 'tierbinder-tray-hint-seen';
 
 // The selection outline, drawn just outside the card (canvas values; see Exceptions in
 // design/hutton-design-system.md)
@@ -448,6 +450,22 @@ export default function Editor() {
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
+  // The empty tray's hint shows until a card has been in a tray, then not again for the
+  // tab's session (sessionStorage, so a reload keeps it hidden)
+  const [trayHintSeen, setTrayHintSeen] = React.useState(() => {
+    try {
+      return sessionStorage.getItem(TRAY_HINT_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  if (!trayHintSeen && graphic.tray.items.length > 0) setTrayHintSeen(true);
+  React.useEffect(() => {
+    if (!trayHintSeen) return;
+    try {
+      sessionStorage.setItem(TRAY_HINT_KEY, '1');
+    } catch {}
+  }, [trayHintSeen]);
   const exportTray = trayShown && includeTray;
   // The tray's height follows its cards
   const shownTrayHeight = trayShown ? trayHeight(graphic.tray.items.length) : 0;
@@ -1671,6 +1689,7 @@ export default function Editor() {
                   onPick={() => setTarget(boardTargets.length)}
                   boardCardWidth={boardCardWidth}
                   hintFont={interfaceFont}
+                  showHint={!trayHintSeen}
                   // Ignores presses while drawing (pen, eraser), as the board does
                   listening={tool === DEFAULT_TOOL}
                 />

@@ -85,6 +85,7 @@ export default function CardTray({
   listening,
   boardCardWidth,
   hintFont,
+  showHint,
 }: {
   tray: Tray;
   // Its top edge, in design pixels
@@ -106,6 +107,8 @@ export default function CardTray({
   boardCardWidth: number;
   // The interface's font (Figtree), for the empty tray's hint
   hintFont: string;
+  // Whether an empty tray shows its hint (only until a card has been in one this session)
+  showHint: boolean;
 }) {
   const height = trayHeight(tray.items.length);
   return (
@@ -123,7 +126,7 @@ export default function CardTray({
           }}
           onTap={onPick}
         />
-        {tray.items.length === 0 && (
+        {showHint && tray.items.length === 0 && (
           // What it's for, quietly, while it's empty
           <TrayHint
             width={BOARD_WIDTH}
