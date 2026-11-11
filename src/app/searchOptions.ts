@@ -23,8 +23,8 @@ export function sortDirection(options: SearchOptions) {
 // How many filters are on (the sort direction isn't a filter)
 export const activeFilters = (options: SearchOptions) => options.sets.length;
 
-// The most sets one search can take: each set listed is a request or two to TCGdex and
-// Limitless. The set filter stops ticking at this many.
+// The most sets one search can take: each set listed is a request or two to TCGdex. The
+// set filter stops ticking at this many.
 export const MAX_SETS = 40;
 
 const SET_CODE = /^[A-Z0-9-]{2,8}$/;

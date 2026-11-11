@@ -1,7 +1,8 @@
 // Card lookups for TierBinder, from the TCGdex API (tcgdex.dev: free, no key, open
-// source). Cards are saved and imported by their official set code and number (TWM 130),
-// as printed on the card, so this maps those to TCGdex's own set ids (sv06) through
-// tcgdex-sets.json, and looks up any set released since that file was made.
+// source), its only card source. Cards are saved and imported by their official set code
+// and number (TWM 130), as printed on the card, so this maps those to TCGdex's own set
+// ids (sv06) through tcgdex-sets.json, and looks up any set released since that file was
+// made. Cards TCGdex has no image for are left out.
 import SETS from './tcgdex-sets.json';
 
 export type CardResult = {
@@ -12,11 +13,13 @@ export type CardResult = {
   name: string;
 };
 
-type SetInfo = { code: string; date: string };
+// `unlisted`: cards the API gives no image, but whose image is on TCGdex's asset host
+// anyway (some promos), found by `npm run tcgdex:sets`
+type SetInfo = { code: string; date: string; unlisted?: { serie: string; ids: string[] } };
 type BriefCard = { id: string; localId: string; name: string; image?: string };
-type FullCard = BriefCard & { set: { id: string } };
 
 const API = 'https://api.tcgdex.net/v2/en';
+const ASSETS = 'https://assets.tcgdex.net/en';
 // TCG Pocket is a separate game with its own cards
 const SKIP_SERIES = new Set(['tcgp']);
 // Card data changes rarely; new sets show up within a day
@@ -68,10 +71,10 @@ function setInfo(id: string): Promise<SetInfo | null> {
   return info;
 }
 
-// Sets whose TCGdex listing doesn't match the cards, so their cards come from Limitless
-// instead: 30th Classic Collection is numbered 1-30 in another order (its 001 is
-// Charizard, the card is CC2), clashing with the main set's numbers, and has no images.
-const ELSEWHERE = new Set(['30th-c']);
+// Sets whose TCGdex listing doesn't match the cards, so they're left out: 30th Classic
+// Collection is numbered 1-30 in another order (its 001 is Charizard, the card is CC2),
+// clashing with the main set's numbers
+const MISNUMBERED = new Set(['30th-c']);
 
 const setOf = (card: BriefCard) => card.id.slice(0, card.id.lastIndexOf('-'));
 
@@ -79,107 +82,89 @@ const setOf = (card: BriefCard) => card.id.slice(0, card.id.lastIndexOf('-'));
 const printed = (card: BriefCard) =>
   /^\d+$/.test(card.localId) ? String(Number(card.localId)) : card.localId;
 
-// Each code's release date (its first set's), for cards from Limitless
-const CODE_DATES = new Map<string, string>();
-for (const set of Object.values(known)) {
-  if (set && !CODE_DATES.has(set.code)) CODE_DATES.set(set.code, set.date);
+// The card's image without its quality and format: the API's, or one only on the asset
+// host
+function imageOf(card: BriefCard, setId: string, set: SetInfo) {
+  if (card.image) return card.image;
+  const unlisted = set.unlisted;
+  return unlisted?.ids.includes(card.localId)
+    ? `${ASSETS}/${unlisted.serie}/${setId}/${card.localId}`
+    : null;
 }
-// After any real date: a code missing from tcgdex-sets.json is a set newer than it
-const NEWER_THAN_KNOWN = '9999';
-
-export const codeDate = (code: string) => CODE_DATES.get(code) ?? NEWER_THAN_KNOWN;
 
 // TCGdex images take a quality and format; high is 600×825, low 245×337
-function toResult(card: BriefCard, set: SetInfo): CardResult | null {
-  if (!card.image) return null;
+function toResult(card: BriefCard, setId: string, set: SetInfo): Found | null {
+  const image = !MISNUMBERED.has(setId) && imageOf(card, setId, set);
+  if (!image) return null;
   return {
     set: set.code,
     number: printed(card),
-    image: `${card.image}/high.webp`,
-    thumb: `${card.image}/low.webp`,
+    image: `${image}/high.webp`,
+    thumb: `${image}/low.webp`,
     name: card.name,
+    date: set.date,
   };
 }
 
 export async function lookupCard(code: string, number: string): Promise<CardResult | null> {
   const upper = code.toUpperCase();
   // A code can cover more than one TCGdex set (a set and its subsets)
-  const ids = Object.keys(known).filter((id) => known[id]?.code === upper && !ELSEWHERE.has(id));
+  let ids = Object.keys(known).filter((id) => known[id]?.code === upper && !MISNUMBERED.has(id));
+  // A set newer than tcgdex-sets.json: look through the sets missing from it
+  if (!ids.length) {
+    const unknown = ((await get<{ id: string }[]>('/sets')) ?? [])
+      .map((s) => s.id)
+      .filter((id) => !(id in known));
+    const infos = await Promise.all(unknown.map(setInfo));
+    ids = unknown.filter((_, i) => infos[i]?.code === upper);
+  }
   for (const id of ids) {
-    const card = await get<FullCard>(
+    const card = await get<BriefCard>(
       `/sets/${encodeURIComponent(id)}/${encodeURIComponent(number)}`
     );
-    const result = card && toResult(card, known[id]!);
-    if (result) return result;
+    const set = known[id] ?? (await setInfo(id));
+    const result = card && set && toResult(card, id, set);
+    if (result) {
+      const { set, image, thumb, name } = result;
+      return { set, number: result.number, image, thumb, name };
+    }
   }
   return null;
 }
 
-// A search's cards, each with its set's release date. For the fallback, `missing` holds
-// the cards TCGdex has no image for, by `cardKey`, and `elsewhere` the codes with cards
-// in an ELSEWHERE set, which all come from Limitless.
-export type CardInfo = { name: string; date: string };
-export type Search = {
-  results: (CardResult & CardInfo)[];
-  missing: Map<string, CardInfo>;
-  elsewhere: Set<string>;
-};
-
-export const cardKey = (card: { set: string; number: string }) => `${card.set} ${card.number}`;
+// A search's cards, each with its set's release date for sorting
+export type Found = CardResult & { date: string };
 
 // Every card whose name contains the query
-export async function searchCards(query: string): Promise<Search> {
+export async function searchCards(query: string): Promise<Found[]> {
   const params = new URLSearchParams({ name: query });
   const cards = (await get<BriefCard[]>(`/cards?${params}`)) ?? [];
   const setIds = [...new Set(cards.map(setOf))];
   const sets = new Map(
     await Promise.all(setIds.map(async (id) => [id, await setInfo(id)] as const))
   );
-
-  const search: Search = { results: [], missing: new Map(), elsewhere: new Set() };
-  for (const card of cards) {
+  return cards.flatMap((card) => {
     const set = sets.get(setOf(card));
-    if (set) addCard(search, card, set, setOf(card));
-  }
-  return search;
+    const result = set && toResult(card, setOf(card), set);
+    return result ? [result] : [];
+  });
 }
 
-// Every card in the sets with these codes (a code's subsets too). `covered` holds the
-// codes TCGdex has; sets newer than tcgdex-sets.json aren't looked for.
-export async function setCards(codes: string[]): Promise<Search & { covered: Set<string> }> {
-  const all = Object.keys(known).filter((id) => codes.includes(known[id]?.code ?? ''));
-  // The sets whose cards come from Limitless aren't fetched, only marked
-  const ids = all.filter((id) => !ELSEWHERE.has(id));
+// Every card in the sets with these codes (a code's subsets too); sets newer than
+// tcgdex-sets.json aren't looked for
+export async function setCards(codes: string[]): Promise<Found[]> {
+  const ids = Object.keys(known).filter(
+    (id) => codes.includes(known[id]?.code ?? '') && !MISNUMBERED.has(id)
+  );
   const sets = await Promise.all(
     ids.map((id) => get<{ cards: BriefCard[] }>(`/sets/${encodeURIComponent(id)}`))
   );
-  const search = {
-    results: [],
-    missing: new Map(),
-    elsewhere: new Set<string>(),
-    covered: new Set<string>(),
-  };
-  for (const id of all.filter((id) => ELSEWHERE.has(id))) {
-    const code = known[id]!.code;
-    search.elsewhere.add(code);
-    search.covered.add(code);
-  }
-  sets.forEach((found, i) => {
+  return sets.flatMap((found, i) => {
     const set = known[ids[i]];
-    if (!found || !set) return;
-    search.covered.add(set.code);
-    for (const card of found.cards) addCard(search, card, set, ids[i]);
+    if (!found || !set) return [];
+    return found.cards.flatMap((card) => {
+      const result = toResult(card, ids[i], set);
+      return result ? [result] : [];
+    });
   });
-  return search;
-}
-
-function addCard(search: Search, card: BriefCard, set: SetInfo, setId: string) {
-  if (ELSEWHERE.has(setId)) {
-    search.elsewhere.add(set.code);
-    return;
-  }
-  const result = toResult(card, set);
-  const info = { name: card.name, date: set.date };
-  if (result) search.results.push({ ...result, ...info });
-  else search.missing.set(cardKey({ set: set.code, number: printed(card) }), info);
 }
