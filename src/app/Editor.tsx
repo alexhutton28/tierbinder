@@ -1077,6 +1077,10 @@ export default function Editor() {
                           alt={`${card.name} (${card.set} ${card.number})`}
                           title={`${card.name} (${card.set} ${card.number})`}
                           className={styles.poolCard}
+                          // Shimmers until it's loaded, as search results do
+                          onLoad={(e) => {
+                            e.currentTarget.dataset.loaded = '';
+                          }}
                           loading="lazy"
                           draggable={false}
                           // The CDN occasionally fails a load; retry once through the proxy, and

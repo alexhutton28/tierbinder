@@ -329,9 +329,11 @@
   aspect-ratio: var(--card-ratio);
 }
 
-/* A result still loading, or a placeholder while the search runs: a dark card shape with
-   a lighter band sweeping across it, left to right */
-.resultThumb:not([data-loaded]) {
+/* A result or a featured pool's card still loading, or a placeholder while the search
+   runs: a dark card shape with a lighter band sweeping across it, left to right. A pool's
+   empty spots (spans) don't shimmer, since nothing is coming. */
+.resultThumb:not([data-loaded]),
+img.poolCard:not([data-loaded]) {
   border-radius: var(--tb-radius);
   background: linear-gradient(
       100deg,
@@ -356,7 +358,8 @@
 
 /* After the shimmer's own rule, which would otherwise win */
 @media (prefers-reduced-motion: reduce) {
-  .resultThumb:not([data-loaded]) {
+  .resultThumb:not([data-loaded]),
+  img.poolCard:not([data-loaded]) {
     animation: none;
   }
 }
