@@ -1,7 +1,8 @@
 // The fallback card source, read from limitlesstcg.com pages (it has no public card
 // API), for cards TCGdex has no image for (see cardSource.ts). Card image numbers
 // aren't predictable (MEG pads to three digits, TWM doesn't), so image URLs always
-// come from Limitless's own pages. Search results have no names.
+// come from Limitless's own pages. Lists (search results, sets) are read in its list
+// view, which names each card.
 
 export type CardResult = {
   set: string;
@@ -15,9 +16,13 @@ const SITE = 'https://limitlesstcg.com';
 const IMAGE_HOST = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/';
 const CARD_PATH = /^\/cards\/([A-Z0-9-]+)\/([0-9A-Za-z-]+)\/?$/;
 
-// Limitless serves _SM thumbnails in lists and _LG (460x640) on card pages
+// Limitless's images come in sizes: _XS (list view), _SM (thumbnails) and _LG (460x640,
+// card pages)
 function sizes(url: string) {
-  return { image: url.replace(/_SM\.png$/, '_LG.png'), thumb: url.replace(/_LG\.png$/, '_SM.png') };
+  return {
+    image: url.replace(/_(XS|SM)\.png$/, '_LG.png'),
+    thumb: url.replace(/_(XS|LG)\.png$/, '_SM.png'),
+  };
 }
 
 async function getPage(url: string) {
@@ -25,7 +30,9 @@ async function getPage(url: string) {
     headers: { 'User-Agent': 'TierBinder' },
     next: { revalidate: 86400 },
   });
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  // An outage or rate limit is an error, not "nothing there", so it isn't cached as no cards
+  if (!res.ok) throw new Error(`Limitless ${url}: ${res.status}`);
   return { html: await res.text(), url: new URL(res.url) };
 }
 
@@ -43,9 +50,10 @@ export async function lookupCard(set: string, number: string) {
   return card && { ...card, name: name ? decodeEntities(name) : undefined };
 }
 
+// Every card whose name contains the query, newest set first
 export async function searchCards(query: string): Promise<CardResult[]> {
   // show=all: every match on one page (otherwise 50 per page), same order
-  const page = await getPage(`${SITE}/cards?q=${encodeURIComponent(query)}&show=all`);
+  const page = await getPage(`${SITE}/cards?q=${encodeURIComponent(query)}&show=all&display=list`);
   if (!page) return [];
 
   // A search with exactly one match redirects to that card's page
@@ -55,10 +63,26 @@ export async function searchCards(query: string): Promise<CardResult[]> {
     return card ? [card] : [];
   }
 
+  return listCards(page.html);
+}
+
+// Every card in a set, in number order, from its set page
+export async function setCards(code: string): Promise<CardResult[]> {
+  const page = await getPage(`${SITE}/cards/${encodeURIComponent(code)}?display=list`);
+  return page ? listCards(page.html) : [];
+}
+
+// The cards in a list view's table (search results, a set): each row has the card's
+// image, then links to the card with its number and with its name. Rows whose images
+// aren't on Limitless's CDN are skipped.
+function listCards(html: string) {
   const results: CardResult[] = [];
-  const grid = /<a href="\/cards\/([A-Z0-9-]+)\/([0-9A-Za-z-]+)"><img[^>]*?src="([^"]+_SM\.png)"/g;
-  for (const [, set, number, src] of page.html.matchAll(grid)) {
-    if (src.startsWith(IMAGE_HOST)) results.push({ set, number, ...sizes(src) });
+  const row =
+    /<tr data-hover="([^"]+_XS\.png)">[\s\S]*?<a href="\/cards\/([A-Z0-9-]+)\/([0-9A-Za-z-]+)">[^<]*<\/a>[\s\S]*?<a href="\/cards\/\2\/\3">([^<]*)<\/a>/g;
+  for (const [, src, set, number, name] of html.matchAll(row)) {
+    if (src.startsWith(IMAGE_HOST)) {
+      results.push({ set, number, ...sizes(src), name: decodeEntities(name.trim()) });
+    }
   }
   return results;
 }

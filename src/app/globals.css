@@ -60,9 +60,17 @@ body {
   --tb-selected: var(--color-petrel-100);
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
+  --tb-option-hover: var(--color-petrel-700);
+  --tb-popup-shadow: 0 8px 24px color-mix(in srgb, var(--color-petrel-950) 45%, transparent);
   --tb-focus: var(--color-storm-200);
   --tb-icon-rest: var(--color-petrel-600);
   --tb-icon-lit: var(--color-storm-300);
+  --tb-scroll-thumb: var(--color-petrel-700);
+  --tb-scroll-thumb-hover: var(--color-petrel-600);
+  --tb-scroll-shade: color-mix(in srgb, var(--color-petrel-950) 60%, transparent);
+  --tb-skeleton: var(--color-petrel-850);
+  --tb-view-backdrop: color-mix(in srgb, var(--color-petrel-950) 75%, transparent);
+  --tb-skeleton-shine: var(--color-petrel-800);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
@@ -72,6 +80,16 @@ body {
   --tb-top-height: 48px;
   --tb-control-height: 32px;
   --tb-icon: 16px;
+  --tb-scrollbar: 8px;
+
+  /* How tall a viewed card (View, in the card menu) can be */
+  --tb-view-height: 80dvh;
+
+  /* One sweep of a loading placeholder's shimmer */
+  --tb-shimmer: 1.5s;
+
+  /* The smallest comfortable thing to tap (Apple's guideline) */
+  --tb-touch-target: 44px;
   --tb-swatch: 24px;
   --tb-number-field: 64px;
 
@@ -106,16 +124,49 @@ body {
   color-scheme: dark;
 }
 
-/* The sidebar's tab panels: 8px under the main nav (as it is under the header) and at the
-   sides to line up with it (.sideHead in Editor.module.css), and 16px at the bottom */
-.tierbinder-panel {
-  padding: var(--spacing-3) var(--spacing-3) var(--spacing-4);
+/* Scrollbars, the page's own included: a thin, fully rounded thumb in the controls' border color, on no track.
+   Browsers with scrollbar-color (Chrome, Firefox) use it; Safari draws the WebKit
+   scrollbar, 8px wide with the thumb inset 2px, lighter on hover. */
+body * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--tb-scroll-thumb) transparent;
 }
 
+@supports not (scrollbar-color: auto) {
+  body ::-webkit-scrollbar {
+    width: var(--tb-scrollbar);
+    height: var(--tb-scrollbar);
+    background: transparent;
+  }
+
+  body ::-webkit-scrollbar-thumb {
+    border: calc(var(--tb-scrollbar) / 4) solid transparent;
+    border-radius: var(--radius-full);
+    background: var(--tb-scroll-thumb) padding-box;
+  }
+
+  body ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--tb-scroll-thumb-hover);
+  }
+
+  body ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* The sidebar's tab panels: 16px under the main nav, 8px at the sides to line up with it
+   (.sideHead in Editor.module.css), and 16px at the bottom */
+.tierbinder-panel {
+  padding: var(--spacing-4) var(--spacing-3);
+}
+
+/* Trimmed to the capitals at the top, so the space above a heading (16px under the main
+   nav) reaches its letters rather than the font's empty ascender room */
 .tierbinder-heading {
   color: var(--tb-heading);
   font-size: var(--text-body);
   font-weight: 600;
+  text-box: trim-start cap alphabetic;
 }
 
 .tierbinder-prop {
@@ -162,7 +213,47 @@ textarea.tierbinder-field {
   border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
   background: var(--tb-popup);
-  box-shadow: 0 8px 24px rgb(18 23 26 / 45%);
+  box-shadow: var(--tb-popup-shadow);
+}
+
+/* A popup floating in the top layer (a popover) under its button, placed by useAnchored
+   (ui/anchored.ts) from --anchor-top, --anchor-left and the widths: at least as wide as
+   the button, and kept 8px inside the window, sliding left when it would hang off the
+   right. Resets the popover's own placement. */
+.tierbinder-anchored {
+  --edge: var(--spacing-3);
+
+  position: fixed;
+  inset: auto;
+  top: calc(var(--anchor-top, 0px) + var(--spacing-2));
+  left: clamp(
+    var(--edge),
+    var(--anchor-left, 0px),
+    100vw - var(--edge) - var(--anchor-popup-width, 0px)
+  );
+  min-width: var(--anchor-width, 0);
+  max-width: calc(100vw - 2 * var(--edge));
+  max-height: calc(100dvh - var(--anchor-top, 0px) - var(--spacing-2) - var(--edge));
+  margin: 0;
+  color: var(--tb-text);
+}
+
+/* Above its button (useAnchored found more room there), growing up from it */
+.tierbinder-anchored.tierbinder-menu[data-side='above'] {
+  top: auto;
+  bottom: calc(var(--anchor-bottom, 0px) + var(--spacing-2));
+  max-height: calc(100dvh - var(--anchor-bottom, 0px) - var(--spacing-2) - var(--edge));
+  transform-origin: center bottom;
+}
+
+/* A dropdown's list scrolls when the window is too short for it */
+.tierbinder-anchored.tierbinder-list {
+  overflow-y: auto;
+}
+
+/* No specificity, so a popup's own padding wins */
+:where(.tierbinder-anchored) {
+  padding: 0;
 }
 
 .tierbinder-option {
@@ -174,8 +265,26 @@ textarea.tierbinder-field {
 
 @media (hover: hover) {
   .tierbinder-option:hover {
-    background: var(--tb-control-hover);
+    background: var(--tb-option-hover);
   }
+}
+
+/* A popup listing options (the card menu, dropdowns): the options are rounded rows inset
+   4px from its edge, so its own corners are that much rounder */
+.tierbinder-list {
+  gap: var(--spacing-1);
+  padding: var(--spacing-2);
+  border-radius: calc(var(--tb-radius) + var(--spacing-2));
+}
+
+/* Dropdown lists keep the controls' corners */
+.tierbinder-list.dropdown {
+  border-radius: var(--tb-radius);
+}
+
+.tierbinder-list .tierbinder-option {
+  border-radius: var(--tb-radius);
+  font-weight: 500;
 }
 
 .tierbinder-page :focus-visible {

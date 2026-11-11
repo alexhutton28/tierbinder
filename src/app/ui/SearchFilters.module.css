@@ -1,0 +1,108 @@
+@reference "../globals.css";
+
+/* Feather's filter icon, colored by the button's text */
+.icon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/filter.svg') center / contain no-repeat;
+}
+
+/* A set width (enough for the longest set names), so it doesn't shrink as the set search
+   narrows the list; placed by .tierbinder-anchored */
+.popup {
+  --popup-width: 22em;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  width: var(--popup-width);
+  padding: var(--spacing-4);
+}
+
+/* Focused on touch screens when it opens, for screen readers; it's plainly open already */
+.popup:focus-visible {
+  outline: none;
+}
+
+/* The set list shows this many rows and scrolls (a row is a line and the gap), with 8px
+   between the set codes and the scrollbar */
+.sets {
+  --rows-shown: 10;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  padding-inline-end: var(--spacing-3);
+
+  /* Shrinks when the window is too short for the rows (the popup's max-height) */
+  min-height: 0;
+  max-height: calc(var(--rows-shown) * (1lh + var(--spacing-3)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* A checkbox, the set's name and its code */
+.choice {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: center;
+  cursor: pointer;
+}
+
+/* On phones (touch, under b7), each row is a full touch target, with no gaps between */
+@media (pointer: coarse) {
+  @variant max-b7 {
+    .sets {
+      gap: 0;
+      max-height: calc(var(--rows-shown) * var(--tb-touch-target));
+    }
+
+    .choice {
+      min-height: var(--tb-touch-target);
+    }
+  }
+}
+
+.setName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.code {
+  color: var(--tb-muted);
+  font-size: var(--text-caption);
+}
+
+/* Drawn here to choose the check's color: a box in the field's colors, filled when
+   ticked with --tick (its tier's color, from SearchFilters.tsx) under Feather's check,
+   white unless SearchFilters.tsx marks it dark (data-check) */
+.check {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  margin: 0;
+  appearance: none;
+  border: var(--tb-line-width) solid var(--tb-field-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+  cursor: pointer;
+}
+
+.check:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.check:checked {
+  border-color: var(--tick, var(--tb-primary));
+  background: url('/check.svg') center / 75% no-repeat var(--tick, var(--tb-primary));
+}
+
+.check:checked[data-check='dark'] {
+  background-image: url('/check-dark.svg');
+}

@@ -1,24 +1,31 @@
 'use client';
 
 import React from 'react';
+import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './Dropdown.module.css';
+import { FOLD_CLEARANCE } from './motion';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
-// through the options, Enter or Space picks one, Escape closes.
+// through the options, Enter or Space picks one, Escape closes. An option with a color
+// shows it as a swatch before its name (the tiers); a hidden label is still the button's
+// tooltip. The list floats over the board, in the top layer (useAnchored), so a narrow
+// sidebar doesn't clip it.
 
 export default function Dropdown<T extends string | number>({
   label,
   hideLabel = false,
+  chevron = true,
   value,
   options,
   onChange,
 }: {
   label: string;
   hideLabel?: boolean;
+  chevron?: boolean;
   value: T;
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; color?: string }[];
   onChange: (value: T) => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -29,14 +36,16 @@ export default function Dropdown<T extends string | number>({
   const closing = shown && !open;
   React.useEffect(() => {
     if (!closing) return;
-    const timer = setTimeout(() => setShown(false), 220);
+    const timer = setTimeout(() => setShown(false), FOLD_CLEARANCE);
     return () => clearTimeout(timer);
   }, [closing]);
 
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const listRef = React.useRef<HTMLDivElement>(null);
   const optionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  useAnchored(shown, buttonRef, listRef);
   const selected = Math.max(
     0,
     options.findIndex((o) => o.value === value)
@@ -91,6 +100,7 @@ export default function Dropdown<T extends string | number>({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-labelledby={`${id}-label ${id}-button`}
+          title={hideLabel ? label : undefined}
           className="flex gap-2 items-center"
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
@@ -100,15 +110,18 @@ export default function Dropdown<T extends string | number>({
             }
           }}
         >
+          <Swatch color={options[selected]?.color} />
           {options[selected]?.label}
-          <span aria-hidden className={styles.chevron} />
+          {chevron && <span aria-hidden className={styles.chevron} />}
         </Button>
         {shown && (
           <div
+            ref={listRef}
+            popover="manual"
             role="listbox"
             aria-labelledby={`${id}-label`}
             onKeyDown={onListKey}
-            className={`tierbinder-menu dropdown absolute left-0 top-full mt-1 z-10 tierbinder-popup flex flex-col min-w-full ${closing ? 'closing pointer-events-none' : ''}`}
+            className={`tierbinder-menu dropdown tierbinder-popup tierbinder-list tierbinder-anchored flex flex-col ${closing ? 'closing pointer-events-none' : ''}`}
           >
             {options.map((option, i) => (
               <button
@@ -120,12 +133,13 @@ export default function Dropdown<T extends string | number>({
                 role="option"
                 aria-selected={i === selected}
                 tabIndex={-1}
-                className="tierbinder-option whitespace-nowrap aria-selected:font-semibold"
+                className="tierbinder-option flex gap-2 items-center whitespace-nowrap aria-selected:font-semibold"
                 onClick={() => {
                   onChange(option.value);
                   close();
                 }}
               >
+                <Swatch color={option.color} />
                 {option.label}
               </button>
             ))}
@@ -134,4 +148,12 @@ export default function Dropdown<T extends string | number>({
       </div>
     </div>
   );
+}
+
+function Swatch({ color }: { color?: string }) {
+  return color ? (
+    <span aria-hidden className={styles.swatchBox}>
+      <span className={styles.swatch} style={{ background: color }} />
+    </span>
+  ) : null;
 }

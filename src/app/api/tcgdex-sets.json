@@ -1,826 +1,1074 @@
 {
   "2011bw": {
     "code": "MCD11",
-    "date": "2011-06-17"
+    "name": "McDonald's Collection 2011",
+    "date": "2011-06-17",
+    "empty": true
   },
   "2012bw": {
     "code": "MCD12",
-    "date": "2012-06-15"
+    "name": "McDonald's Collection 2012",
+    "date": "2012-06-15",
+    "empty": true
   },
   "2014xy": {
     "code": "MCD14",
-    "date": "2014-05-23"
+    "name": "McDonald's Collection 2014",
+    "date": "2014-05-23",
+    "empty": true
   },
   "2015xy": {
     "code": "MCD15",
-    "date": "2015-11-27"
+    "name": "McDonald's Collection 2015",
+    "date": "2015-11-27",
+    "empty": true
   },
   "2016xy": {
     "code": "MCD16",
-    "date": "2016-08-20"
+    "name": "McDonald's Collection 2016",
+    "date": "2016-08-20",
+    "empty": true
   },
   "2017sm": {
     "code": "MCD17",
-    "date": "2017-08-03"
+    "name": "McDonald's Collection 2017",
+    "date": "2017-08-03",
+    "empty": true
   },
   "2018sm": {
     "code": "MCD18",
-    "date": "2018-10-19"
+    "name": "McDonald's Collection 2018",
+    "date": "2018-10-19",
+    "empty": true
   },
   "2019sm": {
     "code": "MCD19",
-    "date": "2019-10-15"
+    "name": "McDonald's Collection 2019",
+    "date": "2019-10-15",
+    "empty": true
   },
   "2021swsh": {
     "code": "MCD21",
-    "date": "2021-02-09"
+    "name": "McDonald's Collection 2021",
+    "date": "2021-02-09",
+    "empty": true
   },
   "2022swsh": {
     "code": "MCD22",
-    "date": "2022-08-03"
+    "name": "McDonald's Collection 2022",
+    "date": "2022-08-03",
+    "empty": true
   },
   "2023sv": {
     "code": "MCD23",
-    "date": "2023-08-01"
+    "name": "McDonald's Collection 2023",
+    "date": "2023-08-01",
+    "empty": true
   },
   "2024sv": {
     "code": "MCD24",
-    "date": "2024-12-04"
+    "name": "McDonald's Collection 2024",
+    "date": "2024-12-04",
+    "empty": true
   },
   "30th": {
     "code": "30C",
+    "name": "30th Celebration",
     "date": "2026-09-16"
   },
   "30th-c": {
     "code": "30C",
+    "name": "30th Classic Collection",
     "date": "2026-09-16"
   },
   "base1": {
     "code": "BS",
+    "name": "Base Set",
     "date": "1999-01-09"
   },
   "base2": {
     "code": "JU",
+    "name": "Jungle",
     "date": "1999-06-16"
   },
   "base3": {
     "code": "FO",
+    "name": "Fossil",
     "date": "1999-10-10"
   },
   "base4": {
     "code": "B2",
+    "name": "Base Set 2",
     "date": "2000-02-24"
   },
   "base5": {
     "code": "RO",
+    "name": "Team Rocket",
     "date": "2000-04-24"
   },
   "basep": {
     "code": "PR",
+    "name": "Wizards Black Star Promos",
     "date": "1999-07-01"
   },
   "bog": {
     "code": "BOG",
-    "date": "2002-12-01"
+    "name": "Best of game",
+    "date": "2002-12-01",
+    "empty": true
   },
   "bw1": {
     "code": "BLW",
+    "name": "Black & White",
     "date": "2011-04-25"
   },
   "bw10": {
     "code": "PLB",
+    "name": "Plasma Blast",
     "date": "2013-08-14"
   },
   "bw11": {
     "code": "LTR",
+    "name": "Legendary Treasures",
     "date": "2013-11-06"
   },
   "bw2": {
     "code": "EP",
+    "name": "Emerging Powers",
     "date": "2011-08-31"
   },
   "bw3": {
     "code": "NVI",
+    "name": "Noble Victories",
     "date": "2011-11-16"
   },
   "bw4": {
     "code": "NXD",
+    "name": "Next Destinies",
     "date": "2012-02-08"
   },
   "bw5": {
     "code": "DEX",
+    "name": "Dark Explorers",
     "date": "2012-05-09"
   },
   "bw6": {
     "code": "DRX",
+    "name": "Dragons Exalted",
     "date": "2012-08-15"
   },
   "bw7": {
     "code": "BCR",
+    "name": "Boundaries Crossed",
     "date": "2012-11-07"
   },
   "bw8": {
     "code": "PLS",
+    "name": "Plasma Storm",
     "date": "2013-02-06"
   },
   "bw9": {
     "code": "PLF",
+    "name": "Plasma Freeze",
     "date": "2013-05-08"
   },
   "bwp": {
     "code": "BWP",
+    "name": "BW Black Star Promos",
     "date": "2011-04-26"
   },
   "cel25": {
     "code": "CEL",
+    "name": "Celebrations",
     "date": "2021-10-08"
   },
   "cel25cc": {
     "code": "CEL",
+    "name": "Celebrations Classic Collection",
     "date": "2021-10-08"
   },
   "col1": {
     "code": "COL",
+    "name": "Call of Legends",
     "date": "2011-02-09"
   },
   "dc1": {
     "code": "DCR",
+    "name": "Double Crisis",
     "date": "2015-03-25"
   },
   "det1": {
     "code": "DET",
+    "name": "Detective Pikachu",
     "date": "2019-03-29"
   },
   "dp1": {
     "code": "DP",
+    "name": "Diamond & Pearl",
     "date": "2007-05-01"
   },
   "dp2": {
     "code": "MT",
+    "name": "Mysterious Treasures",
     "date": "2007-08-01"
   },
   "dp3": {
     "code": "SW",
+    "name": "Secret Wonders",
     "date": "2007-11-01"
   },
   "dp4": {
     "code": "GE",
+    "name": "Great Encounters",
     "date": "2008-02-01"
   },
   "dp5": {
     "code": "MD",
+    "name": "Majestic Dawn",
     "date": "2008-05-01"
   },
   "dp6": {
     "code": "LA",
+    "name": "Legends Awakened",
     "date": "2008-08-01"
   },
   "dp7": {
     "code": "SF",
+    "name": "Stormfront",
     "date": "2008-11-01"
   },
   "dpp": {
     "code": "PR-DPP",
+    "name": "DP Black Star Promos",
     "date": "2007-05-01"
   },
   "dv1": {
     "code": "DRV",
+    "name": "Dragon Vault",
     "date": "2012-10-05"
   },
   "ecard1": {
     "code": "EX",
+    "name": "Expedition Base Set",
     "date": "2002-09-15"
   },
   "ecard2": {
     "code": "AQ",
+    "name": "Aquapolis",
     "date": "2003-01-15"
   },
   "ecard3": {
     "code": "SK",
+    "name": "Skyridge",
     "date": "2003-05-12"
   },
   "ex1": {
     "code": "RS",
+    "name": "Ruby & Sapphire",
     "date": "2003-07-01"
   },
   "ex10": {
     "code": "UF",
+    "name": "Unseen Forces",
     "date": "2005-08-22"
   },
   "ex11": {
     "code": "DS",
+    "name": "Delta Species",
     "date": "2005-10-31"
   },
   "ex12": {
     "code": "LM",
+    "name": "Legend Maker",
     "date": "2006-02-13"
   },
   "ex13": {
     "code": "HP",
+    "name": "Holon Phantoms",
     "date": "2006-05-03"
   },
   "ex14": {
     "code": "CG",
+    "name": "Crystal Guardians",
     "date": "2006-08-30"
   },
   "ex15": {
     "code": "DF",
+    "name": "Dragon Frontiers",
     "date": "2006-11-08"
   },
   "ex16": {
     "code": "PK",
+    "name": "Power Keepers",
     "date": "2007-02-17"
   },
   "ex2": {
     "code": "SS",
+    "name": "Sandstorm",
     "date": "2003-09-18"
   },
   "ex3": {
     "code": "DR",
+    "name": "Dragon",
     "date": "2003-11-24"
   },
   "ex4": {
     "code": "MA",
+    "name": "Team Magma vs Team Aqua",
     "date": "2004-03-01"
   },
   "ex5": {
     "code": "HL",
+    "name": "Hidden Legends",
     "date": "2004-06-01"
   },
   "ex5.5": {
     "code": "EX5.5",
-    "date": "2004-07-01"
+    "name": "Poké Card Creator Pack",
+    "date": "2004-07-01",
+    "empty": true
   },
   "ex6": {
     "code": "RG",
+    "name": "FireRed & LeafGreen",
     "date": "2004-09-01"
   },
   "ex7": {
     "code": "TR",
+    "name": "Team Rocket Returns",
     "date": "2004-11-01"
   },
   "ex8": {
     "code": "DX",
+    "name": "Deoxys",
     "date": "2005-02-01"
   },
   "ex9": {
     "code": "EM",
+    "name": "Emerald",
     "date": "2005-05-09"
   },
   "exu": {
     "code": "EXU",
-    "date": "2005-08-22"
+    "name": "Unseen Forces Unown Collection",
+    "date": "2005-08-22",
+    "empty": true
   },
   "fut2020": {
     "code": "FUT20",
+    "name": "Pokémon Futsal 2020",
     "date": "2020-09-11"
   },
   "g1": {
     "code": "GEN",
+    "name": "Generations",
     "date": "2016-02-22"
   },
   "gym1": {
     "code": "G1",
+    "name": "Gym Heroes",
     "date": "2000-08-14"
   },
   "gym2": {
     "code": "G2",
+    "name": "Gym Challenge",
     "date": "2000-10-16"
   },
   "hgss1": {
     "code": "HS",
+    "name": "HeartGold SoulSilver",
     "date": "2010-02-10"
   },
   "hgss2": {
     "code": "UL",
+    "name": "Unleashed",
     "date": "2010-05-12"
   },
   "hgss3": {
     "code": "UND",
+    "name": "Undaunted",
     "date": "2010-08-18"
   },
   "hgss4": {
     "code": "TRI",
+    "name": "Triumphant",
     "date": "2010-11-03"
   },
   "hgssp": {
     "code": "PR-HS",
+    "name": "HGSS Black Star Promos",
     "date": "2010-02-11"
   },
   "jumbo": {
     "code": "JUMBO",
-    "date": "2000-02-01"
+    "name": "Jumbo cards",
+    "date": "2000-02-01",
+    "empty": true
   },
   "lc": {
     "code": "LC",
+    "name": "Legendary Collection",
     "date": "2002-05-24"
   },
   "me01": {
     "code": "MEG",
+    "name": "Mega Evolution",
     "date": "2025-09-26"
   },
   "me02": {
     "code": "PFL",
+    "name": "Phantasmal Flames",
     "date": "2025-11-14"
   },
   "me02.5": {
     "code": "ASC",
+    "name": "Ascended Heroes",
     "date": "2026-01-30"
   },
   "me03": {
     "code": "POR",
+    "name": "Perfect Order",
     "date": "2026-03-27"
   },
   "me04": {
     "code": "CRI",
+    "name": "Chaos Rising",
     "date": "2026-05-22"
   },
   "me05": {
     "code": "PBL",
+    "name": "Pitch Black",
     "date": "2026-07-17"
   },
   "me06": {
     "code": "DLR",
+    "name": "Delta Reign",
     "date": "2026-11-06"
   },
   "mee": {
     "code": "MEE",
+    "name": "Mega Evolution Energy",
     "date": "2025-09-25"
   },
   "mep": {
     "code": "MEP",
+    "name": "MEP Black Star Promos",
     "date": "2025-09-26"
   },
   "mfb": {
     "code": "MFB",
-    "date": "2023-09-29"
+    "name": "My First Battle",
+    "date": "2023-09-29",
+    "empty": true
   },
   "miscp": {
     "code": "MISCP",
-    "date": "1996-01-01"
+    "name": "Miscellaneous Promos",
+    "date": "1996-01-01",
+    "empty": true
   },
   "neo1": {
     "code": "N1",
+    "name": "Neo Genesis",
     "date": "2000-12-16"
   },
   "neo2": {
     "code": "N2",
+    "name": "Neo Discovery",
     "date": "2001-06-01"
   },
   "neo3": {
     "code": "N3",
+    "name": "Neo Revelation",
     "date": "2001-09-21"
   },
   "neo4": {
     "code": "N4",
+    "name": "Neo Destiny",
     "date": "2002-02-28"
   },
   "np": {
     "code": "PR-NP",
+    "name": "Nintendo Black Star Promos",
     "date": "2003-10-01"
   },
   "pl1": {
     "code": "PL",
+    "name": "Platinum",
     "date": "2009-02-11"
   },
   "pl2": {
     "code": "RR",
+    "name": "Rising Rivals",
     "date": "2009-05-16"
   },
   "pl3": {
     "code": "SV",
+    "name": "Supreme Victors",
     "date": "2009-08-19"
   },
   "pl4": {
     "code": "AR",
+    "name": "Arceus",
     "date": "2009-11-04"
   },
   "pop1": {
     "code": "P1",
+    "name": "POP Series 1",
     "date": "2004-09-01"
   },
   "pop2": {
     "code": "P2",
+    "name": "POP Series 2",
     "date": "2005-08-01"
   },
   "pop3": {
     "code": "P3",
+    "name": "POP Series 3",
     "date": "2006-04-01"
   },
   "pop4": {
     "code": "P4",
+    "name": "POP Series 4",
     "date": "2006-08-01"
   },
   "pop5": {
     "code": "P5",
+    "name": "POP Series 5",
     "date": "2007-03-01"
   },
   "pop6": {
     "code": "P6",
+    "name": "POP Series 6",
     "date": "2007-09-01"
   },
   "pop7": {
     "code": "P7",
+    "name": "POP Series 7",
     "date": "2008-03-01"
   },
   "pop8": {
     "code": "P8",
+    "name": "POP Series 8",
     "date": "2008-09-01"
   },
   "pop9": {
     "code": "P9",
+    "name": "POP Series 9",
     "date": "2009-03-01"
   },
   "rc": {
     "code": "RC",
-    "date": "2013-11-06"
+    "name": "Radiant Collection",
+    "date": "2013-11-06",
+    "empty": true
   },
   "ru1": {
     "code": "RM",
+    "name": "Pokémon Rumble",
     "date": "2009-12-02"
   },
   "si1": {
     "code": "SI",
+    "name": "Southern Islands",
     "date": "2001-07-31"
   },
   "sm1": {
     "code": "SUM",
+    "name": "Sun & Moon",
     "date": "2017-02-03"
   },
   "sm10": {
     "code": "UNB",
+    "name": "Unbroken Bonds",
     "date": "2019-05-03"
   },
   "sm11": {
     "code": "UNM",
+    "name": "Unified Minds",
     "date": "2019-08-02"
   },
   "sm115": {
     "code": "HIF",
+    "name": "Hidden Fates",
     "date": "2019-08-23"
   },
   "sm12": {
     "code": "CEC",
+    "name": "Cosmic Eclipse",
     "date": "2019-11-01"
   },
   "sm2": {
     "code": "GRI",
+    "name": "Guardians Rising",
     "date": "2017-05-05"
   },
   "sm3": {
     "code": "BUS",
+    "name": "Burning Shadows",
     "date": "2017-08-04"
   },
   "sm3.5": {
     "code": "SLG",
+    "name": "Shining Legends",
     "date": "2017-10-06"
   },
   "sm4": {
     "code": "CIN",
+    "name": "Crimson Invasion",
     "date": "2017-11-03"
   },
   "sm5": {
     "code": "UPR",
+    "name": "Ultra Prism",
     "date": "2018-02-02"
   },
   "sm6": {
     "code": "FLI",
+    "name": "Forbidden Light",
     "date": "2018-05-04"
   },
   "sm7": {
     "code": "CES",
+    "name": "Celestial Storm",
     "date": "2018-08-03"
   },
   "sm7.5": {
     "code": "DRM",
+    "name": "Dragon Majesty",
     "date": "2018-09-07"
   },
   "sm8": {
     "code": "LOT",
+    "name": "Lost Thunder",
     "date": "2018-11-02"
   },
   "sm9": {
     "code": "TEU",
+    "name": "Team Up",
     "date": "2019-01-31"
   },
   "sma": {
     "code": "SMA",
+    "name": "Hidden Fates Shiny Vault",
     "date": "2019-08-23"
   },
   "smp": {
     "code": "SMP",
+    "name": "SM Black Star Promos",
     "date": "2017-02-03"
   },
   "sp": {
     "code": "SP",
-    "date": "2002-08-01"
+    "name": "Sample",
+    "date": "2002-08-01",
+    "empty": true
   },
   "sv01": {
     "code": "SVI",
+    "name": "Scarlet & Violet",
     "date": "2023-03-31"
   },
   "sv02": {
     "code": "PAL",
+    "name": "Paldea Evolved",
     "date": "2023-06-09"
   },
   "sv03": {
     "code": "OBF",
+    "name": "Obsidian Flames",
     "date": "2023-08-11"
   },
   "sv03.5": {
     "code": "MEW",
+    "name": "151",
     "date": "2023-09-22"
   },
   "sv04": {
     "code": "PAR",
+    "name": "Paradox Rift",
     "date": "2023-11-03"
   },
   "sv04.5": {
     "code": "PAF",
+    "name": "Paldean Fates",
     "date": "2024-01-26"
   },
   "sv05": {
     "code": "TEF",
+    "name": "Temporal Forces",
     "date": "2024-03-22"
   },
   "sv06": {
     "code": "TWM",
+    "name": "Twilight Masquerade",
     "date": "2024-05-24"
   },
   "sv06.5": {
     "code": "SFA",
+    "name": "Shrouded Fable",
     "date": "2024-08-02"
   },
   "sv07": {
     "code": "SCR",
+    "name": "Stellar Crown",
     "date": "2024-09-13"
   },
   "sv08": {
     "code": "SSP",
+    "name": "Surging Sparks",
     "date": "2024-11-08"
   },
   "sv08.5": {
     "code": "PRE",
+    "name": "Prismatic Evolutions",
     "date": "2025-01-17"
   },
   "sv09": {
     "code": "JTG",
+    "name": "Journey Together",
     "date": "2025-03-28"
   },
   "sv10": {
     "code": "DRI",
+    "name": "Destined Rivals",
     "date": "2025-05-30"
   },
   "sv10.5b": {
     "code": "BLK",
+    "name": "Black Bolt",
     "date": "2025-07-17"
   },
   "sv10.5w": {
     "code": "WHT",
+    "name": "White Flare",
     "date": "2025-07-17"
   },
   "sve": {
     "code": "SVE",
+    "name": "Scarlet & Violet Energy",
     "date": "2023-03-31"
   },
   "svp": {
     "code": "SVP",
+    "name": "SVP Black Star Promos",
     "date": "2023-03-31"
   },
   "swsh1": {
     "code": "SSH",
+    "name": "Sword & Shield",
     "date": "2020-02-07"
   },
   "swsh10": {
     "code": "ASR",
+    "name": "Astral Radiance",
     "date": "2022-05-27"
   },
   "swsh10.5": {
     "code": "PGO",
+    "name": "Pokémon GO",
     "date": "2022-07-01"
   },
   "swsh10tg": {
     "code": "ASR",
+    "name": "Astral Radiance Trainer Gallery",
     "date": "2022-05-27"
   },
   "swsh11": {
     "code": "LOR",
+    "name": "Lost Origin",
     "date": "2022-09-09"
   },
   "swsh11tg": {
     "code": "LOR",
+    "name": "Lost Origin Trainer Gallery",
     "date": "2022-09-09"
   },
   "swsh12": {
     "code": "SIT",
+    "name": "Silver Tempest",
     "date": "2022-11-11"
   },
   "swsh12.5": {
     "code": "CRZ",
+    "name": "Crown Zenith",
     "date": "2023-01-20"
   },
   "swsh12.5gg": {
     "code": "CRZ",
+    "name": "Crown Zenith Galarian Gallery",
     "date": "2023-01-20"
   },
   "swsh12tg": {
     "code": "SIT",
+    "name": "Silver Tempest Trainer Gallery",
     "date": "2022-11-11"
   },
   "swsh2": {
     "code": "RCL",
+    "name": "Rebel Clash",
     "date": "2020-05-01"
   },
   "swsh3": {
     "code": "DAA",
+    "name": "Darkness Ablaze",
     "date": "2020-08-14"
   },
   "swsh3.5": {
     "code": "CPA",
+    "name": "Champion's Path",
     "date": "2020-09-25"
   },
   "swsh4": {
     "code": "VIV",
+    "name": "Vivid Voltage",
     "date": "2020-11-13"
   },
   "swsh4.5": {
     "code": "SHF",
+    "name": "Shining Fates",
     "date": "2021-02-19"
   },
   "swsh4.5sv": {
     "code": "SHF",
+    "name": "Shining Fates Shiny Vault",
     "date": "2021-02-19"
   },
   "swsh5": {
     "code": "BST",
+    "name": "Battle Styles",
     "date": "2021-03-19"
   },
   "swsh6": {
     "code": "CRE",
+    "name": "Chilling Reign",
     "date": "2021-06-18"
   },
   "swsh7": {
     "code": "EVS",
+    "name": "Evolving Skies",
     "date": "2021-08-27"
   },
   "swsh8": {
     "code": "FST",
+    "name": "Fusion Strike",
     "date": "2021-11-12"
   },
   "swsh9": {
     "code": "BRS",
+    "name": "Brilliant Stars",
     "date": "2022-02-25"
   },
   "swsh9tg": {
     "code": "BRS",
+    "name": "Brilliant Stars Trainer Gallery",
     "date": "2022-02-25"
   },
   "swshp": {
     "code": "SWSHP",
+    "name": "SWSH Black Star Promos",
     "date": "2019-11-15"
   },
   "tk-bw-e": {
     "code": "TK5E",
-    "date": "2011-09-01"
+    "name": "BW trainer Kit (Excadrill)",
+    "date": "2011-09-01",
+    "empty": true
   },
   "tk-bw-z": {
     "code": "TK5Z",
-    "date": "2011-09-01"
+    "name": "BW trainer Kit (Zoroark)",
+    "date": "2011-09-01",
+    "empty": true
   },
   "tk-dp-l": {
     "code": "TK3L",
-    "date": "2007-09-01"
+    "name": "DP trainer Kit (Lucario)",
+    "date": "2007-09-01",
+    "empty": true
   },
   "tk-dp-m": {
     "code": "TK3M",
-    "date": "2007-09-01"
+    "name": "DP trainer Kit (Manaphy)",
+    "date": "2007-09-01",
+    "empty": true
   },
   "tk-ex-latia": {
     "code": "TK1A",
-    "date": "2004-07-01"
+    "name": "EX trainer Kit (Latias)",
+    "date": "2004-07-01",
+    "empty": true
   },
   "tk-ex-latio": {
     "code": "TK1O",
-    "date": "2004-07-01"
+    "name": "EX trainer Kit (Latios)",
+    "date": "2004-07-01",
+    "empty": true
   },
   "tk-ex-m": {
     "code": "TK2M",
-    "date": "2006-03-01"
+    "name": "EX trainer Kit 2 (Minun)",
+    "date": "2006-03-01",
+    "empty": true
   },
   "tk-ex-p": {
     "code": "TK2P",
-    "date": "2006-03-01"
+    "name": "EX trainer Kit 2 (Plusle)",
+    "date": "2006-03-01",
+    "empty": true
   },
   "tk-hs-g": {
     "code": "TK4G",
-    "date": "2010-05-01"
+    "name": "HS trainer Kit (Gyarados)",
+    "date": "2010-05-01",
+    "empty": true
   },
   "tk-hs-r": {
     "code": "TK4R",
-    "date": "2010-05-01"
+    "name": "HS trainer Kit (Raichu)",
+    "date": "2010-05-01",
+    "empty": true
   },
   "tk-sm-l": {
     "code": "TK10L",
-    "date": "2017-04-21"
+    "name": "SM trainer Kit (Lycanroc)",
+    "date": "2017-04-21",
+    "empty": true
   },
   "tk-sm-r": {
     "code": "TK10A",
-    "date": "2017-04-21"
+    "name": "SM trainer Kit (Alolan Raichu)",
+    "date": "2017-04-21",
+    "empty": true
   },
   "tk-xy-b": {
     "code": "TK7A",
-    "date": "2014-11-01"
+    "name": "XY trainer Kit (Bisharp)",
+    "date": "2014-11-01",
+    "empty": true
   },
   "tk-xy-latia": {
     "code": "TK8A",
-    "date": "2015-04-29"
+    "name": "XY trainer Kit (Latias)",
+    "date": "2015-04-29",
+    "empty": true
   },
   "tk-xy-latio": {
     "code": "TK8O",
-    "date": "2015-04-29"
+    "name": "XY trainer Kit (Latios)",
+    "date": "2015-04-29",
+    "empty": true
   },
   "tk-xy-n": {
     "code": "TK6N",
-    "date": "2014-03-12"
+    "name": "XY trainer Kit (Noivern)",
+    "date": "2014-03-12",
+    "empty": true
   },
   "tk-xy-p": {
     "code": "TK9P",
-    "date": "2016-04-27"
+    "name": "XY trainer Kit (Pikachu Libre)",
+    "date": "2016-04-27",
+    "empty": true
   },
   "tk-xy-su": {
     "code": "TK9S",
-    "date": "2016-04-27"
+    "name": "XY trainer Kit (Suicune)",
+    "date": "2016-04-27",
+    "empty": true
   },
   "tk-xy-sy": {
     "code": "TK6S",
-    "date": "2014-03-12"
+    "name": "XY trainer Kit (Sylveon)",
+    "date": "2014-03-12",
+    "empty": true
   },
   "tk-xy-w": {
     "code": "TK7B",
-    "date": "2014-11-01"
+    "name": "XY trainer Kit (Wigglytuff)",
+    "date": "2014-11-01",
+    "empty": true
   },
   "wp": {
     "code": "WP",
-    "date": "1999-09-01"
+    "name": "W Promotional",
+    "date": "1999-09-01",
+    "empty": true
   },
   "xy0": {
     "code": "KSS",
+    "name": "Kalos Starter Set",
     "date": "2013-11-08"
   },
   "xy1": {
     "code": "XY",
+    "name": "XY",
     "date": "2014-02-05"
   },
   "xy10": {
     "code": "FCO",
+    "name": "Fates Collide",
     "date": "2016-05-02"
   },
   "xy11": {
     "code": "STS",
+    "name": "Steam Siege",
     "date": "2016-08-03"
   },
   "xy12": {
     "code": "EVO",
+    "name": "Evolutions",
     "date": "2016-11-02"
   },
   "xy2": {
     "code": "FLF",
+    "name": "Flashfire",
     "date": "2014-05-07"
   },
   "xy3": {
     "code": "FFI",
+    "name": "Furious Fists",
     "date": "2014-08-13"
   },
   "xy4": {
     "code": "PHF",
+    "name": "Phantom Forces",
     "date": "2014-11-05"
   },
   "xy5": {
     "code": "PRC",
+    "name": "Primal Clash",
     "date": "2015-02-04"
   },
   "xy6": {
     "code": "ROS",
+    "name": "Roaring Skies",
     "date": "2015-05-06"
   },
   "xy7": {
     "code": "AOR",
+    "name": "Ancient Origins",
     "date": "2015-08-12"
   },
   "xy8": {
     "code": "BKT",
+    "name": "BREAKthrough",
     "date": "2015-11-04"
   },
   "xy9": {
     "code": "BKP",
+    "name": "BREAKpoint",
     "date": "2016-02-03"
   },
   "xya": {
     "code": "XYA",
-    "date": "2014-02-05"
+    "name": "Yellow A Alternate",
+    "date": "2014-02-05",
+    "empty": true
   },
   "xyp": {
     "code": "XYP",
+    "name": "XY Black Star Promos",
     "date": "2013-10-12"
   }
 }

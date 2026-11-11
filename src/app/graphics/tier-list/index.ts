@@ -24,7 +24,7 @@ const tierList: GraphicType<TierList> = {
     ...list,
     tiers: list.tiers.map((t) => ({ ...t, items: t.items.flatMap((i) => change(i) ?? []) })),
   }),
-  targets: (list) => list.tiers.map((t) => t.name),
+  targets: (list) => list.tiers.map((t) => ({ name: t.name, color: t.color })),
   // At the end of the tier
   addCard: (list, item, tier) => insertCard(list, item, tier, list.tiers[tier].items.length),
   // In the tier under the pointer, before the first card whose center is to its right

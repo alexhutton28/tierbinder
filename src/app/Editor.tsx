@@ -6,7 +6,14 @@ import Link from 'next/link';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { Layer, Rect, Stage } from 'react-konva';
-import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH, EXPORT_SCALE } from './canvas/size';
+import {
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
+  CARD_CORNER_RADIUS,
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  EXPORT_SCALE,
+} from './canvas/size';
 import {
   faceOf,
   loadImage,
@@ -16,18 +23,23 @@ import {
   searchCards,
   toFace,
   toItem,
+  type CardFace,
   type CardItem,
   type CardResult,
 } from './cards';
 import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './document';
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
+import { DEFAULT_TIERS } from './graphics/tier-list/model';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
+import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
+import SearchFilters from './ui/SearchFilters';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
+import { FOLD_CLEARANCE } from './ui/motion';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -62,6 +74,17 @@ type Tab = (typeof TABS)[number]['value'];
 // cards in a row, or card-shaped placeholders while it has none. They don't open yet.
 // Image URLs are copied from the cards' Limitless pages (their numbers aren't predictable).
 type Pool = { name: string; cards: CardResult[] };
+// How long the search options must stay unchanged before they rerun the search
+const SEARCH_DELAY = 300;
+
+// Placeholders shown while a search is under way: about three rows at most widths
+const SKELETON_TILES = 18;
+
+// Results drawn at a time (about 20 rows), and how far below the list's visible end the
+// next page starts drawing
+const RESULTS_PAGE = 120;
+const RESULTS_LOOKAHEAD = 400;
+
 const FEATURED_POOLS: Pool[] = [
   {
     name: 'Best Decks of All Time',
@@ -219,8 +242,67 @@ export default function Editor() {
   const [importText, setImportText] = React.useState('');
   const [importing, setImporting] = React.useState(false);
   const [query, setQuery] = React.useState('');
+  // The search the results are for, rerun when the filters or sort order change
+  const [searched, setSearched] = React.useState('');
+  const [searchOptions, setSearchOptions] = React.useState<SearchOptions>(DEFAULT_SEARCH);
+  // Each search's number, so a slower earlier one can't replace a later one's results
+  const searchCount = React.useRef(0);
+  // The search under way, and one waiting for the options to settle (changeSearchOptions)
+  const searchAbort = React.useRef<AbortController | null>(null);
+  const searchTimer = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The last search failed: why, shown under the search
+  const [searchError, setSearchError] = React.useState<string | null>(null);
   const [results, setResults] = React.useState<CardResult[]>([]);
-  const showingResults = results.length > 0 && !importing;
+  // Results whose thumbnail wouldn't load even through the proxy (a source listing an
+  // image it doesn't have): hidden, since there's no picture to show. Each set of results
+  // starts afresh.
+  const [unshown, setUnshown] = React.useState<{ of: CardResult[]; keys: Set<string> }>({
+    of: [],
+    keys: new Set(),
+  });
+  const brokenKeys = unshown.of === results ? unshown.keys : null;
+  const shownResults = brokenKeys
+    ? results.filter((card) => !brokenKeys.has(`${card.set} ${card.number}`))
+    : results;
+  // How many results are drawn: a page at first, and another each time the list is
+  // scrolled near its end, so listing many whole sets can't put thousands of cards on the
+  // page at once. Each set of results starts again at one page.
+  const [resultsLimit, setResultsLimit] = React.useState({ of: results, count: RESULTS_PAGE });
+  const resultsCount = resultsLimit.of === results ? resultsLimit.count : RESULTS_PAGE;
+  const visibleResults = shownResults.slice(0, resultsCount);
+  const resultsRef = React.useRef<HTMLDivElement>(null);
+  const moreResultsRef = React.useRef<HTMLSpanElement>(null);
+  React.useEffect(() => {
+    const more = moreResultsRef.current;
+    if (!more) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting)
+          setResultsLimit({ of: results, count: resultsCount + RESULTS_PAGE });
+      },
+      // Starts drawing the next page a little before the end comes into view
+      { root: resultsRef.current, rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px` }
+    );
+    observer.observe(more);
+    return () => observer.disconnect();
+  }, [results, resultsCount, visibleResults.length]);
+  // What the last search was for; when nothing it found can be shown (none found, or every
+  // thumbnail failed), that's said under the search
+  const [searchedFor, setSearchedFor] = React.useState<{ query: string; sets: string[] } | null>(
+    null
+  );
+  const noResults = searchedFor && shownResults.length === 0 ? searchedFor : null;
+  // A search is under way: its results show as shimmering placeholders until it's back
+  const [searching, setSearching] = React.useState(false);
+  const showingSkeleton = searching && !importing;
+  const showingResults = shownResults.length > 0 && !importing && !searching;
+  // Results, placeholders or the no-results message, which hide the pools and Advanced
+  const searchShown =
+    !importing &&
+    (shownResults.length > 0 || noResults !== null || searching || searchError !== null);
+  // The results are scrolled, so a shade shows they go on under the controls above
+  const [resultsScrolled, setResultsScrolled] = React.useState(false);
+  const sortDirection = sortLabel(searchOptions);
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -245,7 +327,7 @@ export default function Editor() {
   // animationend, which doesn't fire in a tab that isn't painting
   React.useEffect(() => {
     if (!menuClosing) return;
-    const timer = setTimeout(() => setShownMenu(null), 220);
+    const timer = setTimeout(() => setShownMenu(null), FOLD_CLEARANCE);
     return () => clearTimeout(timer);
   }, [menuClosing]);
   // Card face being picked from search: the next result clicked replaces the card (or a
@@ -295,7 +377,69 @@ export default function Editor() {
   const justDragged = React.useRef(false);
 
   const placements = type.layout(graphic);
+
+  // A card shown large in the middle of the window (View, in the card menu; a split card
+  // shows both its cards), grown from its place on the board and shrunk back to it when
+  // anything is pressed or Escape. Like the card menu, it stays on screen while it closes.
+  const [viewing, setViewing] = React.useState<{ id: string; faces: CardFace[] } | null>(null);
+  const [shownView, setShownView] = React.useState(viewing);
+  if (viewing && viewing !== shownView) setShownView(viewing);
+  const viewClosing = !viewing && shownView !== null;
+  React.useEffect(() => {
+    if (!viewClosing) return;
+    // Just after the 180ms shrink (Editor.module.css), as the card menu's timer does
+    const timer = setTimeout(() => setShownView(null), FOLD_CLEARANCE);
+    return () => clearTimeout(timer);
+  }, [viewClosing]);
+  // Opening moves focus to the view, so it's announced; closing puts focus back on the
+  // board, where the viewed card stays selected (the menu it was opened from has closed)
+  const viewerRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!viewing) return;
+    const board = boardBoxRef.current;
+    viewerRef.current?.focus({ preventScroll: true });
+    return () => board?.focus({ preventScroll: true });
+  }, [viewing]);
+  React.useEffect(() => {
+    if (!viewing) return;
+    const close = () => setViewing(null);
+    // It's modal: keys stop here, so the page's shortcuts (Delete removing the viewed card)
+    // don't reach the board behind it, and Tab stays on it (the page behind is inert)
+    const onKey = (e: KeyboardEvent) => {
+      e.stopImmediatePropagation();
+      if (e.key === 'Tab') e.preventDefault();
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', onKey, true);
+    };
+  }, [viewing]);
+  // Where the cards grow from and shrink back to: the card on the board, as a transform
+  // of the cards' place in the middle (--from), measured without that transform
+  const viewRef = React.useRef<HTMLDivElement>(null);
+  const viewedPlace = placements.find((p) => p.item.id === shownView?.id);
+  React.useLayoutEffect(() => {
+    const cards = viewRef.current;
+    const stage = stageRef.current;
+    if (!cards || !stage || !viewedPlace) return;
+    const board = stage.container().getBoundingClientRect();
+    const x = board.left + (viewedPlace.x + viewedPlace.width / 2) * scale;
+    const y = board.top + (viewedPlace.y + viewedPlace.height / 2) * scale;
+    const dx = x - (cards.offsetLeft + cards.offsetWidth / 2);
+    const dy = y - (cards.offsetTop + cards.offsetHeight / 2);
+    const shrink = (viewedPlace.height * scale) / cards.offsetHeight;
+    cards.style.setProperty('--from', `translate(${dx}px, ${dy}px) scale(${shrink})`);
+    // The card's place by value: placements are new objects every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewedPlace?.x, viewedPlace?.y, viewedPlace?.width, viewedPlace?.height, viewClosing, scale]);
   const targets = type.targets(graphic);
+  // The set filter's ticks: the board's tier colors, or a new tier list's on a board
+  // without them
+  const targetColors = targets.flatMap((t) => (t.color ? [t.color] : []));
+  const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
   const targetIndex = Math.min(target, targets.length - 1);
 
   // Changes the board showing
@@ -320,7 +464,7 @@ export default function Editor() {
     // A cleared board starts Add Cards over too
     if (clear) {
       setQuery('');
-      setResults([]);
+      clearSearch();
     }
     if (kind !== doc.kind) {
       setTarget(0);
@@ -346,7 +490,7 @@ export default function Editor() {
   }, [doc]);
 
   // The board fills the workspace: its width on narrow screens (where the page scrolls),
-  // and from b8 up as much as fits, leaving room for the board type, toolbar and status
+  // and from b8 up as much as fits, leaving room for the toolbar and status
   // around it. Exports are always full size.
   React.useEffect(() => {
     const workspace = workspaceRef.current;
@@ -402,6 +546,21 @@ export default function Editor() {
     removeCard(selectedId);
   }, [selectedId, removeCard]);
 
+  // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
+  // board's background does; the card menu is on the board, so using it keeps the card.
+  // Not while picking a replacement (the outline shows which card it replaces) or viewing
+  // (the press that closes the view keeps the card, as Escape does).
+  const keepSelection = picking !== null || shownView !== null;
+  React.useEffect(() => {
+    if (!selectedId || keepSelection) return;
+    const onDown = (e: PointerEvent) => {
+      if (e.target instanceof Node && boardBoxRef.current?.contains(e.target)) return;
+      setSelectedId(null);
+    };
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, [selectedId, keepSelection]);
+
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = e.target instanceof Element && e.target.closest('input, textarea, select');
@@ -455,18 +614,59 @@ export default function Editor() {
     );
   }
 
-  async function search(text: string) {
-    // A blank search clears the results
-    if (!text.trim()) {
-      setResults([]);
-      setStatus('');
+  // Stops the search under way and any waiting to start: a newer one replaces them
+  function cancelSearch() {
+    searchCount.current++;
+    searchAbort.current?.abort();
+    clearTimeout(searchTimer.current);
+  }
+
+  function clearSearch() {
+    cancelSearch();
+    setSearched('');
+    setResults([]);
+    setSearchedFor(null);
+    setSearchError(null);
+    setSearching(false);
+  }
+
+  // A blank search lists the filter's sets whole, or clears the results if there are none.
+  // Starting one closes Bulk import, so its results show.
+  async function search(text: string, options = searchOptions) {
+    if (!text.trim() && !options.sets.length) {
+      clearSearch();
       return;
     }
-    setBusy(true);
-    const found = await searchCards(text.trim());
-    setResults(found);
-    setStatus(found.length ? '' : 'No cards found.');
-    setBusy(false);
+    cancelSearch();
+    const count = searchCount.current;
+    const abort = new AbortController();
+    searchAbort.current = abort;
+    setSearched(text.trim());
+    setSearching(true);
+    setImporting(false);
+    try {
+      const found = await searchCards(text.trim(), options, abort.signal);
+      if (count !== searchCount.current) return;
+      setResults(found);
+      setSearchedFor({ query: text.trim(), sets: options.sets });
+      setSearchError(null);
+    } catch (e) {
+      if (count !== searchCount.current) return;
+      setResults([]);
+      setSearchedFor(null);
+      setSearchError(e instanceof Error ? e.message : 'Search failed.');
+    } finally {
+      if (count === searchCount.current) setSearching(false);
+    }
+  }
+
+  // New filters or a new sort order apply to the next search, and rerun the current one
+  // (with no search, ticking sets lists them) once they've stopped changing for a moment,
+  // so ticking several sets in a row runs one search
+  function changeSearchOptions(options: SearchOptions) {
+    setSearchOptions(options);
+    cancelSearch();
+    searchTimer.current = setTimeout(() => search(searched, options), SEARCH_DELAY);
   }
 
   const findCard = (id: string | undefined) => placements.find((p) => p.item.id === id)?.item;
@@ -487,7 +687,6 @@ export default function Editor() {
     });
     setPicking({ id, part });
     setQuery(name);
-    setResults([]);
     searchInputRef.current?.scrollIntoView({ block: 'center' });
     searchInputRef.current?.focus();
     search(name);
@@ -507,8 +706,8 @@ export default function Editor() {
         : ['Add as split card', addToTarget];
     }
     return split
-      ? ['Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
-      : ['Remove card', 'Replace card', 'Make split card'];
+      ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
+      : ['View', 'Remove card', 'Replace card', 'Make split card'];
   };
 
   function runCardMenuItem({ id, dropped }: CardMenu, label: string) {
@@ -524,6 +723,10 @@ export default function Editor() {
         applyPlaced(type.dropCard(graphic, toItem(dropped.card), dropped.point));
       }
       return;
+    }
+    if (label === 'View') {
+      const item = findCard(id);
+      if (item) setViewing({ id, faces: item.split ? [faceOf(item), item.split] : [faceOf(item)] });
     }
     if (label === 'Remove card') removeCard(id);
     if (label === 'Replace card' || label === 'Replace top half') startPicking(id, 'top');
@@ -665,7 +868,7 @@ export default function Editor() {
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
     <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
-      <div ref={sideColumnRef} className={styles.sideColumn}>
+      <div ref={sideColumnRef} className={styles.sideColumn} inert={viewing !== null}>
         <header className={styles.top}>
           <Link href="/" className={styles.brand}>
             <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
@@ -720,19 +923,102 @@ export default function Editor() {
                     value={query}
                     onChange={(e) => {
                       setQuery(e.target.value);
-                      // Emptying the field clears the results, bringing the other sections back
-                      if (!e.target.value.trim()) {
-                        setResults([]);
-                        setStatus('');
-                      }
+                      // Emptying the field clears the results, bringing the other sections
+                      // back, or goes back to listing the filter's sets
+                      if (!e.target.value.trim()) search('');
                     }}
                   />
+                  {query && (
+                    <button
+                      type="button"
+                      className={styles.clearSearch}
+                      aria-label="Clear search"
+                      title="Clear search"
+                      onClick={() => {
+                        setQuery('');
+                        search('');
+                        searchInputRef.current?.focus();
+                      }}
+                    >
+                      <span aria-hidden />
+                    </button>
+                  )}
                 </label>
-                <Button variant="primary" disabled={busy}>
-                  Search
-                </Button>
+                <Button variant="primary">Search</Button>
               </form>
-              {picking && pickingCard ? (
+              {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
+                picker when there's a choice (a blank canvas has one place for cards),
+                always; and while there are results (or none found), Sort, at the right */}
+              <div className="flex flex-wrap gap-3 items-center">
+                <SearchFilters
+                  options={searchOptions}
+                  colors={tickColors}
+                  onChange={changeSearchOptions}
+                />
+                {!picking && targets.length > 1 && (
+                  <Dropdown
+                    label="Add to"
+                    hideLabel
+                    chevron={false}
+                    value={targetIndex}
+                    options={targets.map((t, i) => ({
+                      value: i,
+                      label: t.name.replaceAll('\n', ' '),
+                      color: t.color,
+                    }))}
+                    onChange={setTarget}
+                  />
+                )}
+                {/* Flips the order: newest or oldest set first, and each set's numbers */}
+                {searchShown && (
+                  <Button
+                    type="button"
+                    variant="icon"
+                    className="ml-auto"
+                    aria-label={`Sort: ${sortDirection}`}
+                    title={`Sort: ${sortDirection}`}
+                    onClick={() =>
+                      changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
+                    }
+                  >
+                    <span
+                      aria-hidden
+                      className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                    />
+                  </Button>
+                )}
+              </div>
+              {/* What the search was for, and with sets ticked, a way to search them all */}
+              {searchError && !importing && !searching && (
+                <p role="alert" className="text-(--tb-muted)">
+                  {searchError}
+                </p>
+              )}
+              {noResults && !importing && !searching && (
+                <div role="status" className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1">
+                    <p className="font-semibold">No cards found</p>
+                    {(noResults.query || noResults.sets.length > 0) && (
+                      <p className="text-(--tb-muted)">
+                        {noResults.query && `for “${noResults.query}”`}
+                        {noResults.query && noResults.sets.length > 0 && ' '}
+                        {noResults.sets.length > 0 &&
+                          `in ${new Intl.ListFormat('en').format(noResults.sets)}`}
+                      </p>
+                    )}
+                  </div>
+                  {noResults.sets.length > 0 && (
+                    <Button
+                      type="button"
+                      className="self-start"
+                      onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
+                    >
+                      {noResults.query ? 'Search all sets' : 'Clear sets'}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {picking && pickingCard && (
                 <p className="flex gap-3 items-center">
                   {picking.part === 'top'
                     ? pickingCard.split
@@ -743,76 +1029,102 @@ export default function Editor() {
                       : `Splitting ${pickingCard.name}: pick the bottom card`}
                   <Button onClick={() => setPicking(null)}>Cancel</Button>
                 </p>
-              ) : (
-                // Only once a submitted search shows results to add, and when there's a
-                // choice (a blank canvas has one place for cards)
-                showingResults &&
-                targets.length > 1 && (
-                  <Dropdown
-                    label="Add to"
-                    value={targetIndex}
-                    options={targets.map((name, i) => ({
-                      value: i,
-                      label: name.replaceAll('\n', ' '),
-                    }))}
-                    onChange={setTarget}
-                  />
-                )
               )}
-              {/* Fixed-size tiles, as many per row as fit (Editor.module.css) */}
-              {showingResults && (
-                <div
-                  className={`${styles.results} text-caption b8:flex-1 b8:min-h-0 overflow-y-auto overflow-x-hidden`}
-                >
-                  {results.map((card) => (
-                    <div
-                      key={`${card.set}-${card.number}`}
-                      role="button"
-                      tabIndex={0}
-                      title={`${card.set} ${card.number}`}
-                      className="cursor-grab select-none flex flex-col items-center text-(--tb-muted)"
-                      // Mouse and pen only: on touch, a press-and-move scrolls the results
-                      onPointerDown={(e) => {
-                        if (e.pointerType === 'touch' || e.button !== 0) return;
-                        e.preventDefault();
-                        resultPress.current = { card, x: e.clientX, y: e.clientY, dragging: false };
-                      }}
-                      onClick={() => {
-                        if (!justDragged.current) pickResult(card);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          pickResult(card);
-                        }
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                      <img
-                        src={card.thumb}
-                        alt={`${card.set} ${card.number}`}
-                        className={`${styles.thumb} object-contain`}
-                        loading="lazy"
-                        draggable={false}
-                        // The CDN occasionally fails a load; retry once through the image proxy
-                        onError={(e) => {
-                          const proxy = proxied(card.thumb);
-                          if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
-                        }}
-                      />
-                      <span className="w-full truncate text-center">
-                        {card.set} {card.number}
-                      </span>
-                    </div>
-                  ))}
+              {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
+                search is under way, then the results. A shade over the top shows when
+                they're scrolled. */}
+              {/* The skeleton and results are visual; this says what they show */}
+              <p role="status" className="sr-only">
+                {showingSkeleton
+                  ? 'Searching…'
+                  : showingResults
+                    ? `${shownResults.length} cards`
+                    : ''}
+              </p>
+              {(showingResults || showingSkeleton) && (
+                <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
+                  <div
+                    ref={resultsRef}
+                    className={`${styles.results} overflow-y-auto overflow-x-hidden`}
+                    style={
+                      { '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}` } as React.CSSProperties
+                    }
+                    onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
+                  >
+                    {showingSkeleton
+                      ? Array.from({ length: SKELETON_TILES }, (_, i) => (
+                          <span key={i} aria-hidden className={styles.resultThumb} />
+                        ))
+                      : visibleResults.map((card) => (
+                          <div
+                            key={`${card.set}-${card.number}`}
+                            role="button"
+                            tabIndex={0}
+                            title={`${card.set} ${card.number}`}
+                            className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
+                            // Mouse and pen only: on touch, a press-and-move scrolls the results
+                            onPointerDown={(e) => {
+                              if (e.pointerType === 'touch' || e.button !== 0) return;
+                              e.preventDefault();
+                              resultPress.current = {
+                                card,
+                                x: e.clientX,
+                                y: e.clientY,
+                                dragging: false,
+                              };
+                            }}
+                            onClick={() => {
+                              if (!justDragged.current) pickResult(card);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                pickResult(card);
+                              }
+                            }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                            <img
+                              src={card.thumb}
+                              alt={`${card.name} (${card.set} ${card.number})`}
+                              className={`${styles.resultThumb} object-contain`}
+                              // Shimmers until it's loaded (Editor.module.css)
+                              onLoad={(e) => {
+                                e.currentTarget.dataset.loaded = '';
+                              }}
+                              loading="lazy"
+                              draggable={false}
+                              // The CDN occasionally fails a load; retry once through the image
+                              // proxy, and hide the result if that fails too
+                              onError={(e) => {
+                                const proxy = proxied(card.thumb);
+                                if (!e.currentTarget.src.endsWith(proxy)) {
+                                  e.currentTarget.src = proxy;
+                                  return;
+                                }
+                                const key = `${card.set} ${card.number}`;
+                                setUnshown((u) => ({
+                                  of: results,
+                                  keys: new Set([...(u.of === results ? u.keys : []), key]),
+                                }));
+                              }}
+                            />
+                          </div>
+                        ))}
+                    {/* Reaching it draws the next page */}
+                    {!showingSkeleton && visibleResults.length < shownResults.length && (
+                      <span ref={moreResultsRef} aria-hidden className="col-span-full" />
+                    )}
+                  </div>
+                  <span aria-hidden className={styles.resultsShade} data-shown={resultsScrolled} />
                 </div>
               )}
             </div>
 
-            {/* Card pools to browse and Advanced, until a search shows results; they come
+            {/* Card pools to browse and Advanced, until a search shows results or finds none; they come
               back when the search is emptied or the board is cleared. The pools are
               placeholders for now: they don't open yet. */}
-            {!showingResults && !importing && (
+            {!searchShown && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Featured Card Pools</h3>
                 {FEATURED_POOLS.map((pool) => (
@@ -859,36 +1171,53 @@ export default function Editor() {
               </div>
             )}
 
-            {!showingResults && (
+            {!searchShown && (
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Advanced</h3>
-                <Button className="self-start" onClick={() => setImporting((on) => !on)}>
-                  {importing ? 'Back to search' : 'Bulk import'}
-                </Button>
-                {importing && (
-                  <>
-                    <textarea
-                      rows={10}
-                      aria-label="Cards to import"
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      spellCheck={false}
-                      className="tierbinder-field font-mono"
-                      placeholder={
-                        '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
-                      }
-                      value={importText}
-                      onChange={(e) => setImportText(e.target.value)}
-                    />
-                    <Button
-                      variant="primary"
-                      onClick={runImport}
-                      disabled={busy || !importText.trim()}
-                    >
-                      Import (adds to the board)
-                    </Button>
-                  </>
-                )}
+                {/* A disclosure: the button names the import below it, which slides open */}
+                <div className="flex flex-col">
+                  <Button
+                    id="bulk-import-label"
+                    variant="text"
+                    className="self-start"
+                    aria-expanded={importing}
+                    aria-controls="bulk-import"
+                    onClick={() => setImporting((on) => !on)}
+                  >
+                    Bulk import
+                    <span aria-hidden className={styles.disclosureChevron} />
+                  </Button>
+                  <div
+                    id="bulk-import"
+                    className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
+                    inert={!importing}
+                  >
+                    <div>
+                      <div className="flex flex-col gap-3 pt-3">
+                        <textarea
+                          rows={10}
+                          aria-labelledby="bulk-import-label"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          spellCheck={false}
+                          className="tierbinder-field font-mono"
+                          placeholder={
+                            '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                          }
+                          value={importText}
+                          onChange={(e) => setImportText(e.target.value)}
+                        />
+                        <Button
+                          variant="primary"
+                          onClick={runImport}
+                          disabled={busy || !importText.trim()}
+                        >
+                          Import (adds to the board)
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </section>
@@ -898,6 +1227,14 @@ export default function Editor() {
             hidden={tab !== 'customize'}
             className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
+            <Dropdown
+              label="Board type"
+              value={doc.kind}
+              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+              onChange={(kind) => {
+                if (kind !== doc.kind) showBoard(kind);
+              }}
+            />
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
             {confirmingClear ? (
@@ -944,20 +1281,10 @@ export default function Editor() {
       <div
         ref={workspaceRef}
         className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+        inert={viewing !== null}
       >
         <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
-          <div className="flex">
-            <Dropdown
-              hideLabel
-              label="Board type"
-              value={doc.kind}
-              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-              onChange={(kind) => {
-                if (kind !== doc.kind) showBoard(kind);
-              }}
-            />
-          </div>
-          <div ref={boardBoxRef} className="w-full relative">
+          <div ref={boardBoxRef} tabIndex={-1} className={`${styles.boardBox} w-full relative`}>
             <Stage
               ref={(stage) => {
                 stageRef.current = stage;
@@ -1015,7 +1342,7 @@ export default function Editor() {
                 ref={cardMenuRef}
                 role="menu"
                 onContextMenu={(e) => e.preventDefault()}
-                className={`tierbinder-menu absolute z-10 tierbinder-popup flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
                 // Kept inside the board's right edge
                 style={{
                   minWidth: MENU_WIDTH,
@@ -1047,6 +1374,43 @@ export default function Editor() {
           {status && <p className="whitespace-pre-line">{status}</p>}
         </div>
       </div>
+
+      {shownView && (
+        <div
+          ref={viewerRef}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          aria-label={shownView.faces.map((f) => f.name).join(' / ')}
+          className={`${styles.viewer} ${viewClosing ? styles.viewerClosing : ''}`}
+        >
+          <div
+            ref={viewRef}
+            className={styles.viewCards}
+            style={
+              {
+                '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                '--count': shownView.faces.length,
+              } as React.CSSProperties
+            }
+          >
+            {shownView.faces.map((face, i) => (
+              // eslint-disable-next-line @next/next/no-img-element -- the board's own image, already loaded through the proxy
+              <img
+                key={i}
+                src={proxied(face.image)}
+                alt={face.name}
+                draggable={false}
+                className={styles.viewCard}
+                // The card images' rounded corners, as on the board
+                style={{
+                  borderRadius: `${(CARD_CORNER_RADIUS / CARD_WIDTH) * 100}% / ${(CARD_CORNER_RADIUS / CARD_HEIGHT) * 100}%`,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {dragGhost && (
         // eslint-disable-next-line @next/next/no-img-element -- remote thumbnail, as in the results

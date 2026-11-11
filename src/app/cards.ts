@@ -3,6 +3,7 @@
 // the same-origin proxy so canvas export works).
 
 import type { ImportCard, ImportLine } from './importText';
+import { DEFAULT_SEARCH, toParams, type SearchOptions } from './searchOptions';
 
 // One printed card
 export type CardFace = {
@@ -50,7 +51,8 @@ async function resolveFace(card: ImportCard): Promise<CardFace | null> {
     const found = await fetchCard(card.set, card.number);
     if (found) return toFace(found);
   }
-  const pick = defaultPrint(await searchCards(card.name));
+  // A failed search reports the card as not found, as an empty one does
+  const pick = defaultPrint(await searchCards(card.name).catch(() => []));
   return pick ? toFace(pick) : null;
 }
 
@@ -84,9 +86,14 @@ export async function fetchCard(set: string, number: string): Promise<CardResult
   return res.ok ? res.json() : null;
 }
 
-export async function searchCards(query: string): Promise<CardResult[]> {
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  if (!res.ok) return [];
+export async function searchCards(
+  query: string,
+  options: SearchOptions = DEFAULT_SEARCH,
+  signal?: AbortSignal
+): Promise<CardResult[]> {
+  const res = await fetch(`/api/search?${toParams(query, options)}`, { signal });
+  // A failed search is an error, not "no cards": the route says what went wrong
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? 'Search failed.');
   return (await res.json()).results;
 }
 

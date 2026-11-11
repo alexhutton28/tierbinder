@@ -35,19 +35,21 @@ const CARDS_AREA_WIDTH = BOARD_WIDTH - CARDS_LEFT - CARDS_RIGHT_PADDING;
 export const TIER_HEIGHT = BOARD_HEIGHT / TIER_COUNT;
 export const SEPARATOR_WIDTH = 3;
 
+// A new tier list's tiers, top to bottom: name and color
+export const DEFAULT_TIERS: [string, string][] = [
+  ['Goated', '#f0392b'],
+  ['Solid', '#f78c1e'],
+  ['Mid', '#ffcb2e'],
+  ['Fraud', '#3cc65a'],
+];
+
 export function defaultTierList(): TierList {
-  const tiers: [string, string][] = [
-    ['Goated', '#f0392b'],
-    ['Solid', '#f78c1e'],
-    ['Mid', '#ffcb2e'],
-    ['Fraud', '#3cc65a'],
-  ];
   return {
     kind: 'tier-list',
     background: '#1f3d4b',
     border: '#16303c',
     tierCardBorders: false,
-    tiers: tiers.map(([name, color]) => ({ id: newId(), name, color, items: [] })),
+    tiers: DEFAULT_TIERS.map(([name, color]) => ({ id: newId(), name, color, items: [] })),
   };
 }
 

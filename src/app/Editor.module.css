@@ -81,6 +81,9 @@
   height: auto;
   padding-block: var(--spacing-3);
   padding-left: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
+
+  /* The same on the right, for the clear button */
+  padding-right: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
 }
 
 /* The search field is taller than other controls: its padding sets its height (8px above
@@ -106,20 +109,120 @@
   background: var(--tb-icon-lit);
 }
 
+/* Feather's x-circle at the field's end, 8px in like the search icon, with the field's
+   height and that padding as its target; it lights up on hover */
+.clearSearch {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  padding-inline: var(--spacing-3);
+  color: var(--tb-icon-rest);
+  cursor: pointer;
+  transition: color var(--duration-hover) ease-out;
+}
+
+.clearSearch span {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/x-circle.svg') center / contain no-repeat;
+}
+
+.clearSearch:hover {
+  color: var(--tb-text);
+}
+
+/* A card shown large (View): over a dimmed window, as tall as --tb-view-height allows, or
+   narrower to fit the window with a split card's two side by side. It grows from the
+   card on the board (--from, set in Editor.tsx) on the spring, and shrinks back to it
+   as the card menu folds, while the dimming fades. */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: var(--spacing-5);
+  background: var(--tb-view-backdrop);
+  animation: view-fade var(--duration-fade) ease-out;
+}
+
+/* Focused when View closes, to hand focus back to the board and its selected card; the
+   selection outline already shows where it is */
+.boardBox:focus-visible {
+  outline: none;
+}
+
+/* Focused for screen readers when it opens; the dimmed page already shows it's open */
+.viewer:focus {
+  outline: none;
+}
+
+.viewerClosing {
+  pointer-events: none;
+  animation: view-fade var(--duration-fold) ease-in reverse forwards;
+}
+
+.viewCards {
+  display: flex;
+  gap: var(--spacing-4);
+  animation: view-grow var(--duration-move) var(--ease-spring);
+}
+
+.viewerClosing .viewCards {
+  animation: view-shrink var(--duration-fold) var(--ease-fold) forwards;
+}
+
+.viewCard {
+  width: min(
+    var(--tb-view-height) * (var(--card-ratio)),
+    (100vw - 2 * var(--spacing-5) - (var(--count) - 1) * var(--spacing-4)) / var(--count)
+  );
+  aspect-ratio: var(--card-ratio);
+  object-fit: cover;
+  box-shadow: var(--tb-popup-shadow);
+}
+
+@keyframes view-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes view-grow {
+  from {
+    transform: var(--from);
+  }
+}
+
+@keyframes view-shrink {
+  to {
+    transform: var(--from);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .viewCards,
+  .viewerClosing .viewCards {
+    animation: none;
+  }
+
+  .clearSearch,
   .searchIcon {
     transition: none;
   }
 }
 
-/* No padding below: the panel's own 8px top padding is the gap to the content */
+/* No padding below: the panel's own 16px top padding is the gap to the content */
 .sideHead {
   padding: var(--spacing-3) var(--spacing-3) 0;
 }
 
-/* Search results: thumbnail tiles (card and caption), as many per row as fit. On narrow
-   screens the box shows 3 rows and scrolls; beside the board it fills the sidebar. A row
-   is a thumbnail and one line of caption (1lh: the box sets the caption text). */
+/* Search results: thumbnail tiles, as many per row as fit (the set and number are the
+   tooltip). On narrow screens the box shows 3 rows and scrolls; beside the board it
+   fills the sidebar. */
 .results {
   --rows-shown: 3;
 
@@ -128,12 +231,41 @@
   align-content: start;
   gap: var(--spacing-2);
   max-height: calc(
-    var(--rows-shown) * (var(--tb-thumb-height) + 1lh) + (var(--rows-shown) - 1) * var(--spacing-2)
+    var(--rows-shown) * var(--tb-thumb-height) + (var(--rows-shown) - 1) * var(--spacing-2)
   );
 
   @variant b8 {
     max-height: none;
   }
+}
+
+/* The results and the shade over their top */
+.resultsBox {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.resultsBox > .results {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Fades in once the results are scrolled, as if they go under the controls above */
+.resultsShade {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: var(--spacing-3);
+  background: linear-gradient(var(--tb-scroll-shade), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-fade) ease-out;
+}
+
+.resultsShade[data-shown='true'] {
+  opacity: 1;
 }
 
 /* A featured card pool in Add Cards: its name over a row of card placeholders, on the
@@ -181,4 +313,121 @@
 .thumb {
   width: var(--tb-thumb-width);
   height: var(--tb-thumb-height);
+}
+
+/* The browser skips drawing results scrolled out of view, keeping a thumbnail's size in
+   their place (and each one's real size once it has been drawn) */
+.resultTile {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--tb-thumb-width) auto var(--tb-thumb-height);
+}
+
+/* A result fills its column (at least --tb-thumb-width wide, stretching to share the
+   row), at the card's shape, so the cards sit 4px apart both ways */
+.resultThumb {
+  width: 100%;
+  aspect-ratio: var(--card-ratio);
+}
+
+/* A result still loading, or a placeholder while the search runs: a dark card shape with
+   a lighter band sweeping across it, left to right */
+.resultThumb:not([data-loaded]) {
+  border-radius: var(--tb-radius);
+  background: linear-gradient(
+      100deg,
+      var(--tb-skeleton) 40%,
+      var(--tb-skeleton-shine) 50%,
+      var(--tb-skeleton) 60%
+    )
+    var(--tb-skeleton);
+  background-size: 300% 100%;
+  animation: shimmer var(--tb-shimmer) linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* After the shimmer's own rule, which would otherwise win */
+@media (prefers-reduced-motion: reduce) {
+  .resultThumb:not([data-loaded]) {
+    animation: none;
+  }
+}
+
+/* The sort button's arrow: down for the usual order, turning to point up when it's
+   reversed */
+.sortIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/arrow-down.svg') center / contain no-repeat;
+  transition: rotate var(--duration-move) var(--ease-spring);
+}
+
+.reversed {
+  rotate: 180deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sortIcon {
+    transition: none;
+  }
+}
+
+/* Bulk import's chevron, turning down while it's open */
+.disclosureChevron {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-right.svg') center / contain no-repeat;
+  transition: rotate var(--duration-move) var(--ease-spring);
+}
+
+[aria-expanded='true'] > .disclosureChevron {
+  rotate: 90deg;
+}
+
+/* Bulk import slides open below its button (its row grows from nothing to its height) as
+   the dropdowns open, and fades in. The content is clipped while it moves, with room for
+   focus rings; it starts 8px below the button (pt-3 in Editor.tsx), inside the clip. */
+.reveal {
+  --ring-room: calc(2 * var(--tb-focus-width));
+
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duration-drop) var(--ease-spring),
+    opacity var(--duration-fade) ease-out;
+}
+
+.reveal > * {
+  min-height: 0;
+  margin: calc(-1 * var(--ring-room));
+  padding: var(--ring-room);
+  overflow: hidden;
+}
+
+.revealed {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosureChevron {
+    transition: none;
+  }
+
+  /* Fades only */
+  .reveal {
+    transition: opacity var(--duration-fade) ease-out;
+  }
 }
