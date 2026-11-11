@@ -1676,7 +1676,9 @@ export default function Editor() {
                 />
               )}
               {/* Editor-only layer: hidden while exporting */}
-              <Layer name="editor" listening={false}>
+              {/* Listening, so the dragged card's events (moved here) still reach the stage and
+                move the outline with it; the outline itself takes no presses */}
+              <Layer name="editor">
                 {/* The card being dragged, over the board and the tray and under the outline
                   (CardNode moves it here) */}
                 <Group name="drag" />
@@ -1693,6 +1695,7 @@ export default function Editor() {
                       stroke={OUTLINE.color}
                       strokeWidth={OUTLINE.width}
                       cornerRadius={OUTLINE.radius}
+                      listening={false}
                     />
                   ))}
               </Layer>

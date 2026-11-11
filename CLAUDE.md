@@ -81,7 +81,7 @@ A type (`GraphicType` in `graphics/types.ts`) owns its document, how it draws, i
 - 1200×675 for every graphic; export is 2× (2400×1350 PNG, or taller with the card tray: 2400×1690 with up to 10 cards in it), downloaded (named after the graphic's kind) or copied.
 - On screen the stage scales to fill the workspace, larger or smaller than 1200 (`scale` in `Editor.tsx`): its width on narrow screens, and from `b8` up as much as fits beside the sidebar, with room left for the toolbar and status, which it measures rather than assumes.
 - Cards are 100×140, clipped to the card images' rounded corners (`CARD_CORNER_RADIUS`, ~4.5px).
-- Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline), and any a graphic adds (the eraser's circle).
+- Editor-only layers are named `editor` and hidden while exporting: the editor's (selection outline, and the `drag` group the dragged card moves into), and any a graphic adds (the eraser's circle). The editor's layer listens, so a dragged card's events still reach the stage and move the outline with it; the outline itself doesn't (`listening={false}`).
 - The selection outline follows a dragged card: Konva moves the card without React, so the stage's `dragmove` and `dragend` move the outline too. Cards carry their item's id (`CardNode` sets the group's `id`), which is how the editor knows the dragged card is the selected one.
 - Canvas text uses Inter Black (900), loaded with `next/font` in `layout.tsx` (`--font-inter`); it needs `document.fonts.load` before it draws, so the editor passes `fontFamily` once it's loaded.
 
