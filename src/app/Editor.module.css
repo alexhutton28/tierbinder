@@ -203,10 +203,6 @@
     animation: none;
   }
 
-  .resultThumb:not([data-loaded]) {
-    animation: none;
-  }
-
   .clearSearch,
   .searchIcon {
     transition: none;
@@ -349,6 +345,13 @@
 
   to {
     background-position: 0 0;
+  }
+}
+
+/* After the shimmer's own rule, which would otherwise win */
+@media (prefers-reduced-motion: reduce) {
+  .resultThumb:not([data-loaded]) {
+    animation: none;
   }
 }
 

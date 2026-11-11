@@ -400,11 +400,12 @@ export default function Editor() {
   React.useEffect(() => {
     if (!viewing) return;
     const close = () => setViewing(null);
+    // It's modal: keys stop here, so the page's shortcuts (Delete removing the viewed card)
+    // don't reach the board behind it, and Tab stays on it (the page behind is inert)
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      // Kept from the page's own Escape handling
       e.stopImmediatePropagation();
-      close();
+      if (e.key === 'Tab') e.preventDefault();
+      if (e.key === 'Escape') close();
     };
     window.addEventListener('pointerdown', close);
     window.addEventListener('keydown', onKey, true);
@@ -541,6 +542,18 @@ export default function Editor() {
     if (!selectedId) return;
     removeCard(selectedId);
   }, [selectedId, removeCard]);
+
+  // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
+  // board's background does; the card menu is on the board, so using it keeps the card
+  React.useEffect(() => {
+    if (!selectedId) return;
+    const onDown = (e: PointerEvent) => {
+      if (e.target instanceof Node && boardBoxRef.current?.contains(e.target)) return;
+      setSelectedId(null);
+    };
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, [selectedId]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -850,7 +863,7 @@ export default function Editor() {
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
     <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
-      <div ref={sideColumnRef} className={styles.sideColumn}>
+      <div ref={sideColumnRef} className={styles.sideColumn} inert={viewing !== null}>
         <header className={styles.top}>
           <Link href="/" className={styles.brand}>
             <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
@@ -1255,6 +1268,7 @@ export default function Editor() {
       <div
         ref={workspaceRef}
         className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+        inert={viewing !== null}
       >
         <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
           <div ref={boardBoxRef} className="w-full relative">

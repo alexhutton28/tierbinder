@@ -75,16 +75,21 @@ async function setCards(options: SearchOptions): Promise<CardResult[]> {
   const fromLimitless = codes.filter(
     (code) => !found?.covered.has(code) || missingIn.has(code) || found.elsewhere.has(code)
   );
+  let failed = 0;
   const extra = (
     await Promise.all(
       fromLimitless.map((code) =>
         limitless.setCards(code).catch((e) => {
           console.error(`Limitless set ${code} failed:`, e);
+          failed++;
           return [];
         })
       )
     )
   ).flat();
+  // With both sources down, an error (the route's 502) rather than an empty listing that
+  // would be cached as "No cards found"
+  if (!found && failed === fromLimitless.length) throw new Error('Card sources unavailable');
   if (!found) return arranged(extra.map(limitlessCard), options);
   // Sets TCGdex doesn't have yet come wholly from Limitless
   const uncovered = extra.filter((card) => !found.covered.has(card.set));
