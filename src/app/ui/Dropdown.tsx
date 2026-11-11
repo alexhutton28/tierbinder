@@ -4,6 +4,7 @@ import React from 'react';
 import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './Dropdown.module.css';
+import { FOLD_CLEARANCE } from './motion';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
@@ -35,7 +36,7 @@ export default function Dropdown<T extends string | number>({
   const closing = shown && !open;
   React.useEffect(() => {
     if (!closing) return;
-    const timer = setTimeout(() => setShown(false), 220);
+    const timer = setTimeout(() => setShown(false), FOLD_CLEARANCE);
     return () => clearTimeout(timer);
   }, [closing]);
 

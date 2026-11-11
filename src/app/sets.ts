@@ -11,9 +11,10 @@ const byCode = new Map<string, CardSet>();
 for (const set of Object.values(SETS)) {
   if ('empty' in set) continue;
   const known = byCode.get(set.code);
-  if (!known || set.name.length < known.name.length) {
-    byCode.set(set.code, { ...set, date: known && known.date > set.date ? known.date : set.date });
-  }
+  // The latest date of the code's sets, and the shortest name
+  const date = known && known.date > set.date ? known.date : set.date;
+  const name = known && known.name.length <= set.name.length ? known.name : set.name;
+  byCode.set(set.code, { code: set.code, name, date });
 }
 
 export const CARD_SETS: CardSet[] = [...byCode.values()].sort(

@@ -39,6 +39,7 @@ import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
+import { FOLD_CLEARANCE } from './ui/motion';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -285,15 +286,20 @@ export default function Editor() {
     observer.observe(more);
     return () => observer.disconnect();
   }, [results, resultsCount, visibleResults.length]);
-  // The last search found nothing: what it was for, shown under the search
-  const [noResults, setNoResults] = React.useState<{ query: string; sets: string[] } | null>(null);
+  // What the last search was for; when nothing it found can be shown (none found, or every
+  // thumbnail failed), that's said under the search
+  const [searchedFor, setSearchedFor] = React.useState<{ query: string; sets: string[] } | null>(
+    null
+  );
+  const noResults = searchedFor && shownResults.length === 0 ? searchedFor : null;
   // A search is under way: its results show as shimmering placeholders until it's back
   const [searching, setSearching] = React.useState(false);
   const showingSkeleton = searching && !importing;
-  const showingResults = results.length > 0 && !importing && !searching;
+  const showingResults = shownResults.length > 0 && !importing && !searching;
   // Results, placeholders or the no-results message, which hide the pools and Advanced
   const searchShown =
-    !importing && (results.length > 0 || noResults !== null || searching || searchError !== null);
+    !importing &&
+    (shownResults.length > 0 || noResults !== null || searching || searchError !== null);
   // The results are scrolled, so a shade shows they go on under the controls above
   const [resultsScrolled, setResultsScrolled] = React.useState(false);
   const sortDirection = sortLabel(searchOptions);
@@ -321,7 +327,7 @@ export default function Editor() {
   // animationend, which doesn't fire in a tab that isn't painting
   React.useEffect(() => {
     if (!menuClosing) return;
-    const timer = setTimeout(() => setShownMenu(null), 220);
+    const timer = setTimeout(() => setShownMenu(null), FOLD_CLEARANCE);
     return () => clearTimeout(timer);
   }, [menuClosing]);
   // Card face being picked from search: the next result clicked replaces the card (or a
@@ -382,7 +388,7 @@ export default function Editor() {
   React.useEffect(() => {
     if (!viewClosing) return;
     // Just after the 180ms shrink (Editor.module.css), as the card menu's timer does
-    const timer = setTimeout(() => setShownView(null), 220);
+    const timer = setTimeout(() => setShownView(null), FOLD_CLEARANCE);
     return () => clearTimeout(timer);
   }, [viewClosing]);
   // Opening moves focus to the view, so it's announced; closing puts focus back on the
@@ -619,7 +625,7 @@ export default function Editor() {
     cancelSearch();
     setSearched('');
     setResults([]);
-    setNoResults(null);
+    setSearchedFor(null);
     setSearchError(null);
     setSearching(false);
   }
@@ -642,12 +648,12 @@ export default function Editor() {
       const found = await searchCards(text.trim(), options, abort.signal);
       if (count !== searchCount.current) return;
       setResults(found);
-      setNoResults(found.length ? null : { query: text.trim(), sets: options.sets });
+      setSearchedFor({ query: text.trim(), sets: options.sets });
       setSearchError(null);
     } catch (e) {
       if (count !== searchCount.current) return;
       setResults([]);
-      setNoResults(null);
+      setSearchedFor(null);
       setSearchError(e instanceof Error ? e.message : 'Search failed.');
     } finally {
       if (count === searchCount.current) setSearching(false);
@@ -681,7 +687,6 @@ export default function Editor() {
     });
     setPicking({ id, part });
     setQuery(name);
-    setResults([]);
     searchInputRef.current?.scrollIntoView({ block: 'center' });
     searchInputRef.current?.focus();
     search(name);
@@ -1028,6 +1033,14 @@ export default function Editor() {
               {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
                 search is under way, then the results. A shade over the top shows when
                 they're scrolled. */}
+              {/* The skeleton and results are visual; this says what they show */}
+              <p role="status" className="sr-only">
+                {showingSkeleton
+                  ? 'Searching…'
+                  : showingResults
+                    ? `${shownResults.length} cards`
+                    : ''}
+              </p>
               {(showingResults || showingSkeleton) && (
                 <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
                   <div
@@ -1073,7 +1086,7 @@ export default function Editor() {
                             {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
                             <img
                               src={card.thumb}
-                              alt={`${card.set} ${card.number}`}
+                              alt={`${card.name} (${card.set} ${card.number})`}
                               className={`${styles.resultThumb} object-contain`}
                               // Shimmers until it's loaded (Editor.module.css)
                               onLoad={(e) => {

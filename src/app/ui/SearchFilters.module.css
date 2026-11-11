@@ -21,6 +21,11 @@
   padding: var(--spacing-4);
 }
 
+/* Focused on touch screens when it opens, for screen readers; it's plainly open already */
+.popup:focus-visible {
+  outline: none;
+}
+
 /* The set list shows this many rows and scrolls (a row is a line and the gap), with 8px
    between the set codes and the scrollbar */
 .sets {

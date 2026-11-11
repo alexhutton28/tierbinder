@@ -30,7 +30,9 @@ async function getPage(url: string) {
     headers: { 'User-Agent': 'TierBinder' },
     next: { revalidate: 86400 },
   });
-  if (!res.ok) return null;
+  if (res.status === 404) return null;
+  // An outage or rate limit is an error, not "nothing there", so it isn't cached as no cards
+  if (!res.ok) throw new Error(`Limitless ${url}: ${res.status}`);
   return { html: await res.text(), url: new URL(res.url) };
 }
 

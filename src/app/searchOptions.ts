@@ -41,10 +41,14 @@ export function toParams(query: string, options: SearchOptions) {
 
 export function fromParams(params: URLSearchParams): SearchOptions {
   return {
-    sets: (params.get('sets') ?? '')
-      .split(',')
-      .map((code) => code.trim().toUpperCase())
-      .filter((code) => SET_CODE.test(code)),
+    sets: [
+      ...new Set(
+        (params.get('sets') ?? '')
+          .split(',')
+          .map((code) => code.trim().toUpperCase())
+          .filter((code) => SET_CODE.test(code))
+      ),
+    ],
     reverse: params.get('reverse') === '1',
   };
 }

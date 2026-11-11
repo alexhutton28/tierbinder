@@ -147,7 +147,9 @@ export async function searchCards(query: string): Promise<Search> {
 // Every card in the sets with these codes (a code's subsets too). `covered` holds the
 // codes TCGdex has; sets newer than tcgdex-sets.json aren't looked for.
 export async function setCards(codes: string[]): Promise<Search & { covered: Set<string> }> {
-  const ids = Object.keys(known).filter((id) => codes.includes(known[id]?.code ?? ''));
+  const all = Object.keys(known).filter((id) => codes.includes(known[id]?.code ?? ''));
+  // The sets whose cards come from Limitless aren't fetched, only marked
+  const ids = all.filter((id) => !ELSEWHERE.has(id));
   const sets = await Promise.all(
     ids.map((id) => get<{ cards: BriefCard[] }>(`/sets/${encodeURIComponent(id)}`))
   );
@@ -157,6 +159,11 @@ export async function setCards(codes: string[]): Promise<Search & { covered: Set
     elsewhere: new Set<string>(),
     covered: new Set<string>(),
   };
+  for (const id of all.filter((id) => ELSEWHERE.has(id))) {
+    const code = known[id]!.code;
+    search.elsewhere.add(code);
+    search.covered.add(code);
+  }
   sets.forEach((found, i) => {
     const set = known[ids[i]];
     if (!found || !set) return;

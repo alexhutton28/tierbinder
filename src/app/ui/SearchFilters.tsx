@@ -7,6 +7,7 @@ import { CARD_SETS } from '../sets';
 import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './SearchFilters.module.css';
+import { FOLD_CLEARANCE } from './motion';
 
 // The card search's Sets button (a filter) and its popup: which sets to search, from a list of
 // every set (newest first) narrowed by a search of their names and codes. None ticked
@@ -58,7 +59,7 @@ export default function SearchFilters({
   const closing = shown && !open;
   React.useEffect(() => {
     if (!closing) return;
-    const timer = setTimeout(() => setShown(false), 220);
+    const timer = setTimeout(() => setShown(false), FOLD_CLEARANCE);
     return () => clearTimeout(timer);
   }, [closing]);
 
@@ -82,9 +83,12 @@ export default function SearchFilters({
   }, [open]);
 
   // Opening focuses the set search, except on touch screens, where that would bring up the
-  // keyboard over the list; tapping the field does
+  // keyboard over the list (tapping the field does): there the popup itself takes focus,
+  // so screen readers move into it and Escape closes it
   React.useEffect(() => {
-    if (open && matchMedia('(pointer: fine)').matches) searchRef.current?.focus();
+    if (!open) return;
+    if (matchMedia('(pointer: fine)').matches) searchRef.current?.focus();
+    else popupRef.current?.focus({ preventScroll: true });
   }, [open]);
 
   // Closes on any press outside it
@@ -118,13 +122,15 @@ export default function SearchFilters({
         type="button"
         aria-expanded={open}
         aria-controls={`${id}-popup`}
-        aria-label={count ? `Sets: ${options.sets.join(', ')}` : 'Sets'}
         className="flex gap-2 items-center"
         onClick={() => setOpen((o) => !o)}
       >
         <span aria-hidden className={styles.icon} />
         {/* The ticked set's code, or the first one's and how many more ("TWM +2") */}
+        {/* Screen readers hear what it filters and every ticked code, around the words shown */}
+        {count > 0 && <span className="sr-only">Sets: </span>}
         {count ? `${options.sets[0]}${count > 1 ? ` +${count - 1}` : ''}` : 'Sets'}
+        {count > 1 && <span className="sr-only"> ({options.sets.join(', ')})</span>}
       </Button>
       {shown && (
         <div
@@ -132,6 +138,7 @@ export default function SearchFilters({
           id={`${id}-popup`}
           popover="manual"
           role="dialog"
+          tabIndex={-1}
           aria-label="Filter by set"
           onKeyDown={(e) => {
             // Kept from the page's own Escape handling, which would also deselect the card

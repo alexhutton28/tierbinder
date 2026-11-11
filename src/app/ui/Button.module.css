@@ -52,6 +52,13 @@
   background: none;
 }
 
+/* On touch screens, a finger-sized target around its words */
+@media (pointer: coarse) {
+  .text {
+    min-height: var(--tb-touch-target);
+  }
+}
+
 /* Tools show as selected from aria-pressed */
 .tool[aria-pressed='true'] {
   border-color: transparent;

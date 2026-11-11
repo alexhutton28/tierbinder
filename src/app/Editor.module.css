@@ -120,7 +120,7 @@
   padding-inline: var(--spacing-3);
   color: var(--tb-icon-rest);
   cursor: pointer;
-  transition: color var(--duration-fade) ease-out;
+  transition: color var(--duration-hover) ease-out;
 }
 
 .clearSearch span {
@@ -422,8 +422,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .disclosureChevron,
-  .reveal {
+  .disclosureChevron {
     transition: none;
+  }
+
+  /* Fades only */
+  .reveal {
+    transition: opacity var(--duration-fade) ease-out;
   }
 }
