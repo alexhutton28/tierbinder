@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
 import { flushSync } from 'react-dom';
-import { Layer, Rect, Stage } from 'react-konva';
+import { Group, Layer, Rect, Stage } from 'react-konva';
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
@@ -29,11 +29,13 @@ import {
 } from './cards';
 import CardTray from './canvas/CardTray';
 import {
+  MAX_TRAY_CARDS,
   TRAY_GAP,
-  TRAY_HEIGHT,
   insertTrayCard,
   layoutTray,
   mapTray,
+  trayCardWidth,
+  trayHeight,
   moveTrayCard,
   trayDropIndex,
   type Tray,
@@ -76,6 +78,31 @@ function withTray(g: Graphic, tray: Tray | { error: string }): Placed<Graphic> {
 // The card menu's narrowest width; it opens left of the pointer when this wouldn't fit
 // inside the board's right edge
 const MENU_WIDTH = 160;
+
+// The light logo shown where the top bar's was while the sidebar is hidden
+// (tierbinder-combined-light.svg, drawn at 137×28), at the top bar logo's height (25px), so
+// its mark lands where the top bar's did; cut to the mark alone when the full logo won't
+// fit beside the board, with the room either needs around it to show (space-3)
+const LOGO_HEIGHT = 25;
+const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
+const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
+const LOGO_CLEARANCE = 8;
+
+// A motion token (e.g. --duration-move) in ms
+function durationOf(token: string) {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(token);
+  return parseFloat(value) * (value.trim().endsWith('ms') ? 1 : 1000) || 0;
+}
+
+// The sidebar shortcut as the keyboard shows it, for the toggle's tooltip
+const SIDEBAR_SHORTCUT = () =>
+  /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318\\' : 'Ctrl+\\';
+
+// From b8 up, where the board has the room beside the sidebar
+function wideQuery() {
+  const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
+  return matchMedia(`(width >= ${b8.trim()})`);
+}
 
 function loadSaved() {
   try {
@@ -178,6 +205,9 @@ export default function Editor() {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [scale, setScale] = React.useState(1);
   const [fontFamily, setFontFamily] = React.useState('sans-serif');
+  // The interface's font (Figtree), for canvas text that belongs to the editor (the empty
+  // card tray's hint)
+  const [interfaceFont, setInterfaceFont] = React.useState('sans-serif');
   const [status, setStatus] = React.useState('');
   // Featured pool cards whose thumbnail failed both ways, by set and number, and the cards
   // each pool shows without them
@@ -302,14 +332,21 @@ export default function Editor() {
   // The selection outline. Konva moves a dragged card itself, without React, so the
   // outline is moved the same way to stay on it (cards carry their item's id).
   const outlineRef = React.useRef<Konva.Rect>(null);
-  // The layer of the card being dragged, and its place to go back to (see onDragStart)
-  const draggedLayer = React.useRef<{ layer: Konva.Layer; zIndex: number } | null>(null);
   const moveOutline = (e: Konva.KonvaEventObject<DragEvent>) => {
     const card = e.target;
     if (card.name() !== 'card' || card.id() !== selectedId) return;
-    // On the stage, not in its parent: the card tray's cards are in a group under the board
-    const { x, y } = card.getAbsolutePosition(card.getStage() ?? undefined);
-    outlineRef.current?.position({ x: x - OUTLINE.width, y: y - OUTLINE.width });
+    // On the stage, not in its parent (the card tray's cards are in a group under the
+    // board), and at the card's size, which changes as it's dragged between the tray and
+    // the board
+    const stage = card.getStage();
+    if (!stage) return;
+    const box = card.getClientRect({ relativeTo: stage, skipStroke: true });
+    outlineRef.current?.setAttrs({
+      x: box.x - OUTLINE.width,
+      y: box.y - OUTLINE.width,
+      width: box.width + 2 * OUTLINE.width,
+      height: box.height + 2 * OUTLINE.width,
+    });
   };
   // Search result pressed with a mouse or pen: where the press started, and whether it
   // has moved far enough to be a drag. A drag shows the card under the pointer
@@ -330,15 +367,81 @@ export default function Editor() {
 
   // From b8 up, where the board has the room beside the sidebar; the card tray only
   // shows there
-  const [wide, setWide] = React.useState(false);
+  // Known from the first render (the editor only renders in the browser), so the board's
+  // first fit already uses the wide layout
+  const [wide, setWide] = React.useState(() => wideQuery().matches);
+  // The sidebar column hidden with Ctrl+\ (Cmd+\ on a Mac, as in Notion and Figma) or the
+  // button at the sidebar's foot, sliding out to leave the window to the board; from b8 up
+  // only, where it's beside the board. Not saved: a reload, or a narrower window, shows it.
+  const [sidebarHidden, setSidebarHidden] = React.useState(false);
+  const showSidebarRef = React.useRef<HTMLButtonElement>(null);
+  const sidebarCollapsed = wide && sidebarHidden;
+  // While the sidebar is hidden, the light logo fades in where the top bar's was (the colored
+  // one goes with the sidebar), once the slide is over (`data-settled`), as a button that
+  // brings the sidebar back: the full logo if the board leaves room for it, else the mark
+  // alone, else neither (`data-size`, measured as the board moves). Showing the sidebar fades
+  // it out (`logoLeaving`) as the top bar comes back.
+  const floatingLogoRef = React.useRef<HTMLButtonElement>(null);
+  const [logoMounted, setLogoMounted] = React.useState(false);
+  if (sidebarCollapsed && !logoMounted) setLogoMounted(true);
+  const logoLeaving = logoMounted && !sidebarCollapsed;
   React.useEffect(() => {
-    const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
-    const query = matchMedia(`(width >= ${b8.trim()})`);
-    const update = () => setWide(query.matches);
-    update();
+    if (!logoLeaving) return;
+    const timer = setTimeout(() => setLogoMounted(false), durationOf('--duration-fade'));
+    return () => clearTimeout(timer);
+  }, [logoLeaving]);
+  React.useEffect(() => {
+    const logo = floatingLogoRef.current;
+    if (!sidebarCollapsed || !logo) return;
+    // The slide's length (none under reduced motion, where the sidebar goes at once)
+    const slide = matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 0
+      : durationOf('--duration-move');
+    const timer = setTimeout(() => logo.toggleAttribute('data-settled', true), slide);
+    return () => {
+      clearTimeout(timer);
+      logo.toggleAttribute('data-settled', false);
+    };
+  }, [sidebarCollapsed]);
+  React.useEffect(() => {
+    const query = wideQuery();
+    const update = () => {
+      setWide(query.matches);
+      if (!query.matches) setSidebarHidden(false);
+    };
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
+  const hideSidebarRef = React.useRef<HTMLButtonElement>(null);
+  const toggleSidebar = React.useCallback(() => {
+    if (sidebarHidden) {
+      // The show button goes as the sidebar comes back: focus on it moves to the hide button
+      const fromShowButton = document.activeElement === showSidebarRef.current;
+      flushSync(() => setSidebarHidden(false));
+      if (fromShowButton) hideSidebarRef.current?.focus({ preventScroll: true });
+    } else {
+      // Focus in the sidebar would be lost with it: the board takes it
+      if (sideColumnRef.current?.contains(document.activeElement)) {
+        boardBoxRef.current?.focus({ preventScroll: true });
+      }
+      // Open dropdowns and popups close as the sidebar goes, as they do on a press outside
+      // them; the press is on the board, so the selected card stays selected
+      boardBoxRef.current?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+      setSidebarHidden(true);
+    }
+  }, [sidebarHidden]);
+  React.useEffect(() => {
+    if (!wide) return;
+    const onKey = (e: KeyboardEvent) => {
+      // By the key's place, so it works on keyboards where \ takes another key
+      if (e.code !== 'Backslash' || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+      e.preventDefault();
+      // Holding the keys toggles it once
+      if (!e.repeat) toggleSidebar();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [wide, toggleSidebar]);
   // The card tray, under the board: its top edge in design pixels sits TRAY_GAP on-screen
   // pixels below the board, whatever the scale
   const trayShown = wide && graphic.tray.enabled;
@@ -346,7 +449,18 @@ export default function Editor() {
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
   const exportTray = trayShown && includeTray;
-  const exportHeight = BOARD_HEIGHT + (exportTray ? TRAY_HEIGHT : 0);
+  // The tray's height follows its cards
+  const shownTrayHeight = trayShown ? trayHeight(graphic.tray.items.length) : 0;
+  const exportHeight = BOARD_HEIGHT + (exportTray ? shownTrayHeight : 0);
+
+  // A dragged card shows at the board's card size over the board, and the tray's over
+  // the card tray (as a new card there would be)
+  const boardCardWidth = type.cardWidth?.(graphic) ?? CARD_WIDTH;
+  // (a full tray won't take it, so it keeps the board's size)
+  const cardDragWidth = (center: Point) =>
+    trayShown && center.y > BOARD_HEIGHT && graphic.tray.items.length < MAX_TRAY_CARDS
+      ? trayCardWidth(graphic.tray.items.length + 1)
+      : boardCardWidth;
 
   // Every card and where it's drawn: the board's, then the tray's
   const boardPlacements = type.layout(graphic);
@@ -415,7 +529,7 @@ export default function Editor() {
   // The graphic's targets, then the card tray while it shows
   const boardTargets = type.targets(graphic);
   const targets = trayShown
-    ? [...boardTargets, { name: 'Card tray', color: graphic.tray.color }]
+    ? [...boardTargets, { name: 'Card tray', color: graphic.tray.color, outlined: true }]
     : boardTargets;
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
   // without them
@@ -437,9 +551,13 @@ export default function Editor() {
     setDoc((d) => {
       const old = d.graphics[kind];
       if (old && !clear) return { ...d, kind };
-      // Clearing empties the card tray but keeps it on, in its color
+      // Clearing empties the card tray if it shows, keeping it on in its color; a hidden
+      // tray (turned off, or a narrow window) keeps its cards, as it promises
       const fresh = typeOf(kind).create();
-      const next = old ? { ...fresh, tray: { ...old.tray, items: [] } } : fresh;
+      const keepTray = kind !== d.kind || !trayShown;
+      const next = old
+        ? { ...fresh, tray: { ...old.tray, items: keepTray ? old.tray.items : [] } }
+        : fresh;
       return { ...d, kind, graphics: { ...d.graphics, [kind]: next } };
     });
     setSelectedId(null);
@@ -492,7 +610,7 @@ export default function Editor() {
         const around = board.offsetHeight - box.offsetHeight;
         // The card tray and the gap above it, when it shows
         const tray = trayShown ? TRAY_GAP : 0;
-        const designHeight = BOARD_HEIGHT + (trayShown ? TRAY_HEIGHT : 0);
+        const designHeight = BOARD_HEIGHT + shownTrayHeight;
         next = Math.min(next, (height - around - tray) / designHeight);
       }
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
@@ -505,7 +623,39 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayShown]);
+  }, [wide, trayShown, shownTrayHeight]);
+
+  // The floating logo's size: the biggest that clears the board (and its toolbar and
+  // status) by LOGO_CLEARANCE. Measured whenever the workspace or the board changes size:
+  // as the sidebar slides, the board moves to stay centered even once its scale settles.
+  React.useEffect(() => {
+    const logo = floatingLogoRef.current;
+    const board = boardRef.current;
+    const workspace = workspaceRef.current;
+    if (!sidebarCollapsed || !logo || !board || !workspace) return;
+    const measure = () => {
+      const box = logo.getBoundingClientRect();
+      const b = board.getBoundingClientRect();
+      const left = box.left + parseFloat(getComputedStyle(logo).paddingLeft);
+      const top =
+        box.top +
+        parseFloat(getComputedStyle(logo).paddingTop) +
+        (box.height - parseFloat(getComputedStyle(logo).paddingTop) - LOGO_HEIGHT) / 2;
+      const clears = (width: number) =>
+        left + width + LOGO_CLEARANCE <= b.left ||
+        top + LOGO_HEIGHT + LOGO_CLEARANCE <= b.top ||
+        b.right + LOGO_CLEARANCE <= left ||
+        b.bottom + LOGO_CLEARANCE <= top;
+      const size = clears(LIGHT_LOGO_WIDTH) ? 'full' : clears(LOGO_MARK_WIDTH) ? 'mark' : null;
+      if (size) logo.dataset.size = size;
+      else delete logo.dataset.size;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(workspace);
+    observer.observe(board);
+    return () => observer.disconnect();
+  }, [sidebarCollapsed]);
 
   // Canvas text needs the font loaded first; next/font gives it a generated family name,
   // set on this route's layout
@@ -514,6 +664,8 @@ export default function Editor() {
     const family = box && getComputedStyle(box).getPropertyValue('--font-inter').trim();
     if (!family) return;
     document.fonts.load(`900 30px ${family}`).then(() => setFontFamily(family));
+    const figtree = box && getComputedStyle(box).getPropertyValue('--font-figtree').trim();
+    if (figtree) document.fonts.load(`400 14px ${figtree}`).then(() => setInterfaceFont(figtree));
   }, []);
 
   const removeCard = React.useCallback(
@@ -669,6 +821,7 @@ export default function Editor() {
     flushSync(() => {
       setTab('add');
       setImporting(false);
+      setSidebarHidden(false);
     });
     setPicking({ id, part });
     setQuery(name);
@@ -875,23 +1028,31 @@ export default function Editor() {
     // Put back as they are now
     const trayY = tray?.y();
     const trayRadius = trayBox?.cornerRadius();
+    const stageScale = stage.scaleX();
     if (exportTray) {
       tray?.y(BOARD_HEIGHT);
       trayBox?.cornerRadius(0);
     }
+    // Drawn at design size times EXPORT_SCALE, not from the on-screen scale, so the image
+    // is always whole pixels (2400 wide). Konva draws it as toBlob is called, so the board
+    // is put back before the screen next draws.
+    stage.scale({ x: 1, y: 1 });
+    let blob: Promise<Blob>;
     try {
-      return (await stage.toBlob({
-        pixelRatio: EXPORT_SCALE / scale,
+      blob = stage.toBlob({
+        pixelRatio: EXPORT_SCALE,
         x: 0,
         y: 0,
-        width: BOARD_WIDTH * scale,
-        height: exportHeight * scale,
-      })) as Blob;
+        width: BOARD_WIDTH,
+        height: exportHeight,
+      }) as Promise<Blob>;
     } finally {
+      stage.scale({ x: stageScale, y: stageScale });
       editorOnly.forEach((node) => node.show());
       if (trayY !== undefined) tray?.y(trayY);
       if (trayRadius !== undefined) trayBox?.cornerRadius(trayRadius);
     }
+    return blob;
   }
 
   async function exportPng() {
@@ -922,7 +1083,57 @@ export default function Editor() {
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
     <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
-      <div ref={sideColumnRef} className={styles.sideColumn} inert={viewing !== null}>
+      {logoMounted && (
+        <button
+          ref={floatingLogoRef}
+          type="button"
+          className={`${styles.floatingBrand} ${logoLeaving ? styles.floatingBrandLeaving : ''}`}
+          style={
+            {
+              '--logo-mark-width': `${LOGO_MARK_WIDTH}px`,
+              '--logo-full-width': `${LIGHT_LOGO_WIDTH}px`,
+            } as React.CSSProperties
+          }
+          aria-label="Show sidebar"
+          title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
+          aria-keyshortcuts="Control+\ Meta+\"
+          aria-controls="sidebar-column"
+          inert={viewing !== null || logoLeaving}
+          onClick={toggleSidebar}
+        >
+          <span className={styles.lightLogo}>
+            <Image
+              src="/tierbinder-combined-light.svg"
+              alt=""
+              width={LIGHT_LOGO_WIDTH}
+              height={LOGO_HEIGHT}
+            />
+          </span>
+        </button>
+      )}
+      {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
+      {sidebarCollapsed && (
+        <button
+          ref={showSidebarRef}
+          type="button"
+          className={`${styles.sidebarToggle} ${styles.showSidebar}`}
+          // Behind a viewed card, as the rest of the page is
+          inert={viewing !== null}
+          aria-label="Show sidebar"
+          title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
+          aria-keyshortcuts="Control+\ Meta+\"
+          aria-controls="sidebar-column"
+          onClick={toggleSidebar}
+        >
+          <span aria-hidden className={styles.sidebarIcon} />
+        </button>
+      )}
+      <div
+        id="sidebar-column"
+        ref={sideColumnRef}
+        className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
+        inert={viewing !== null}
+      >
         <header className={styles.top}>
           <Link href="/" className={styles.brand}>
             <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
@@ -1019,6 +1230,8 @@ export default function Editor() {
                       value: i,
                       label: t.name.replaceAll('\n', ' '),
                       color: t.color,
+                      // The tray's color is a shade of the board, so it gets a stroke
+                      outlined: 'outlined' in t && t.outlined,
                     }))}
                     onChange={setTarget}
                   />
@@ -1329,15 +1542,18 @@ export default function Editor() {
                 )}
               </>
             )}
-            {/* Confirmed on the page: some browsers (the in-app one) never show confirm() */}
+            {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
+              16px above it, as between sections, so it doesn't read as part of the last one */}
             {confirmingClear ? (
-              <div className="flex flex-wrap gap-3 items-center">
-                {graphic.tray.items.length ? 'Clear the board and card tray?' : 'Clear the board?'}
+              <div className="mt-3 flex flex-wrap gap-3 items-center">
+                {trayShown && graphic.tray.items.length
+                  ? 'Clear the board and card tray?'
+                  : 'Clear the board?'}
                 <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
                 <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
               </div>
             ) : (
-              <Button className="self-start" onClick={() => setConfirmingClear(true)}>
+              <Button className="mt-3 self-start" onClick={() => setConfirmingClear(true)}>
                 Clear board
               </Button>
             )}
@@ -1380,8 +1596,23 @@ export default function Editor() {
           </section>
 
           {/* At the sidebar's foot under every tab, until the credits find a better home */}
-          <footer>
+          {/* The credits, and from b8 up the button that hides the sidebar at its other end */}
+          <footer className={styles.foot}>
             <Credits />
+            {wide && (
+              <button
+                ref={hideSidebarRef}
+                type="button"
+                className={styles.sidebarToggle}
+                aria-label="Hide sidebar"
+                title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
+                aria-keyshortcuts="Control+\ Meta+\"
+                aria-controls="sidebar-column"
+                onClick={toggleSidebar}
+              >
+                <span aria-hidden className={styles.sidebarIcon} />
+              </button>
+            )}
           </footer>
         </aside>
       </div>
@@ -1398,7 +1629,7 @@ export default function Editor() {
                 stageRef.current = stage;
               }}
               width={BOARD_WIDTH * scale}
-              height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + TRAY_HEIGHT * scale : 0)}
+              height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + shownTrayHeight * scale : 0)}
               scaleX={scale}
               scaleY={scale}
               onMouseDown={(e) => {
@@ -1406,23 +1637,10 @@ export default function Editor() {
                   setSelectedId(null);
                 }
               }}
-              // A dragged card's layer goes on top while it's dragged, so a card dragged
-              // between the board and the card tray stays above both
-              onDragStart={(e) => {
-                const layer = e.target.getLayer();
-                if (!layer) return;
-                draggedLayer.current = { layer, zIndex: layer.zIndex() };
-                layer.moveToTop();
-              }}
               onDragMove={moveOutline}
               // After the card's own dragend has put it back at its laid-out spot; React only
               // moves the outline when that spot changes
-              onDragEnd={(e) => {
-                moveOutline(e);
-                const dragged = draggedLayer.current;
-                dragged?.layer.zIndex(dragged.zIndex);
-                draggedLayer.current = null;
-              }}
+              onDragEnd={moveOutline}
             >
               <type.Canvas
                 graphic={graphic}
@@ -1431,9 +1649,11 @@ export default function Editor() {
                 onSelect={setSelectedId}
                 onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                 onCardDrop={boardCardDrop}
+                cardDragWidth={cardDragWidth}
                 onPickTarget={setTarget}
                 onEditSetting={(key) => {
                   setTab('customize');
+                  setSidebarHidden(false);
                   setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
                 }}
                 tool={tool}
@@ -1449,12 +1669,17 @@ export default function Editor() {
                   onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                   onCardDrop={trayCardDrop}
                   onPick={() => setTarget(boardTargets.length)}
+                  boardCardWidth={boardCardWidth}
+                  hintFont={interfaceFont}
                   // Ignores presses while drawing (pen, eraser), as the board does
                   listening={tool === DEFAULT_TOOL}
                 />
               )}
               {/* Editor-only layer: hidden while exporting */}
               <Layer name="editor" listening={false}>
+                {/* The card being dragged, over the board and the tray and under the outline
+                  (CardNode moves it here) */}
+                <Group name="drag" />
                 {placements
                   .filter((p) => p.item.id === selectedId)
                   .map((p) => (

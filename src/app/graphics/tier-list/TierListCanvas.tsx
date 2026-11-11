@@ -26,6 +26,7 @@ export default function TierListCanvas({
   onSelect,
   onCardMenu,
   onCardDrop,
+  cardDragWidth,
   onPickTarget,
   onEditSetting,
 }: CanvasProps<TierList>) {
@@ -83,6 +84,7 @@ export default function TierListCanvas({
           dividerColor={list.tierCardBorders ? list.tiers[tierIndex].color : list.border}
           onSelect={() => onSelect(item.id)}
           onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
+          dragWidth={cardDragWidth}
           onDragEnd={(cardX, cardY) => {
             if (onCardDrop(item.id, cardX, cardY)) return;
             const target = dropTarget(

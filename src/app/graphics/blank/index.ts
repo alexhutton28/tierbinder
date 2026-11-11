@@ -21,6 +21,7 @@ const blank: GraphicType<BlankCanvas> = {
   Canvas: BlankCanvasView,
   Settings: BlankSettings,
   Toolbar: BlankToolbar,
+  cardWidth: (canvas) => canvas.cardWidth,
   layout: layoutCards,
   mapCards,
   // One place to add cards: the canvas

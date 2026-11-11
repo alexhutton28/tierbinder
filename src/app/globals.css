@@ -157,7 +157,8 @@ body * {
 /* The sidebar's tab panels: 16px under the main nav, 8px at the sides to line up with it
    (.sideHead in Editor.module.css), and 16px at the bottom */
 .tierbinder-panel {
-  padding: var(--spacing-4) var(--spacing-3);
+  /* None below: the sidebar's foot (the credits) has its own room above it */
+  padding: var(--spacing-4) var(--spacing-3) 0;
 }
 
 /* Trimmed to the capitals at the top, so the space above a heading (16px under the main
@@ -285,6 +286,11 @@ textarea.tierbinder-field {
 .tierbinder-list .tierbinder-option {
   border-radius: var(--tb-radius);
   font-weight: 500;
+}
+
+/* Dropdown rows have 8px at each end, close to their swatch or name */
+.tierbinder-list.dropdown .tierbinder-option {
+  padding-inline: var(--spacing-3);
 }
 
 .tierbinder-page :focus-visible {

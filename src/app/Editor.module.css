@@ -34,17 +34,150 @@
   display: contents;
 
   @variant b8 {
-    position: relative;
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    width: clamp(
+    --side-width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
       100vw - var(--tb-workspace-min)
     );
+
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: var(--side-width);
     min-height: 0;
+    transition:
+      margin-inline-start var(--duration-move) var(--ease-slide),
+      visibility 0s;
   }
+}
+
+/* Hidden with Ctrl+\ or Cmd+\ (Editor.tsx), from b8 up only: it slides off the window's
+   left edge (ease-slide: the spring without its overshoot, which would open a gap at the
+   window's edge) as the workspace grows into its place, and once it's gone it's
+   hidden, so nothing in it can be focused. Reduced motion: it goes at once. */
+.sideColumnHidden {
+  @variant b8 {
+    margin-inline-start: calc(-1 * var(--side-width));
+    visibility: hidden;
+    transition:
+      margin-inline-start var(--duration-move) var(--ease-slide),
+      visibility 0s var(--duration-move);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideColumn,
+  .sideColumnHidden {
+    transition: none;
+  }
+
+  /* The sidebar goes at once, so its show button fades in at once */
+  .showSidebar {
+    animation-delay: 0s;
+  }
+}
+
+/* While the sidebar is hidden: the light logo where the top bar's was (the same box: as
+   tall as the top bar, 16px in), under the top bar as it slides away with the colored
+   logo. It fades in once the slide is over (data-settled, Editor.tsx), cut to the mark
+   when the full logo won't fit beside the board (data-size), and not at all when even the
+   mark won't; leaving, it fades out as the top bar comes back. */
+.floatingBrand {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-inline: var(--spacing-4);
+  cursor: pointer;
+  visibility: hidden;
+  transition: opacity var(--duration-fade) ease-out;
+
+  & img {
+    max-width: none;
+  }
+
+  &[data-settled][data-size] {
+    visibility: visible;
+    animation: view-fade var(--duration-fade) ease-out;
+  }
+}
+
+.lightLogo {
+  width: var(--logo-mark-width);
+  overflow: hidden;
+}
+
+.floatingBrand[data-size='full'] .lightLogo {
+  width: var(--logo-full-width);
+}
+
+.floatingBrandLeaving {
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* The sidebar's foot: the credits, then the sidebar toggle at the other end */
+.foot {
+  display: flex;
+  align-items: center;
+
+  & > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Feather's sidebar icon, quiet until hovered, as the credits' info button is */
+.sidebarToggle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  margin-inline-end: var(--spacing-3);
+  color: var(--tb-muted);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--duration-hover);
+
+  &:hover {
+    color: var(--tb-heading);
+  }
+}
+
+/* A touch target around the small icon on touch screens (tablets, from b8 up), as the
+   credits' info button has */
+@media (pointer: coarse) {
+  .sidebarToggle::before {
+    position: absolute;
+    inset: calc((var(--tb-icon) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
+.sidebarIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/sidebar.svg') center / contain no-repeat;
+}
+
+/* While the sidebar is hidden: at the window's bottom left, 8px in and on the line the
+   sidebar's foot had, fading in once the sidebar has slid away */
+.showSidebar {
+  position: fixed;
+
+  /* Centered on the foot's line: its padding, less half the icon's overhang past the
+     line's capital height (at the credits' caption size) */
+  bottom: calc(var(--spacing-4) + (1cap - var(--tb-icon)) / 2);
+  font-size: var(--text-caption);
+  left: var(--spacing-3);
+  z-index: 10;
+  margin: 0;
+  animation: view-fade var(--duration-fade) ease-out var(--duration-move) both;
 }
 
 /* Below the board on narrow screens (the column's header stays first); beside it, under

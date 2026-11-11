@@ -8,6 +8,7 @@ import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './SearchFilters.module.css';
 import { FOLD_CLEARANCE } from './motion';
+import { PETREL_950, darkReadsBetter } from '../color';
 
 // The card search's Sets button (a filter) and its popup: which sets to search, from a list of
 // every set (newest first) narrowed by a search of their names and codes. None ticked
@@ -22,25 +23,13 @@ import { FOLD_CLEARANCE } from './motion';
 // it's faint on yellow), and on any other color whichever of white and the page's
 // darkest color (petrel 950, as in check-dark.svg) contrasts more
 const DEFAULT_COLORS = new Set(DEFAULT_TIERS.map(([, color]) => color));
-// --color-petrel-950 in design/theme.css, which check-dark.svg also draws in (an SVG used
-// as a background can't read CSS variables, and the contrast is worked out here)
-const DARK = '#12171a';
+// Petrel 950, which check-dark.svg also draws in (an SVG used as a background can't read
+// CSS variables, and the contrast is worked out here)
+const DARK = PETREL_950;
 
 function checkOn(color: string): 'light' | 'dark' {
-  const hex = color.toLowerCase();
-  if (DEFAULT_COLORS.has(hex) || !/^#[0-9a-f]{6}$/.test(hex)) return 'light';
-  const contrast = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-  const tick = luminance(hex);
-  return contrast(tick, luminance(DARK)) > contrast(tick, 1) ? 'dark' : 'light';
-}
-
-// WCAG's relative luminance of a #rrggbb color
-function luminance(hex: string) {
-  const [r, g, b] = [1, 3, 5].map((i) => {
-    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
-    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  if (DEFAULT_COLORS.has(color.toLowerCase())) return 'light';
+  return darkReadsBetter(color, DARK) ? 'dark' : 'light';
 }
 
 export default function SearchFilters({

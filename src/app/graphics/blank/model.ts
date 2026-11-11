@@ -49,8 +49,9 @@ const DEFAULT_DRAWING = {
   eraserWidth: 24,
 } satisfies Partial<BlankCanvas>;
 
-// A step darker than the white background
-const DEFAULT_TRAY_COLOR = '#e8e8e8';
+// A step darker than the white background: Petrel 100 (design/theme.css; canvas colors
+// can't read the CSS variables)
+const DEFAULT_TRAY_COLOR = '#e3e8eb';
 
 export function defaultBlankCanvas(): BlankCanvas {
   return {

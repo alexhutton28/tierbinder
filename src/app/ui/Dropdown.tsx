@@ -25,7 +25,8 @@ export default function Dropdown<T extends string | number>({
   hideLabel?: boolean;
   chevron?: boolean;
   value: T;
-  options: { value: T; label: string; color?: string }[];
+  // `outlined` gives the swatch a light stroke
+  options: { value: T; label: string; color?: string; outlined?: boolean }[];
   onChange: (value: T) => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -110,7 +111,7 @@ export default function Dropdown<T extends string | number>({
             }
           }}
         >
-          <Swatch color={options[selected]?.color} />
+          <Swatch color={options[selected]?.color} outlined={options[selected]?.outlined} />
           {options[selected]?.label}
           {chevron && <span aria-hidden className={styles.chevron} />}
         </Button>
@@ -139,7 +140,7 @@ export default function Dropdown<T extends string | number>({
                   close();
                 }}
               >
-                <Swatch color={option.color} />
+                <Swatch color={option.color} outlined={option.outlined} />
                 {option.label}
               </button>
             ))}
@@ -150,10 +151,13 @@ export default function Dropdown<T extends string | number>({
   );
 }
 
-function Swatch({ color }: { color?: string }) {
+function Swatch({ color, outlined }: { color?: string; outlined?: boolean }) {
   return color ? (
     <span aria-hidden className={styles.swatchBox}>
-      <span className={styles.swatch} style={{ background: color }} />
+      <span
+        className={`${styles.swatch} ${outlined ? styles.outlined : ''}`}
+        style={{ background: color }}
+      />
     </span>
   ) : null;
 }

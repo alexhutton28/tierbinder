@@ -46,14 +46,17 @@ export const DEFAULT_TIERS: [string, string][] = [
   ['Fraud', '#3cc65a'],
 ];
 
-const DEFAULT_BORDER = '#16303c';
-// The tray starts just a little darker than the background (#1f3d4b)
-const DEFAULT_TRAY_COLOR = '#1b3744';
+// A new tier list's board, in brand colors (design/theme.css; canvas colors can't read
+// the CSS variables): Storm 800, with the tray a step darker in Petrel 850 and the lines
+// between tiers darker still in Petrel 900
+const DEFAULT_BACKGROUND = '#2a4352';
+const DEFAULT_TRAY_COLOR = '#232b30';
+const DEFAULT_BORDER = '#1b2125';
 
 export function defaultTierList(): TierList {
   return {
     kind: 'tier-list',
-    background: '#1f3d4b',
+    background: DEFAULT_BACKGROUND,
     border: DEFAULT_BORDER,
     tierCardBorders: false,
     tiers: DEFAULT_TIERS.map(([name, color]) => ({ id: newId(), name, color, items: [] })),

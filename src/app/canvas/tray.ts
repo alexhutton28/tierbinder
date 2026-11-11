@@ -1,6 +1,7 @@
 // The card tray: a holding area under the board, shared by every graphic and saved with
 // each one (`tray` in its document). It takes cards like a tier does, up to MAX_TRAY_CARDS:
-// one row at full size, then smaller cards, then two rows, so it never gets taller. Plain
+// one row at full size, then a little smaller, then a second row; it's as tall as its cards
+// and its padding (trayHeight). Plain
 // JSON, separate from rendering (CardTray.tsx); the editor draws it and moves cards in
 // and out.
 
@@ -17,15 +18,22 @@ export type Tray = {
 
 export const MAX_TRAY_CARDS = 48;
 
-// Its height in design pixels, as tall as a tier with full-size cards
-export const TRAY_PADDING = 15;
-export const TRAY_HEIGHT = CARD_HEIGHT + 2 * TRAY_PADDING;
+// Around the cards, in design pixels: a row of full-size cards makes it about as tall as
+// a tier
+const TRAY_PADDING = 15;
 // Between cards, as a share of a card's width
 const GAP_SHARE = 0.1;
+// How far cards shrink to stay in one row, as a share of full size, before a second row
+// starts at that size
+const MIN_ROW_SHARE = 0.75;
+const MAX_ROWS = 2;
 // On-screen pixels, whatever the board's scale: the gap above it (the board's space-4)
 // and its corners (radius-medium). In exports it sits flush under the board, square.
 export const TRAY_GAP = 16;
 export const TRAY_RADIUS = 8;
+// The empty tray's hint, in on-screen pixels: text-body
+export const TRAY_HINT_SIZE = 14;
+export const TRAY_HINT = 'Drag cards here to hold them';
 
 export function defaultTray(color: string): Tray {
   return { enabled: false, color, items: [] };
@@ -42,37 +50,56 @@ export function parseTray(value: unknown, color: string): Tray {
   };
 }
 
-// The grid for `count` cards: as many rows as give the biggest cards, each row as full as
-// the others. Up to 10 cards are full size in one row; past that they shrink to fit it,
-// until 2 rows hold bigger ones (past 22); 48 are 2 rows of 24, about 45% of full size.
-const ROW_CHOICES = [1, 2, 3];
+const INNER_WIDTH = BOARD_WIDTH - 2 * TRAY_PADDING;
+// The widest cards that fit `columns` to a row
+const widthFor = (columns: number) =>
+  Math.min(CARD_WIDTH, INNER_WIDTH / (columns + (columns - 1) * GAP_SHARE));
+// How many cards of a width fit in a row
+const columnsAt = (width: number) =>
+  Math.floor((INNER_WIDTH + width * GAP_SHARE) / (width * (1 + GAP_SHARE)));
+
+// The grid for `count` cards, filling each row left to right before the next: up to 10 at
+// full size in one row; then shrinking to fit it, down to MIN_ROW_SHARE (14 cards); then a
+// second row at that size (up to 28); then both rows shrinking to fit (48 are two rows of
+// 24, about 45% of full size).
 function grid(count: number) {
-  const ratio = CARD_WIDTH / CARD_HEIGHT;
-  const inner = TRAY_HEIGHT - 2 * TRAY_PADDING;
-  const sizes = ROW_CHOICES.map((rows) => {
-    const columns = Math.max(1, Math.ceil(count / rows));
-    // rows × height + (rows - 1) gaps fill the height, with gap = width × GAP_SHARE; the
-    // same across the width
-    const byHeight = (inner / (rows + (rows - 1) * GAP_SHARE * ratio)) * ratio;
-    const byWidth = (BOARD_WIDTH - 2 * TRAY_PADDING) / (columns + (columns - 1) * GAP_SHARE);
-    return { rows, columns, width: Math.min(CARD_WIDTH, byHeight, byWidth) };
-  });
-  const best = sizes.reduce((a, b) => (b.width > a.width ? b : a));
-  const height = best.width / ratio;
-  const gap = best.width * GAP_SHARE;
-  const rows = Math.max(1, Math.ceil(count / best.columns));
-  // Centered top to bottom when the cards don't fill the height
-  const top = (TRAY_HEIGHT - rows * height - (rows - 1) * gap) / 2;
-  return { ...best, height, gap, top };
+  const minWidth = CARD_WIDTH * MIN_ROW_SHARE;
+  let columns = Math.max(1, count);
+  let width = widthFor(columns);
+  if (width < minWidth) {
+    columns = columnsAt(minWidth);
+    width = minWidth;
+    if (count > MAX_ROWS * columns) {
+      columns = Math.ceil(count / MAX_ROWS);
+      width = widthFor(columns);
+    }
+  }
+  const rows = Math.max(1, Math.ceil(count / columns));
+  const height = (width * CARD_HEIGHT) / CARD_WIDTH;
+  const gap = width * GAP_SHARE;
+  return { columns, rows, width, height, gap };
+}
+
+// The tray's height in design pixels with `count` cards: its rows and padding, rounded
+// to whole pixels so exports are (the padding below the cards takes the difference).
+// Empty, it's as tall as a row of full-size cards.
+export function trayHeight(count: number) {
+  const { rows, height, gap } = grid(count);
+  return Math.round(2 * TRAY_PADDING + rows * height + (rows - 1) * gap);
+}
+
+// The width the tray's cards are drawn at when it holds `count`
+export function trayCardWidth(count: number) {
+  return grid(count).width;
 }
 
 // Every card in the tray, its top-left corner measured from the tray's
 export function layoutTray(tray: Tray): CardPlacement[] {
-  const { columns, width, height, gap, top } = grid(tray.items.length);
+  const { columns, width, height, gap } = grid(tray.items.length);
   return tray.items.map((item, i) => ({
     item,
     x: TRAY_PADDING + (i % columns) * (width + gap),
-    y: top + Math.floor(i / columns) * (height + gap),
+    y: TRAY_PADDING + Math.floor(i / columns) * (height + gap),
     width,
     height,
   }));

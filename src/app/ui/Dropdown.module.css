@@ -15,6 +15,12 @@
   border-radius: var(--radius-small);
 }
 
+/* A light stroke inside the swatch, for a color that would sink into the control behind
+   it (the card tray's, a shade of the board) */
+.outlined {
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-muted);
+}
+
 /* Feather's chevron-down, colored by the text around it */
 .chevron {
   width: var(--tb-icon);

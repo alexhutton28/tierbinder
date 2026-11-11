@@ -4,6 +4,7 @@ import Konva from 'konva';
 import React from 'react';
 import { Group, Image as KonvaImage, Rect, Text } from 'react-konva';
 import { loadImage, type CardFace, type CardItem } from '../cards';
+import type { Point } from '../graphics/types';
 import { CARD_BORDER_WIDTH, CARD_CORNER_RADIUS, CARD_HEIGHT, CARD_WIDTH } from './size';
 
 // A card on the board, shared by every graphic: its image (or both halves of a split
@@ -94,6 +95,20 @@ export function cardBox(item: CardItem, width = CARD_WIDTH, topHalf = false) {
   return { width, height: showsTopHalf(item, topHalf) ? height / 2 : height };
 }
 
+// How long a dragged card takes to grow or shrink to the size where it's over (the
+// board's, or the card tray's): --duration-drop, read from the page, easing out
+function resizeDuration() {
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--duration-drop');
+  return parseFloat(value) * (value.trim().endsWith('ms') ? 1 : 1000) || 0;
+}
+const easeOut = (t: number) => 1 - (1 - t) ** 3;
+
+// Where the card being dragged is drawn (a group named `drag` at the bottom of the editor's
+// layer): above the board and the card tray, so a card dragged between them shows over
+// both, and below the selection outline. The card goes back to its own layer when it's
+// dropped. Konva doesn't redraw the layer a node leaves, so each move redraws it.
+const DRAG_GROUP = '.drag';
+
 // Named `card`, so the board can tell clicks on cards from clicks on what's behind them.
 // Drawn at the design size (100×140) and scaled to `width`, so borders and corners scale
 // with it.
@@ -109,6 +124,7 @@ export default function CardNode({
   onSelect,
   onMenu,
   onDragEnd,
+  dragWidth,
 }: {
   item: CardItem;
   x: number;
@@ -125,14 +141,81 @@ export default function CardNode({
   onSelect: () => void;
   // x, y are in the stage's on-screen pixels
   onMenu: (x: number, y: number) => void;
-  // Where the card was dropped (its top-left corner, in design pixels)
+  // Where the card was dropped: its top-left corner, in design pixels, at the size it's
+  // laid out at, with its center where the dragged card's was
   onDragEnd: (x: number, y: number) => void;
+  // The width to show at while dragged with its center at `center` (the stage's design
+  // pixels): the card grows or shrinks to it, keeping its center under the same spot
+  // of the pointer. Without it, it keeps its size.
+  dragWidth?: (center: Point) => number;
 }) {
-  const zIndex = React.useRef(0);
+  // Where the card is drawn while it isn't dragged: its parent and place in it
+  const home = React.useRef<{ parent: Konva.Container; zIndex: number } | null>(null);
+  // Set as the card leaves the board (removed, or the card tray hidden), when Konva ends
+  // its drag: that drop is ignored, since it no longer has a place to go back to
+  const unmounting = React.useRef(false);
+  React.useLayoutEffect(() => {
+    // Mounted (again, in development, where React mounts each component twice)
+    unmounting.current = false;
+    return () => {
+      unmounting.current = true;
+    };
+  }, []);
+  // While dragged with dragWidth: the card's center from the pointer, its scale, and the
+  // resize under way
+  const drag = React.useRef<{
+    offset: Point;
+    scale: number;
+    target: number;
+    frame: number;
+  } | null>(null);
   const half = showsTopHalf(item, topHalf);
   // Visible height at design size
   const height = half ? CARD_HEIGHT / 2 : CARD_HEIGHT;
   const scale = width / CARD_WIDTH;
+
+  // The dragged card's center, in the stage's design pixels
+  const dragCenter = (stage: Konva.Stage) => {
+    const pointer = stage.getPointerPosition();
+    if (!pointer || !drag.current) return null;
+    const stageScale = stage.scaleX();
+    return {
+      x: pointer.x / stageScale + drag.current.offset.x,
+      y: pointer.y / stageScale + drag.current.offset.y,
+    };
+  };
+
+  // The top-left corner (on screen) that puts a card at `cardScale` around `center`
+  const cornerAt = (stage: Konva.Stage, center: Point, cardScale: number) => ({
+    x: (center.x - (CARD_WIDTH * cardScale) / 2) * stage.scaleX(),
+    y: (center.y - (height * cardScale) / 2) * stage.scaleX(),
+  });
+
+  // Grows or shrinks the dragged card to the width for where it is, easing out
+  const resizeTo = (node: Konva.Node, width: number) => {
+    const state = drag.current;
+    const target = width / CARD_WIDTH;
+    if (!state || target === state.target) return;
+    state.target = target;
+    cancelAnimationFrame(state.frame);
+    const from = state.scale;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const duration = resizeDuration();
+    const start = performance.now();
+    const step = (now: number) => {
+      const stage = node.getStage();
+      const center = stage && dragCenter(stage);
+      if (!stage || !center || drag.current !== state) return;
+      const t = reduce || !duration ? 1 : Math.min(1, (now - start) / duration);
+      state.scale = from + (target - from) * easeOut(t);
+      node.scale({ x: state.scale, y: state.scale });
+      node.absolutePosition(cornerAt(stage, center, state.scale));
+      // Moves the selection outline with it, as dragging does
+      node.fire('dragmove', {}, true);
+      if (t < 1) state.frame = requestAnimationFrame(step);
+    };
+    state.frame = requestAnimationFrame(step);
+  };
 
   const openMenu = (stage: Konva.Stage | null) => {
     const pointer = stage?.getPointerPosition();
@@ -154,6 +237,14 @@ export default function CardNode({
         Konva.Util.drawRoundedRectPath(ctx, CARD_WIDTH, height, CARD_CORNER_RADIUS)
       }
       draggable
+      // Keeps a resizing card's center under the same spot of the pointer
+      dragBoundFunc={function (this: Konva.Node, pos) {
+        const stage = this.getStage();
+        const center = stage && dragCenter(stage);
+        if (!stage || !center || !drag.current) return pos;
+        if (dragWidth) resizeTo(this, dragWidth(center));
+        return cornerAt(stage, center, drag.current.scale);
+      }}
       onMouseDown={onSelect}
       // Konva fires click/tap only when the card wasn't dragged. It also fires click for
       // the right button; that opens the menu through contextmenu instead, or the menu
@@ -173,15 +264,55 @@ export default function CardNode({
       }}
       // Above everything while dragging, then back in order (later cards overlap earlier)
       onDragStart={(e) => {
-        zIndex.current = e.target.zIndex();
-        e.target.moveToTop();
+        const node = e.target;
+        const stage = node.getStage();
+        const parent = node.getParent();
+        const dragGroup = stage?.findOne<Konva.Group>(DRAG_GROUP);
+        if (parent && dragGroup) {
+          home.current = { parent, zIndex: node.zIndex() };
+          const corner = node.getAbsolutePosition();
+          node.moveTo(dragGroup);
+          node.absolutePosition(corner);
+          parent.getLayer()?.batchDraw();
+        }
+        const pointer = stage?.getPointerPosition();
+        if (!dragWidth || !stage || !pointer) return;
+        const corner = node.getAbsolutePosition();
+        const stageScale = stage.scaleX();
+        drag.current = {
+          offset: {
+            x: (corner.x - pointer.x) / stageScale + (CARD_WIDTH * scale) / 2,
+            y: (corner.y - pointer.y) / stageScale + (height * scale) / 2,
+          },
+          scale,
+          target: scale,
+          frame: 0,
+        };
       }}
       onDragEnd={(e) => {
         const node = e.target;
-        onDragEnd(node.x(), node.y());
-        // Back to its laid-out spot; the new layout moves it if the drop changed it
+        const dragScale = drag.current?.scale ?? scale;
+        if (drag.current) cancelAnimationFrame(drag.current.frame);
+        drag.current = null;
+        // Back in its own layer, where it was, before its spot is read in that layer's terms
+        const back = home.current;
+        home.current = null;
+        if (back) {
+          const corner = node.getAbsolutePosition();
+          const dragLayer = node.getLayer();
+          node.moveTo(back.parent);
+          dragLayer?.batchDraw();
+          node.zIndex(Math.min(back.zIndex, back.parent.children.length - 1));
+          node.absolutePosition(corner);
+        }
+        if (unmounting.current) return;
+        // Reported at its laid-out size around the dragged card's center
+        const centerX = node.x() + (CARD_WIDTH * dragScale) / 2;
+        const centerY = node.y() + (height * dragScale) / 2;
+        onDragEnd(centerX - (CARD_WIDTH * scale) / 2, centerY - (height * scale) / 2);
+        // Back to its laid-out spot and size; the new layout moves it if the drop changed it
+        node.scale({ x: scale, y: scale });
         node.position({ x, y });
-        node.zIndex(zIndex.current);
       }}
     >
       {item.split ? (
