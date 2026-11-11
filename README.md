@@ -4,7 +4,8 @@ Make TCG tier lists and graphics, and export them as images. Live at
 [tierbinder.big-a.fun](https://tierbinder.big-a.fun).
 
 It's built with Next.js, React and Konva, and card data and images come from
-[TCGdex](https://tcgdex.dev). Licenses for the material it includes are in
+[TCGdex](https://tcgdex.dev), with images it doesn't have yet from
+[pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data). Licenses for the material it includes are in
 `THIRD_PARTY_NOTICES.md`.
 
 ## Getting started

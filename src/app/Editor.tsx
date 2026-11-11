@@ -94,10 +94,29 @@ const poolCard = (set: string, number: string, name: string, path: string): Card
   thumb: `https://assets.tcgdex.net/en/${path}/low.webp`,
 });
 
+// One TCGdex has no image for, from pokemon-tcg-data's image hosts (as fill-images.json
+// has it): Scrydex's by card id (me6-84), or pokemontcg.io's by path (sm35/53). Switch it
+// to poolCard once TCGdex has the image.
+const scrydexCard = (set: string, number: string, name: string, id: string): CardResult => ({
+  set,
+  number,
+  name,
+  image: `https://images.scrydex.com/pokemon/${id}/large`,
+  thumb: `https://images.scrydex.com/pokemon/${id}/small`,
+});
+const pokemontcgCard = (set: string, number: string, name: string, path: string): CardResult => ({
+  set,
+  number,
+  name,
+  image: `https://images.pokemontcg.io/${path}_hires.png`,
+  thumb: `https://images.pokemontcg.io/${path}.png`,
+});
+
 const FEATURED_POOLS: Pool[] = [
   {
     name: 'Best Decks of All Time',
     cards: [
+      pokemontcgCard('SLG', '53', 'Zoroark-GX', 'sm35/53'),
       poolCard('SVI', '86', 'Gardevoir ex', 'sv/sv01/086'),
       poolCard('CEC', '156', 'Arceus & Dialga & Palkia-GX', 'sm/sm12/156'),
       poolCard('FST', '114', 'Mew VMAX', 'swsh/swsh8/114'),
@@ -105,8 +124,17 @@ const FEATURED_POOLS: Pool[] = [
       poolCard('TWM', '130', 'Dragapult ex', 'sv/sv06/130'),
     ],
   },
-  // Placeholders until TCGdex has Delta Reign's images
-  { name: 'Delta Reign', cards: [] },
+  {
+    name: 'Delta Reign',
+    cards: [
+      scrydexCard('DLR', '84', 'Mega Rayquaza ex', 'me6-84'),
+      scrydexCard('DLR', '88', 'Talonflame ex', 'me6-88'),
+      scrydexCard('DLR', '11', 'Mega Golisopod ex', 'me6-11'),
+      scrydexCard('DLR', '69', 'Mega Malamar ex', 'me6-69'),
+      scrydexCard('DLR', '47', 'Mega Golurk ex', 'me6-47'),
+      scrydexCard('DLR', '33', 'Raikou ex', 'me6-33'),
+    ],
+  },
   {
     name: 'Mega Evolution Cards',
     cards: [

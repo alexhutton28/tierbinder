@@ -83,7 +83,17 @@ export default function Credits() {
           }}
           className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored text-caption ${styles.popup} ${closing ? 'closing pointer-events-none' : ''}`}
         >
-          <p>Card data and images from {tcgdex}.</p>
+          <p>
+            Card data and images from {tcgdex}, with images TCGdex doesn&apos;t have yet from{' '}
+            <a
+              href="https://github.com/PokemonTCG/pokemon-tcg-data"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              pokemon-tcg-data<span className="sr-only"> (opens in a new tab)</span>
+            </a>
+            .
+          </p>
           <p>
             Pokémon is a trademark of Nintendo, Creatures, GAME FREAK and The Pokémon Company.
             TierBinder isn&apos;t affiliated with them.

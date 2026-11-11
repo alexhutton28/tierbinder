@@ -2,7 +2,12 @@
 // images from hosts that don't send CORS headers, so TierBinder loads every image
 // through here, which also keeps one cache of them. Only known image hosts are allowed, so this can't
 // be used as an open proxy.
-const ALLOWED_HOSTS = new Set(['assets.tcgdex.net']);
+const ALLOWED_HOSTS = new Set([
+  'assets.tcgdex.net',
+  // pokemon-tcg-data's images, for cards TCGdex has none for (fill-images.json)
+  'images.scrydex.com',
+  'images.pokemontcg.io',
+]);
 
 const MAX_BYTES = 5_000_000;
 

@@ -2,14 +2,12 @@
   "2011bw": {
     "code": "MCD11",
     "name": "McDonald's Collection 2011",
-    "date": "2011-06-17",
-    "empty": true
+    "date": "2011-06-17"
   },
   "2012bw": {
     "code": "MCD12",
     "name": "McDonald's Collection 2012",
-    "date": "2012-06-15",
-    "empty": true
+    "date": "2012-06-15"
   },
   "2014xy": {
     "code": "MCD14",
@@ -26,8 +24,7 @@
   "2016xy": {
     "code": "MCD16",
     "name": "McDonald's Collection 2016",
-    "date": "2016-08-20",
-    "empty": true
+    "date": "2016-08-20"
   },
   "2017sm": {
     "code": "MCD17",
@@ -44,20 +41,17 @@
   "2019sm": {
     "code": "MCD19",
     "name": "McDonald's Collection 2019",
-    "date": "2019-10-15",
-    "empty": true
+    "date": "2019-10-15"
   },
   "2021swsh": {
     "code": "MCD21",
     "name": "McDonald's Collection 2021",
-    "date": "2021-02-09",
-    "empty": true
+    "date": "2021-02-09"
   },
   "2022swsh": {
     "code": "MCD22",
     "name": "McDonald's Collection 2022",
-    "date": "2022-08-03",
-    "empty": true
+    "date": "2022-08-03"
   },
   "2023sv": {
     "code": "MCD23",
@@ -443,8 +437,7 @@
   "me06": {
     "code": "DLR",
     "name": "Delta Reign",
-    "date": "2026-11-06",
-    "empty": true
+    "date": "2026-11-06"
   },
   "mee": {
     "code": "MEE",
@@ -455,52 +448,7 @@
   "mep": {
     "code": "MEP",
     "name": "MEP Black Star Promos",
-    "date": "2025-09-26",
-    "unlisted": {
-      "serie": "me",
-      "ids": [
-        "001",
-        "002",
-        "003",
-        "004",
-        "005",
-        "006",
-        "007",
-        "008",
-        "009",
-        "010",
-        "011",
-        "012",
-        "013",
-        "014",
-        "015",
-        "016",
-        "017",
-        "018",
-        "019",
-        "020",
-        "021",
-        "022",
-        "023",
-        "024",
-        "025",
-        "026",
-        "027",
-        "028",
-        "029",
-        "030",
-        "031",
-        "037",
-        "038",
-        "039",
-        "040",
-        "041",
-        "042",
-        "043",
-        "044",
-        "045"
-      ]
-    }
+    "date": "2025-09-26"
   },
   "mfb": {
     "code": "MFB",
@@ -658,11 +606,7 @@
   "sm3.5": {
     "code": "SLG",
     "name": "Shining Legends",
-    "date": "2017-10-06",
-    "unlisted": {
-      "serie": "sm",
-      "ids": ["67", "70"]
-    }
+    "date": "2017-10-06"
   },
   "sm4": {
     "code": "CIN",
@@ -687,8 +631,7 @@
   "sm7.5": {
     "code": "DRM",
     "name": "Dragon Majesty",
-    "date": "2018-09-07",
-    "empty": true
+    "date": "2018-09-07"
   },
   "sm8": {
     "code": "LOT",
@@ -799,37 +742,12 @@
   "sve": {
     "code": "SVE",
     "name": "Scarlet & Violet Energy",
-    "date": "2023-03-31",
-    "empty": true
+    "date": "2023-03-31"
   },
   "svp": {
     "code": "SVP",
     "name": "SVP Black Star Promos",
-    "date": "2023-03-31",
-    "unlisted": {
-      "serie": "sv",
-      "ids": [
-        "191",
-        "192",
-        "196",
-        "199",
-        "200",
-        "201",
-        "202",
-        "203",
-        "204",
-        "205",
-        "213",
-        "214",
-        "215",
-        "216",
-        "217",
-        "218",
-        "224",
-        "225",
-        "500"
-      ]
-    }
+    "date": "2023-03-31"
   },
   "swsh1": {
     "code": "SSH",

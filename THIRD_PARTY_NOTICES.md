@@ -20,6 +20,13 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+## pokemon-tcg-data
+
+For cards TCGdex has no image for, `npm run tcgdex:sets` takes image links from
+[pokemon-tcg-data](https://github.com/PokemonTCG/pokemon-tcg-data), the data behind the
+Pokémon TCG API (pokemontcg.io), into `src/app/api/extra-images.json`. The repository states no
+license; the images are hosted by Scrydex and pokemontcg.io and aren't copied here.
+
 ## Feather
 
 The interface icons in `public/` (all but the logo) come from [Feather](https://feathericons.com).

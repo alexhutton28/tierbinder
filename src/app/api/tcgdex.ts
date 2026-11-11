@@ -2,7 +2,9 @@
 // source), its only card source. Cards are saved and imported by their official set code
 // and number (TWM 130), as printed on the card, so this maps those to TCGdex's own set
 // ids (sv06) through tcgdex-sets.json, and looks up any set released since that file was
-// made. Cards TCGdex has no image for are left out.
+// made. Cards the API gives no image take one from extra-images.json (TCGdex's own, on its
+// asset host anyway, or pokemon-tcg-data's), or are left out.
+import EXTRA from './extra-images.json';
 import SETS from './tcgdex-sets.json';
 
 export type CardResult = {
@@ -13,13 +15,10 @@ export type CardResult = {
   name: string;
 };
 
-// `unlisted`: cards the API gives no image, but whose image is on TCGdex's asset host
-// anyway (some promos), found by `npm run tcgdex:sets`
-type SetInfo = { code: string; date: string; unlisted?: { serie: string; ids: string[] } };
+type SetInfo = { code: string; date: string };
 type BriefCard = { id: string; localId: string; name: string; image?: string };
 
 const API = 'https://api.tcgdex.net/v2/en';
-const ASSETS = 'https://assets.tcgdex.net/en';
 // TCG Pocket is a separate game with its own cards
 const SKIP_SERIES = new Set(['tcgp']);
 // Card data changes rarely; new sets show up within a day
@@ -45,6 +44,9 @@ async function get<T>(path: string): Promise<T | null> {
 }
 
 const known: Record<string, SetInfo | null> = SETS;
+// Images for cards the API gives none, by set id and card id: the board's image and the
+// thumbnail, found by `npm run tcgdex:sets`
+const extra: Record<string, Record<string, [string, string]>> = EXTRA as never;
 
 // A set's code and date, fetched once for sets newer than tcgdex-sets.json
 const fetched = new Map<string, Promise<SetInfo | null>>();
@@ -82,28 +84,18 @@ const setOf = (card: BriefCard) => card.id.slice(0, card.id.lastIndexOf('-'));
 const printed = (card: BriefCard) =>
   /^\d+$/.test(card.localId) ? String(Number(card.localId)) : card.localId;
 
-// The card's image without its quality and format: the API's, or one only on the asset
-// host
-function imageOf(card: BriefCard, setId: string, set: SetInfo) {
-  if (card.image) return card.image;
-  const unlisted = set.unlisted;
-  return unlisted?.ids.includes(card.localId)
-    ? `${ASSETS}/${unlisted.serie}/${setId}/${card.localId}`
-    : null;
+// The card's image and thumbnail: the API's, whose URL takes a quality and format (high is
+// 600×825, low 245×337), or else extra-images.json's
+function imagesOf(card: BriefCard, setId: string) {
+  if (card.image) return { image: `${card.image}/high.webp`, thumb: `${card.image}/low.webp` };
+  const found = extra[setId]?.[card.localId];
+  return found ? { image: found[0], thumb: found[1] } : null;
 }
 
-// TCGdex images take a quality and format; high is 600×825, low 245×337
 function toResult(card: BriefCard, setId: string, set: SetInfo): Found | null {
-  const image = !MISNUMBERED.has(setId) && imageOf(card, setId, set);
-  if (!image) return null;
-  return {
-    set: set.code,
-    number: printed(card),
-    image: `${image}/high.webp`,
-    thumb: `${image}/low.webp`,
-    name: card.name,
-    date: set.date,
-  };
+  const images = !MISNUMBERED.has(setId) && imagesOf(card, setId);
+  if (!images) return null;
+  return { set: set.code, number: printed(card), ...images, name: card.name, date: set.date };
 }
 
 export async function lookupCard(code: string, number: string): Promise<CardResult | null> {
