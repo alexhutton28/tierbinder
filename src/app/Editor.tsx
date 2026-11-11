@@ -37,6 +37,7 @@ import Button from './ui/Button';
 import Dropdown from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
+import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
@@ -1169,13 +1170,8 @@ export default function Editor() {
           </section>
 
           {/* At the sidebar's foot under every tab, until the credits find a better home */}
-          <footer className={`${styles.credits} text-caption`}>
-            Card data and images from{' '}
-            <a href="https://tcgdex.dev" target="_blank" rel="noopener noreferrer">
-              TCGdex<span className="sr-only"> (opens in a new tab)</span>
-            </a>
-            . Pokémon is a trademark of Nintendo, Creatures, GAME FREAK and The Pokémon Company;
-            TierBinder isn&apos;t affiliated with them.
+          <footer>
+            <Credits />
           </footer>
         </aside>
       </div>

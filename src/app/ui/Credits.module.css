@@ -1,0 +1,64 @@
+/* One quiet line of caption text at the sidebar's foot, with no dividing line */
+.credits {
+  padding: var(--spacing-3);
+  color: var(--tb-muted);
+
+  & a {
+    color: var(--tb-text);
+    text-decoration: underline;
+    transition: color var(--duration-hover);
+  }
+
+  /* Plain :hover, so it brightens on every device, as text buttons do */
+  & a:hover {
+    color: var(--tb-heading);
+  }
+}
+
+/* The source's name and the info button 4px after it, centered on each other */
+.source {
+  display: inline-flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+/* Feather's info icon, as tall as the text, in the link's color */
+.info {
+  position: relative;
+  display: flex;
+  color: var(--tb-text);
+  cursor: pointer;
+  transition: color var(--duration-hover);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    color: var(--tb-heading);
+  }
+}
+
+.icon {
+  width: 1em;
+  height: 1em;
+  background: currentcolor;
+  mask: url('/info.svg') center / contain no-repeat;
+}
+
+/* A touch target around the small icon on touch screens */
+@media (pointer: coarse) {
+  .info::before {
+    position: absolute;
+    inset: calc((1em - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
+/* The full credits: caption text, as wide as the sidebar at its narrowest. Its link takes
+   .credits a, since the popup is inside it */
+.popup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  width: var(--tb-sidebar-min);
+  padding: var(--spacing-3);
+  color: var(--tb-muted);
+}
