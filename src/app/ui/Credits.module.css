@@ -62,3 +62,9 @@
   padding: var(--spacing-3);
   color: var(--tb-muted);
 }
+
+/* Opening focuses the popup itself, only so screen readers read it and Escape reaches it;
+   it isn't a control, so it takes no ring (its link still does) */
+.credits .popup:focus-visible {
+  outline: none;
+}
