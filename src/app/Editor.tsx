@@ -544,16 +544,19 @@ export default function Editor() {
   }, [selectedId, removeCard]);
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
-  // board's background does; the card menu is on the board, so using it keeps the card
+  // board's background does; the card menu is on the board, so using it keeps the card.
+  // Not while picking a replacement (the outline shows which card it replaces) or viewing
+  // (the press that closes the view keeps the card, as Escape does).
+  const keepSelection = picking !== null || shownView !== null;
   React.useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || keepSelection) return;
     const onDown = (e: PointerEvent) => {
       if (e.target instanceof Node && boardBoxRef.current?.contains(e.target)) return;
       setSelectedId(null);
     };
     window.addEventListener('pointerdown', onDown);
     return () => window.removeEventListener('pointerdown', onDown);
-  }, [selectedId]);
+  }, [selectedId, keepSelection]);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
