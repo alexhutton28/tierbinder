@@ -142,9 +142,10 @@ export function importCards(list: TierList, groups: ResolvedGroup[]) {
     const imported = groups[i];
     const items = [...tier.items, ...(imported?.items ?? [])];
     const name = imported?.name ?? tier.name;
-    if (items.length > MAX_CARDS_PER_TIER) {
+    const left = items.length - MAX_CARDS_PER_TIER;
+    if (left > 0) {
       errors.push(
-        `${name}: ${items.length - MAX_CARDS_PER_TIER} Cards Didn't Fit (${MAX_CARDS_PER_TIER} per Tier)`
+        `${name}: ${left} ${left === 1 ? 'Card' : 'Cards'} Didn't Fit (${MAX_CARDS_PER_TIER} per Tier)`
       );
     }
     return { ...tier, name, items: items.slice(0, MAX_CARDS_PER_TIER) };

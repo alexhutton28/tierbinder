@@ -16,10 +16,10 @@ export async function GET(req: Request) {
   try {
     url = new URL(new URL(req.url).searchParams.get('url') ?? '');
   } catch {
-    return Response.json({ error: 'Need an image URL.' }, { status: 400 });
+    return Response.json({ error: 'Need an Image URL' }, { status: 400 });
   }
   if (url.protocol !== 'https:' || !ALLOWED_HOSTS.has(url.hostname)) {
-    return Response.json({ error: 'Image host not allowed.' }, { status: 400 });
+    return Response.json({ error: 'Image Host Not Allowed' }, { status: 400 });
   }
 
   try {
@@ -27,11 +27,11 @@ export async function GET(req: Request) {
     const res = await fetch(url, { redirect: 'error' });
     const type = res.headers.get('Content-Type') ?? '';
     if (!res.ok || !type.startsWith('image/')) {
-      return Response.json({ error: 'Image not found.' }, { status: 404 });
+      return Response.json({ error: 'Image Not Found' }, { status: 404 });
     }
     const body = await res.arrayBuffer();
     if (body.byteLength > MAX_BYTES) {
-      return Response.json({ error: 'Image too large.' }, { status: 413 });
+      return Response.json({ error: 'Image Too Large' }, { status: 413 });
     }
     return new Response(body, {
       headers: {
@@ -42,6 +42,6 @@ export async function GET(req: Request) {
     });
   } catch (e) {
     console.error('API /api/image error:', e);
-    return Response.json({ error: 'Image fetch failed.' }, { status: 502 });
+    return Response.json({ error: 'Image Fetch Failed' }, { status: 502 });
   }
 }

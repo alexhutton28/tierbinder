@@ -129,15 +129,18 @@ export function insertTrayCard(tray: Tray, item: CardItem, index = tray.items.le
   return { ...tray, items };
 }
 
-// Bulk import: every group's cards at the end, in order, as many as fit. It turns the tray on.
+// Bulk import: every group's cards at the end, in order, as many as fit. Adding any turns the
+// tray on.
 export function importTrayCards(tray: Tray, items: CardItem[]) {
   const room = Math.max(MAX_TRAY_CARDS - tray.items.length, 0);
+  const left = items.length - room;
   const errors =
-    items.length > room
-      ? [`${items.length - room} Cards Didn't Fit (${MAX_TRAY_CARDS} in the Card Tray)`]
+    left > 0
+      ? [`${left} ${left === 1 ? 'Card' : 'Cards'} Didn't Fit (${MAX_TRAY_CARDS} in the Card Tray)`]
       : [];
+  const added = items.slice(0, room);
   return {
-    tray: { ...tray, enabled: true, items: [...tray.items, ...items.slice(0, room)] },
+    tray: added.length ? { ...tray, enabled: true, items: [...tray.items, ...added] } : tray,
     errors,
   };
 }

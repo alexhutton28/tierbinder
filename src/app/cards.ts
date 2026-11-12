@@ -91,7 +91,12 @@ export async function searchCards(
   options: SearchOptions = DEFAULT_SEARCH,
   signal?: AbortSignal
 ): Promise<CardResult[]> {
-  const res = await fetch(`/api/search?${toParams(query, options)}`, { signal });
+  // The browser's own network errors ("Failed to fetch") aren't for people; a cancelled
+  // search still throws its AbortError
+  const res = await fetch(`/api/search?${toParams(query, options)}`, { signal }).catch((e) => {
+    if (signal?.aborted) throw e;
+    throw new Error("Couldn't Reach the Server");
+  });
   // A failed search is an error, not "no cards": the route says what went wrong
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? 'Search Failed');
   return (await res.json()).results;

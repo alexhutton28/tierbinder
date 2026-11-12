@@ -230,6 +230,11 @@ const POOL_PREVIEW_CARDS = 6;
 
 export default function Editor() {
   const [doc, setDoc] = React.useState<TierBinderDoc>(loadSaved);
+  // The latest document, for work that finishes after an await (bulk import)
+  const docRef = React.useRef(doc);
+  React.useEffect(() => {
+    docRef.current = doc;
+  });
   const graphic = currentGraphic(doc);
   const type = typeOf(graphic.kind);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
@@ -936,27 +941,42 @@ export default function Editor() {
     for (const line of lines) {
       if (!found.get(line)) {
         const name = line.split ? `${line.name} / ${line.split.name}` : line.name;
-        errors.push(`Line ${line.line}: Couldn't Find "${name}"`);
+        errors.push(`Line ${line.line}: Couldn't Find “${name}”`);
       }
     }
     const resolvedGroups = groups.map((g) => ({
       name: g.name,
       items: g.cards.flatMap((line) => found.get(line) ?? []),
     }));
-    // Pure, so it runs on the latest board (it may have changed while cards were looking
-    // up); the messages come from the board as it was
-    if (into === 'tray') {
-      const items = resolvedGroups.flatMap((g) => g.items);
-      setGraphic((g) => ({ ...g, tray: importTrayCards(g.tray, items).tray }));
-      errors.push(...importTrayCards(graphic.tray, items).errors);
+    // Placed on the board as it is now (it may have changed, or the window narrowed, while
+    // cards were looking up), so the counts and messages match what happened
+    const current = currentGraphic(docRef.current);
+    const toTray = into === 'tray' && wideQuery().matches;
+    let next: Graphic;
+    let added: number;
+    if (toTray) {
+      const placed = importTrayCards(
+        current.tray,
+        resolvedGroups.flatMap((g) => g.items)
+      );
+      next = { ...current, tray: placed.tray };
+      added = placed.tray.items.length - current.tray.items.length;
+      errors.push(...placed.errors);
     } else {
-      setGraphic((g) => typeOf(g.kind).importCards(g, resolvedGroups).graphic);
-      errors.push(...type.importCards(graphic, resolvedGroups).errors);
+      const currentType = typeOf(current.kind);
+      const placed = currentType.importCards(current, resolvedGroups);
+      next = placed.graphic;
+      added = currentType.layout(next).length - currentType.layout(current).length;
+      errors.push(...placed.errors);
     }
+    setGraphic(() => next);
     setBusy(false);
-    const added = resolved.filter(Boolean).length;
+    const where = toTray ? 'the Card Tray' : 'the Board';
     setStatus(
-      errors.length ? errors.join('\n') : `Added ${added} ${added === 1 ? 'Card' : 'Cards'}`
+      [
+        ...(added ? [`Added ${added} ${added === 1 ? 'Card' : 'Cards'} to ${where}`] : []),
+        ...errors,
+      ].join('\n')
     );
   }
 
@@ -2139,7 +2159,10 @@ export default function Editor() {
             <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
           )}
 
-          {status && <p className="whitespace-pre-line">{status}</p>}
+          {/* Always there, so screen readers hear each change (import, copy) */}
+          <p role="status" className={status ? 'whitespace-pre-line' : 'sr-only'}>
+            {status}
+          </p>
         </div>
       </div>
 
