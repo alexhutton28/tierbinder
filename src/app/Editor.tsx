@@ -890,7 +890,7 @@ export default function Editor() {
     [setGraphic]
   );
 
-  // Only a card that shows: not one in a card tray hidden on a narrow screen
+  // Only a card that shows: not one in a card tray that's turned off
   const selectedShown = placements.some((p) => p.item.id === selectedId);
   const removeSelected = React.useCallback(() => {
     if (!selectedId || !selectedShown) return;
@@ -941,7 +941,8 @@ export default function Editor() {
   async function runImport() {
     const { tray, groups } = parseImport(importText);
     const lines = [...tray, ...groups.flatMap((g) => g.cards)];
-    if (!lines.length) {
+    // `#` lines alone still rename tiers
+    if (!lines.length && !groups.some((g) => g.name)) {
       showToast('No Cards to Import');
       return;
     }
@@ -1906,7 +1907,7 @@ export default function Editor() {
                           spellCheck={false}
                           className="tierbinder-field font-mono"
                           placeholder={
-                            '# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                            'Pikachu ex SSP 57\n# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
                           }
                           value={importText}
                           onChange={(e) => setImportText(e.target.value)}
@@ -1941,33 +1942,31 @@ export default function Editor() {
               }}
             />
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-            <>
-              <h3 className="tierbinder-heading">Card Tray</h3>
-              <label className="flex gap-3 items-center">
-                <input
-                  type="checkbox"
-                  checked={graphic.tray.enabled}
-                  onChange={(e) => {
-                    const enabled = e.target.checked;
-                    setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
-                    // Turned off while it's the Add to choice: back to the first tier, so the
-                    // next card doesn't quietly turn it on again
-                    if (!enabled && targetIndex === boardTargets.length) setTarget(0);
-                  }}
+            <h3 className="tierbinder-heading">Card Tray</h3>
+            <label className="flex gap-3 items-center">
+              <input
+                type="checkbox"
+                checked={graphic.tray.enabled}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
+                  // Turned off while it's the Add to choice: back to the first tier, so the
+                  // next card doesn't quietly turn it on again
+                  if (!enabled && targetIndex === boardTargets.length) setTarget(0);
+                }}
+              />
+              Show card tray under the board
+            </label>
+            {graphic.tray.enabled && (
+              <div className="tierbinder-prop">
+                Tray Color
+                <ColorField
+                  label="Card tray color"
+                  value={graphic.tray.color}
+                  onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
                 />
-                Show card tray under the board
-              </label>
-              {graphic.tray.enabled && (
-                <div className="tierbinder-prop">
-                  Tray Color
-                  <ColorField
-                    label="Card tray color"
-                    value={graphic.tray.color}
-                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
-                  />
-                </div>
-              )}
-            </>
+              </div>
+            )}
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
               16px above it, as between sections, so it doesn't read as part of the last one */}
             {confirmingClear ? (

@@ -10,7 +10,7 @@ import type { CardPlacement, Point } from '../graphics/types';
 import { BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH } from './size';
 
 export type Tray = {
-  // Shown under the board (from b8 up); cards stay in it while it's off
+  // Shown under the board; cards stay in it while it's off
   enabled: boolean;
   color: string;
   items: CardItem[];
