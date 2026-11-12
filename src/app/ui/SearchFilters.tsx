@@ -6,6 +6,7 @@ import { activeFilters, MAX_SETS, type SearchOptions } from '../searchOptions';
 import { CARD_SETS } from '../sets';
 import { useAnchored } from './anchored';
 import Button from './Button';
+import Checkbox from './Checkbox';
 import styles from './SearchFilters.module.css';
 import { FOLD_CLEARANCE } from './motion';
 import { PETREL_950, darkReadsBetter } from '../color';
@@ -174,20 +175,18 @@ export default function SearchFilters({
               const ticked = options.sets.indexOf(s.code);
               const tick = ticked >= 0 && colors.length ? colors[ticked % colors.length] : null;
               return (
-                <label key={s.code} className={styles.choice}>
-                  <input
-                    type="checkbox"
-                    checked={ticked >= 0}
-                    // At the limit, only ticked sets can change
-                    disabled={ticked < 0 && full}
-                    className={styles.check}
-                    data-check={tick ? checkOn(tick) : undefined}
-                    style={tick ? ({ '--tick': tick } as React.CSSProperties) : undefined}
-                    onChange={(e) => toggle(s.code, e.target.checked)}
-                  />
+                <Checkbox
+                  key={s.code}
+                  checked={ticked >= 0}
+                  // At the limit, only ticked sets can change
+                  disabled={ticked < 0 && full}
+                  color={tick ?? undefined}
+                  check={tick ? checkOn(tick) : undefined}
+                  onChange={(on) => toggle(s.code, on)}
+                >
                   <span className={styles.setName}>{s.name}</span>
                   <span className={styles.code}>{s.code}</span>
-                </label>
+                </Checkbox>
               );
             })}
             {!sets.length && <p className={styles.code}>No Sets Match</p>}

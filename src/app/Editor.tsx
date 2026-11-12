@@ -48,6 +48,7 @@ import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
+import Checkbox from './ui/Checkbox';
 import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
@@ -1984,20 +1985,17 @@ export default function Editor() {
             />
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
             <h3 className="tierbinder-heading">Card Tray</h3>
-            <label className="flex gap-3 items-center">
-              <input
-                type="checkbox"
-                checked={graphic.tray.enabled}
-                onChange={(e) => {
-                  const enabled = e.target.checked;
-                  setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
-                  // Turned off while it's the Add to choice: back to the first tier, so the
-                  // next card doesn't quietly turn it on again
-                  if (!enabled && targetIndex === boardTargets.length) setTarget(0);
-                }}
-              />
+            <Checkbox
+              checked={graphic.tray.enabled}
+              onChange={(enabled) => {
+                setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
+                // Turned off while it's the Add to choice: back to the first tier, so the
+                // next card doesn't quietly turn it on again
+                if (!enabled && targetIndex === boardTargets.length) setTarget(0);
+              }}
+            >
               Show card tray under the board
-            </label>
+            </Checkbox>
             {graphic.tray.enabled && (
               <div className="tierbinder-prop">
                 Tray Color
@@ -2042,14 +2040,9 @@ export default function Editor() {
               <span className="text-(--tb-text)">PNG</span>
             </div>
             {trayShown && (
-              <label className="flex gap-3 items-center">
-                <input
-                  type="checkbox"
-                  checked={includeTray}
-                  onChange={(e) => setIncludeTray(e.target.checked)}
-                />
+              <Checkbox checked={includeTray} onChange={setIncludeTray}>
                 Include card tray in export
-              </label>
+              </Checkbox>
             )}
             <div className="flex flex-wrap gap-3">
               <Button variant="primary" onClick={exportPng} disabled={busy}>

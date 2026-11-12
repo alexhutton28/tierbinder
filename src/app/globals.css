@@ -54,6 +54,9 @@ body {
   --tb-control-border: var(--color-petrel-700);
   --tb-field: var(--color-petrel-950);
   --tb-field-border: var(--color-petrel-700);
+
+  /* An unticked checkbox under the pointer */
+  --tb-field-border-hover: var(--color-petrel-600);
   --tb-primary: var(--color-storm-300);
   --tb-primary-hover: var(--color-storm-200);
   --tb-primary-text: var(--color-petrel-950);
@@ -120,7 +123,6 @@ body {
 .tierbinder-page {
   color: var(--tb-text);
   font-family: var(--font-figtree), system-ui, sans-serif;
-  accent-color: var(--tb-primary);
   color-scheme: dark;
 }
 

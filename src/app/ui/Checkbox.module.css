@@ -1,0 +1,67 @@
+@reference "../globals.css";
+
+/* The box and its words, 8px apart. The box sits on the first line when the words wrap:
+   rows align to the top, and the box is pushed down to the middle of a line. */
+.row {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+/* At the limit of ticked sets, say: the whole row dims, not just the box */
+.row[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* On touch screens each row is a full touch target, 44px tall, but gives the extra
+   height back as negative margin, so it sits as close to what's around it as on other
+   screens (8px in the settings). Where it overlaps a later neighbor, the neighbor is
+   drawn on top and keeps its taps. The Sets popup's rows take the full height instead. */
+@media (pointer: coarse) {
+  .row {
+    align-items: center;
+    min-height: var(--tb-touch-target);
+    margin-block: calc((1lh - var(--tb-touch-target)) / 2);
+  }
+}
+
+/* A box in the fields' colors, filled when ticked with --tick (the primary color unless
+   Checkbox.tsx sets one) under Feather's check: check.svg (white) or check-dark.svg
+   (Petrel 950), as data-check says. An SVG used as a background can't read CSS
+   variables, so the two colors are two files. Ticking is immediate: a fading fill would
+   show its check before the fill behind it. */
+.box {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  margin: 0;
+  margin-block-start: calc((1lh - var(--tb-icon)) / 2);
+  appearance: none;
+  border: var(--tb-line-width) solid var(--tb-field-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+  cursor: inherit;
+  transition: border-color var(--duration-hover) ease-out;
+}
+
+@media (pointer: coarse) {
+  .box {
+    margin-block-start: 0;
+  }
+}
+
+.box:checked {
+  border-color: var(--tick, var(--tb-primary));
+  background: url('/check.svg') center / 75% no-repeat var(--tick, var(--tb-primary));
+}
+
+.box:checked[data-check='dark'] {
+  background-image: url('/check-dark.svg');
+}
+
+/* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
+.row:hover .box:not(:checked, :disabled) {
+  border-color: var(--tb-field-border-hover);
+}

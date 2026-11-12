@@ -43,24 +43,15 @@
   overscroll-behavior: contain;
 }
 
-/* A checkbox, the set's name and its code */
-.choice {
-  display: flex;
-  gap: var(--spacing-3);
-  align-items: center;
-  cursor: pointer;
-}
-
-/* On phones (touch, under b7), each row is a full touch target, with no gaps between */
+/* On touch screens each row is a full touch target (ui/Checkbox), stacked with no gaps
+   and none of the negative margin that keeps settings rows close */
 @media (pointer: coarse) {
-  @variant max-b7 {
-    .sets {
-      gap: 0;
-      max-height: calc(var(--rows-shown) * var(--tb-touch-target));
-    }
+  .sets {
+    gap: 0;
+    max-height: calc(var(--rows-shown) * var(--tb-touch-target));
 
-    .choice {
-      min-height: var(--tb-touch-target);
+    & > label {
+      margin-block: 0;
     }
   }
 }
@@ -76,35 +67,6 @@
 .code {
   color: var(--tb-muted);
   font-size: var(--text-caption);
-}
-
-/* Drawn here to choose the check's color: a box in the field's colors, filled when
-   ticked with --tick (its tier's color, from SearchFilters.tsx) under Feather's check,
-   white unless SearchFilters.tsx marks it dark (data-check) */
-.check {
-  flex: none;
-  width: var(--tb-icon);
-  height: var(--tb-icon);
-  margin: 0;
-  appearance: none;
-  border: var(--tb-line-width) solid var(--tb-field-border);
-  border-radius: var(--tb-radius);
-  background: var(--tb-field);
-  cursor: pointer;
-}
-
-.check:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.check:checked {
-  border-color: var(--tick, var(--tb-primary));
-  background: url('/check.svg') center / 75% no-repeat var(--tick, var(--tb-primary));
-}
-
-.check:checked[data-check='dark'] {
-  background-image: url('/check-dark.svg');
 }
 
 /* The set search, with room at its end for the clear button (globals.css): the button's

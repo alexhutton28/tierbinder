@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.11 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.12 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -39,30 +39,30 @@ Semantic tokens that map onto existing palette colors and spacing steps, recorde
 
 Petrel and storm are for the interface, and the tier colors are the brand's color. The look is set as `--tb-*` roles on `body` in `globals.css`.
 
-| Name        | Hex       | Semantic roles | Used for                                                                                                                                              |
-| ----------- | --------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Petrel 50   | `#F2F5F6` |                | Section headings, the credits link and icon on hover, the sidebar button on hover                                                                     |
-| Petrel 100  | `#E3E8EB` |                | Text, selected tool, links, default card tray (blank canvas)                                                                                          |
-| Petrel 200  | `#CCD4D8` |                | Not used yet                                                                                                                                          |
-| Petrel 300  | `#B3BEC4` |                | Not used yet                                                                                                                                          |
-| Petrel 400  | `#94A2AA` |                | Muted text, the stroke on the card tray's swatch                                                                                                      |
-| Petrel 500  | `#6C7D88` |                | Not used yet                                                                                                                                          |
-| Petrel 600  | `#546470` |                | Search and clear icons at rest, scrollbar thumb on hover                                                                                              |
-| Petrel 700  | `#3E4B53` |                | Button, popup and field borders, option hover, scrollbar thumb                                                                                        |
-| Petrel 800  | `#2D373D` |                | Dividing lines, hover, skeleton shimmer                                                                                                               |
-| Petrel 850  | `#232B30` |                | Popups, card placeholders and skeletons, default card tray (tier list)                                                                                |
-| Petrel 900  | `#1B2125` |                | Sidebar, default lines between tiers                                                                                                                  |
-| Petrel 950  | `#12171A` |                | Workspace, fields, text on main actions; at part strength the View backdrop, scroll shade and popup shadow, the empty card tray's hint on light trays |
-| Storm 100   | `#DCEAF1` |                | Not used yet                                                                                                                                          |
-| Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                                                                                                                      |
-| Storm 300   | `#9CC0D4` |                | Main buttons, lit search icon                                                                                                                         |
-| Storm 400   | `#78A5BD` |                | Top bar                                                                                                                                               |
-| Storm 600   | `#466E85` |                | Text field focus                                                                                                                                      |
-| Storm 800   | `#2A4352` |                | Default board background (tier list)                                                                                                                  |
-| Tier Goated | `#F0392B` |                | Default tier color. Board only                                                                                                                        |
-| Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav                                                                                                      |
-| Tier Mid    | `#FFCB2E` |                | Default tier color. Customize in the main nav                                                                                                         |
-| Tier Fraud  | `#3CC65A` |                | Default tier color. Add Cards in the main nav                                                                                                         |
+| Name        | Hex       | Semantic roles | Used for                                                                                                                                                                         |
+| ----------- | --------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Petrel 50   | `#F2F5F6` |                | Section headings, the credits link and icon on hover, the sidebar button on hover                                                                                                |
+| Petrel 100  | `#E3E8EB` |                | Text, selected tool, links, default card tray (blank canvas)                                                                                                                     |
+| Petrel 200  | `#CCD4D8` |                | Not used yet                                                                                                                                                                     |
+| Petrel 300  | `#B3BEC4` |                | Not used yet                                                                                                                                                                     |
+| Petrel 400  | `#94A2AA` |                | Muted text, the stroke on the card tray's swatch                                                                                                                                 |
+| Petrel 500  | `#6C7D88` |                | Not used yet                                                                                                                                                                     |
+| Petrel 600  | `#546470` |                | Search and clear icons at rest, scrollbar thumb on hover, an unticked checkbox's edge on hover                                                                                   |
+| Petrel 700  | `#3E4B53` |                | Button, popup and field borders, option hover, scrollbar thumb                                                                                                                   |
+| Petrel 800  | `#2D373D` |                | Dividing lines, hover, skeleton shimmer                                                                                                                                          |
+| Petrel 850  | `#232B30` |                | Popups, card placeholders and skeletons, default card tray (tier list)                                                                                                           |
+| Petrel 900  | `#1B2125` |                | Sidebar, default lines between tiers                                                                                                                                             |
+| Petrel 950  | `#12171A` |                | Workspace, fields, text on main actions and checks on ticked boxes; at part strength the View backdrop, scroll shade and popup shadow, the empty card tray's hint on light trays |
+| Storm 100   | `#DCEAF1` |                | Not used yet                                                                                                                                                                     |
+| Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                                                                                                                                                 |
+| Storm 300   | `#9CC0D4` |                | Main buttons, lit search icon, ticked checkboxes                                                                                                                                 |
+| Storm 400   | `#78A5BD` |                | Top bar                                                                                                                                                                          |
+| Storm 600   | `#466E85` |                | Text field focus                                                                                                                                                                 |
+| Storm 800   | `#2A4352` |                | Default board background (tier list)                                                                                                                                             |
+| Tier Goated | `#F0392B` |                | Default tier color. Board only                                                                                                                                                   |
+| Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav                                                                                                                                 |
+| Tier Mid    | `#FFCB2E` |                | Default tier color. Customize in the main nav                                                                                                                                    |
+| Tier Fraud  | `#3CC65A` |                | Default tier color. Add Cards in the main nav                                                                                                                                    |
 
 Board colors (tier colors, backgrounds, borders) are canvas colors that users can change. See Exceptions.
 
@@ -132,7 +132,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 - Icons and logos are SVGs in `public/`, with no icon library package.
 - Icons come from [Feather](https://feathericons.com) (MIT license). Copy the icon's SVG into `public/` under its Feather name, unchanged. Where it needs to follow the text color, use it as a CSS mask over `currentcolor` (see `.chevron` in `ui/Dropdown.module.css`).
-- One exception: the Sets popup's checkmarks (`check.svg`, `check-dark.svg`) are Feather's `check` with a heavier 3.5 stroke, in white or Petrel 950, since they're drawn as the checkbox's background image, which a mask can't color.
+- One exception: the checkboxes' checkmarks (`check.svg`, `check-dark.svg`) are Feather's `check` with a heavier 3.5 stroke, in white or Petrel 950, since they're drawn as the checkbox's background image, which a mask can't color.
 
 ## 8. Logo
 
@@ -222,7 +222,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Add Cards
 
-- Under the search field (Feather `search` at its start, and `x-circle` at its end to clear it while it has text), one row: the Sets button (Feather `filter`, then "Sets", the ticked set's code, or the first one's and how many more, as in "TWM +2"), the Add to picker (the tier's color as a rounded swatch the size of Feather's square icon, and its name, no chevron), and at the right, while there's a search, the sort button (Feather `arrow-down`, turning to point up when reversed). Sets opens a popup like a dropdown, floating over the board: a "Search sets" field (with `x-circle` at its end to clear it while it has text, as the card search has) over a scrolling list of every set to tick (up to 40), the ticked boxes filled in their tier's colors in the order they were ticked, and Clear Sets while any is ticked. Changes rerun the current search once they settle. On phones (touch, under `b7`) its rows are 44px tall (`--tb-touch-target`), as are text buttons on touch screens.
+- Under the search field (Feather `search` at its start, and `x-circle` at its end to clear it while it has text), one row: the Sets button (Feather `filter`, then "Sets", the ticked set's code, or the first one's and how many more, as in "TWM +2"), the Add to picker (the tier's color as a rounded swatch the size of Feather's square icon, and its name, no chevron), and at the right, while there's a search, the sort button (Feather `arrow-down`, turning to point up when reversed). Sets opens a popup like a dropdown, floating over the board: a "Search sets" field (with `x-circle` at its end to clear it while it has text, as the card search has) over a scrolling list of every set to tick (up to 40), the ticked boxes filled in their tier's colors in the order they were ticked, and Clear Sets while any is ticked. Changes rerun the current search once they settle. On touch screens its rows are 44px tall (`--tb-touch-target`), as are text buttons.
 - Three sections, 16px apart, each a heading with its contents 8px under it: Add a Card (the search), Featured Card Pools and Advanced. Advanced holds Bulk Import: a text button (its words and a `chevron-right` 4px after them, brightening on hover) that slides the import open below it, the chevron turning down. Under its text box, one primary Import button: on a tier list, cards before the first `#` go in the card tray and each `#` group to a tier; on the blank canvas, all of them go on the canvas.
 - A featured pool is a box in the field color (Petrel 950, 8px padding, small radius) with its name (12px semibold, then Feather's `chevron-right` at the text's size, 4px after it) over a row of six cards, 4px apart, always six columns so every pool's cards are the same size. Each card shimmers until its image loads, as search results do. Card-shaped placeholders in Petrel 850 fill a pool's row past its cards, and take the place of a card whose image doesn't load. In order: Best Decks of All Time previews SLG 53, SVI 86, CEC 156, FST 114, SIT 139 and TWM 130. Delta Reign previews DLR 84, 88, 11, 69, 47 and 33. Mega Evolution Cards previews MEG 104, PFL 13, MEG 77, MEG 86, PBL 65 and CRI 22. They don't open yet.
 - Results are thumbnails 4px apart, filling their columns, with a shade fading in over their top once scrolled. While a search runs they're card-shaped placeholders in Petrel 850 with a lighter shimmer, and each thumbnail shimmers until it loads. A search that finds nothing says so under the search ("No Cards Found", what for and in which sets, and Search All Sets while sets are ticked). A failed search says why in the same place.
@@ -248,6 +248,10 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 - It acts like a tier: "Card Tray" is always the last Add to choice, even while the tray is off, and adding a card to it turns it on; cards drag in, out and within it, and the card menu opens upward on it, since it's at the board's foot.
 - At every width: on phones it's under the board in the page, scaled with the board.
 - Save & Share's "Include card tray in export" (off by default) puts it flush and square under the board in the image (2400×1690 with up to 10 cards; taller with two rows), so the graphic reads as one piece.
+
+### Checkbox
+
+- Every checkbox is `ui/Checkbox.tsx`, never the browser's own: a 16px box (Feather's icon size) with 4px corners in the fields' colors (Petrel 950, a Petrel 700 line), filled when ticked with the primary color (Storm 300) under a Petrel 950 check, or with a given color under whichever check reads on it (the Sets popup's tier colors). The whole row, box and words, is the label, 8px apart, with the box on the first line when the words wrap. Hovering an unticked box lightens its edge to Petrel 600; ticking is immediate; disabled, the whole row is at 50%; focus shows the usual ring. On touch screens each row is a 44px touch target (`--tb-touch-target`) that gives the extra height back as negative margin, so settings keep their 8px spacing (the Sets popup's rows take the full 44px).
 
 ### Credits
 
@@ -299,6 +303,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 12, 2026 · v1.12:** Every checkbox is the custom one the Sets popup used (`ui/Checkbox.tsx`), ticked in the primary color with a dark check, with a hover edge, and 44px touch targets on every touch screen that keep the settings' 8px spacing.
 - **November 12, 2026 · v1.11:** On phones the top bar slides up while the page scrolls down and back as it scrolls up.
 - **November 12, 2026 · v1.10:** The card tray shows on phones too, under the board. Bulk Import has one Import button again: on a tier list, cards before the first `#` go in the card tray, `#` groups to the tiers. The empty tray's hint says "Send Cards to Card Tray to Hold Them", since results can't be dragged on touch screens.
 - **November 12, 2026 · v1.9:** Every message is a toast: bulk import's progress and results and copying's moved there from under the board. Toasts stay 1.5s longer for each line past the first, "Importing…" stays until its result replaces it, and an import lists at most 4 problems.

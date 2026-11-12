@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ColorField from '../../ui/ColorField';
+import Checkbox from '../../ui/Checkbox';
 import type { SettingsProps } from '../types';
 import type { Tier, TierList } from './model';
 
@@ -48,14 +49,12 @@ export default function TierListSettings({
           />
         </div>
       ))}
-      <label className="flex gap-3 items-center">
-        <input
-          type="checkbox"
-          checked={list.tierCardBorders}
-          onChange={(e) => onChange((l) => ({ ...l, tierCardBorders: e.target.checked }))}
-        />
+      <Checkbox
+        checked={list.tierCardBorders}
+        onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}
+      >
         Add tier colored border to cards
-      </label>
+      </Checkbox>
       <h3 className="tierbinder-heading">Board</h3>
       <div className="tierbinder-prop">
         Background
