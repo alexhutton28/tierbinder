@@ -135,6 +135,8 @@
   translate: -50% 0;
   color: var(--tb-text);
   font-weight: 500;
+  /* An import's results are a line each */
+  white-space: pre-line;
   pointer-events: none;
   animation:
     toast-in var(--duration-drop) var(--ease-spring),

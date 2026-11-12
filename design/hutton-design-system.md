@@ -238,7 +238,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Toast
 
-- One short message at the top of the window, centered, 16px down: when a tier or the card tray is full. A popup box (`tierbinder-popup`) with 8px by 16px padding and 500-weight text. It drops in on the spring over `duration-drop`, stays 3 seconds, then folds up and fades over `duration-fold`; reduced motion: it fades. Only one shows: a new message replaces it, and the same message again keeps it up without replaying its entrance. It's read out politely (`role="status"`).
+- Every message is a toast, never text on or under the board: a tier or the card tray is full, bulk import's progress and results, copying the image. One short message at the top of the window, centered, 16px down; an import's results take a line each. A popup box (`tierbinder-popup`) with 8px by 16px padding and 500-weight text. It drops in on the spring over `duration-drop`, stays 3 seconds (1.5 more for each line past the first, and "Importing…" until its result replaces it), then folds up and fades over `duration-fold`; reduced motion: it fades. Only one shows: a new message replaces it, and the same message again keeps it up without replaying its entrance. It's read out politely (`role="status"`).
 
 ### Card tray
 

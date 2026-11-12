@@ -66,8 +66,10 @@ const STORAGE_KEY = 'tierbinder-doc';
 // The Add to picker's swatch while a split card is being made: a white card
 const SPLIT_SWATCH = '#ffffff';
 
-// How long a toast (a tier or the card tray being full) stays before it fades
+// How long a toast stays before it fades (ms), and how much longer for each line past the
+// first (an import's list of cards it couldn't find), so there's time to read them
 const TOAST_DURATION = 3000;
+const TOAST_LINE_DURATION = 1500;
 
 // sessionStorage: the card tray's hint has done its job (a card has been in a tray)
 const TRAY_HINT_KEY = 'tierbinder-tray-hint-seen';
@@ -243,9 +245,10 @@ export default function Editor() {
   // The interface's font (Figtree), for canvas text that belongs to the editor (the empty
   // card tray's hint)
   const [interfaceFont, setInterfaceFont] = React.useState('sans-serif');
-  const [status, setStatus] = React.useState('');
-  // A short message at the top of the window (a tier or the card tray is full) that fades
-  // after TOAST_DURATION. Only one shows: another message replaces it, and the same one
+  // Every message (a tier or the card tray is full, import results, copying) is a short
+  // toast at the top of the window, never on the board. It fades after TOAST_DURATION,
+  // plus TOAST_LINE_DURATION for each line past the first; `stay` keeps work under way
+  // ("Importing…") up until the next message replaces it. Only one shows: another message replaces it, and the same one
   // again keeps it up longer without replaying its entrance, so repeated clicks can't
   // pile them up. `id` changes with the message (replaying the entrance), `n` with every
   // showing (restarting the timer); `closing` while it fades, like the card menu.
@@ -254,19 +257,22 @@ export default function Editor() {
     id: number;
     n: number;
     closing: boolean;
+    stay: boolean;
   } | null>(null);
-  const showToast = (message: string) =>
+  const showToast = (message: string, { stay = false } = {}) =>
     setToast((t) => ({
       message,
       id: t && t.message === message && !t.closing ? t.id : (t?.id ?? 0) + 1,
       n: (t?.n ?? 0) + 1,
       closing: false,
+      stay,
     }));
   React.useEffect(() => {
-    if (!toast || toast.closing) return;
+    if (!toast || toast.closing || toast.stay) return;
+    const lines = toast.message.split('\n').length;
     const timer = setTimeout(
       () => setToast((t) => (t ? { ...t, closing: true } : t)),
-      TOAST_DURATION
+      TOAST_DURATION + (lines - 1) * TOAST_LINE_DURATION
     );
     return () => clearTimeout(timer);
     // Restarts with each showing (`n`), not on closing
@@ -797,7 +803,7 @@ export default function Editor() {
   }, [doc]);
 
   // The board fills the workspace: its width on narrow screens (where the page scrolls),
-  // and from b8 up as much as fits, leaving room for the toolbar and status
+  // and from b8 up as much as fits, leaving room for the toolbar
   // around it. Exports are always full size.
   React.useEffect(() => {
     const workspace = workspaceRef.current;
@@ -830,8 +836,7 @@ export default function Editor() {
     };
   }, [wide, trayShown, shownTrayHeight]);
 
-  // The floating logo's size: the biggest that clears the board (and its toolbar and
-  // status) by LOGO_CLEARANCE. Measured whenever the workspace or the board changes size:
+  // The floating logo's size: the biggest that clears the board (and its toolbar) by LOGO_CLEARANCE. Measured whenever the workspace or the board changes size:
   // as the sidebar slides, the board moves to stay centered even once its scale settles.
   React.useEffect(() => {
     const logo = floatingLogoRef.current;
@@ -933,7 +938,7 @@ export default function Editor() {
   async function runImport(into: 'board' | 'tray') {
     const groups = parseImport(importText);
     setBusy(true);
-    setStatus('Importing…');
+    showToast('Importing…', { stay: true });
     const lines = groups.flatMap((g) => g.cards);
     const resolved = await mapLimit(lines, 4, resolveCard);
     const found = new Map(lines.map((line, i) => [line, resolved[i]]));
@@ -972,11 +977,11 @@ export default function Editor() {
     setGraphic(() => next);
     setBusy(false);
     const where = toTray ? 'the Card Tray' : 'the Board';
-    setStatus(
+    showToast(
       [
         ...(added ? [`Added ${added} ${added === 1 ? 'Card' : 'Cards'} to ${where}`] : []),
         ...errors,
-      ].join('\n')
+      ].join('\n') || 'No Cards to Import'
     );
   }
 
@@ -1391,9 +1396,9 @@ export default function Editor() {
     if (!blob) return;
     try {
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      setStatus('Copied to Clipboard');
+      showToast('Copied to Clipboard');
     } catch {
-      setStatus("Couldn't Copy; Use Export PNG");
+      showToast("Couldn't Copy; Use Export PNG");
     }
   }
 
@@ -2158,11 +2163,6 @@ export default function Editor() {
           {type.Toolbar && (
             <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
           )}
-
-          {/* Always there, so screen readers hear each change (import, copy) */}
-          <p role="status" className={status ? 'whitespace-pre-line' : 'sr-only'}>
-            {status}
-          </p>
         </div>
       </div>
 
