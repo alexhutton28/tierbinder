@@ -55,36 +55,13 @@ import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
+import { titleCase } from './text';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
 
-// Title case for menu items, which are also the menu's keys: short words stay lower case
-// unless first or last
-const SMALL_WORDS = new Set([
-  'a',
-  'an',
-  'and',
-  'as',
-  'at',
-  'by',
-  'for',
-  'in',
-  'of',
-  'on',
-  'or',
-  'the',
-  'to',
-]);
-const titleCase = (text: string) =>
-  text
-    .split(' ')
-    .map((w, i, all) =>
-      i > 0 && i < all.length - 1 && SMALL_WORDS.has(w) ? w : w[0].toUpperCase() + w.slice(1)
-    )
-    .join(' ');
 // The Add to picker's swatch while a split card is being made: a white card
 const SPLIT_SWATCH = '#ffffff';
 
@@ -1558,7 +1535,7 @@ export default function Editor() {
                 />
                 {(!picking || splitPicker) && targets.length > 1 && (
                   <Dropdown
-                    label="Add To"
+                    label="Add to"
                     hideLabel
                     chevron={false}
                     value={targetIndex}
