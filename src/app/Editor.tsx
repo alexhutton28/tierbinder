@@ -70,6 +70,8 @@ const SPLIT_SWATCH = '#ffffff';
 // first (an import's list of cards it couldn't find), so there's time to read them
 const TOAST_DURATION = 3000;
 const TOAST_LINE_DURATION = 1500;
+// An import's toast lists at most this many problems, then how many more there were
+const MAX_TOAST_PROBLEMS = 4;
 
 // sessionStorage: the card tray's hint has done its job (a card has been in a tray)
 const TRAY_HINT_KEY = 'tierbinder-tray-hint-seen';
@@ -245,11 +247,12 @@ export default function Editor() {
   // The interface's font (Figtree), for canvas text that belongs to the editor (the empty
   // card tray's hint)
   const [interfaceFont, setInterfaceFont] = React.useState('sans-serif');
-  // Every message (a tier or the card tray is full, import results, copying) is a short
-  // toast at the top of the window, never on the board. It fades after TOAST_DURATION,
-  // plus TOAST_LINE_DURATION for each line past the first; `stay` keeps work under way
-  // ("Importing…") up until the next message replaces it. Only one shows: another message replaces it, and the same one
-  // again keeps it up longer without replaying its entrance, so repeated clicks can't
+  // Every message (a tier or the card tray is full, import results, copying) is a toast at
+  // the top of the window, never on the board. It fades after TOAST_DURATION, plus
+  // TOAST_LINE_DURATION for each line past the first; `stay` keeps work under way
+  // ("Importing…") up until the next message replaces it (another message during an
+  // import replaces it too, and the import's result follows). Only one shows: another
+  // message replaces it, and the same one again keeps it up longer without replaying its entrance, so repeated clicks can't
   // pile them up. `id` changes with the message (replaying the entrance), `n` with every
   // showing (restarting the timer); `closing` while it fades, like the card menu.
   const [toast, setToast] = React.useState<{
@@ -836,8 +839,9 @@ export default function Editor() {
     };
   }, [wide, trayShown, shownTrayHeight]);
 
-  // The floating logo's size: the biggest that clears the board (and its toolbar) by LOGO_CLEARANCE. Measured whenever the workspace or the board changes size:
-  // as the sidebar slides, the board moves to stay centered even once its scale settles.
+  // The floating logo's size: the biggest that clears the board (and its toolbar) by
+  // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
+  // sidebar slides, the board moves to stay centered even once its scale settles.
   React.useEffect(() => {
     const logo = floatingLogoRef.current;
     const board = boardRef.current;
@@ -937,10 +941,23 @@ export default function Editor() {
   // tray (every card in order; groups mean nothing there)
   async function runImport(into: 'board' | 'tray') {
     const groups = parseImport(importText);
+    const lines = groups.flatMap((g) => g.cards);
+    if (!lines.length) {
+      showToast('No Cards to Import');
+      return;
+    }
     setBusy(true);
     showToast('Importing…', { stay: true });
-    const lines = groups.flatMap((g) => g.cards);
-    const resolved = await mapLimit(lines, 4, resolveCard);
+    let resolved: Awaited<ReturnType<typeof resolveCard>>[];
+    try {
+      resolved = await mapLimit(lines, 4, resolveCard);
+    } catch {
+      // Offline, or a lookup failed outright: nothing was added
+      showToast("Couldn't Import; Try Again");
+      return;
+    } finally {
+      setBusy(false);
+    }
     const found = new Map(lines.map((line, i) => [line, resolved[i]]));
     const errors: string[] = [];
     for (const line of lines) {
@@ -975,13 +992,15 @@ export default function Editor() {
       errors.push(...placed.errors);
     }
     setGraphic(() => next);
-    setBusy(false);
     const where = toTray ? 'the Card Tray' : 'the Board';
+    // The first few problems, so a long list doesn't cover the board
+    const more = errors.length - MAX_TOAST_PROBLEMS;
     showToast(
       [
         ...(added ? [`Added ${added} ${added === 1 ? 'Card' : 'Cards'} to ${where}`] : []),
-        ...errors,
-      ].join('\n') || 'No Cards to Import'
+        ...errors.slice(0, MAX_TOAST_PROBLEMS),
+        ...(more > 0 ? [`And ${more} More ${more === 1 ? 'Problem' : 'Problems'}`] : []),
+      ].join('\n') || 'No Cards Found'
     );
   }
 
@@ -1438,9 +1457,10 @@ export default function Editor() {
       )}
       {/* The toast's words for screen readers, in a live region that's always there (one
         that appears with its text in it is often not read out) */}
-      <p role="status" className="sr-only">
-        {toast && !toast.closing ? toast.message : ''}
-      </p>
+      <div role="status" className="sr-only">
+        {/* A new element for each showing, so the same message again is read again */}
+        {toast && !toast.closing && <p key={toast.n}>{toast.message}</p>}
+      </div>
       {toast && (
         <div
           // A new element for each new message, so it plays its entrance

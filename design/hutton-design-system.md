@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.8 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.9 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -238,7 +238,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Toast
 
-- Every message is a toast, never text on or under the board: a tier or the card tray is full, bulk import's progress and results, copying the image. One short message at the top of the window, centered, 16px down; an import's results take a line each. A popup box (`tierbinder-popup`) with 8px by 16px padding and 500-weight text. It drops in on the spring over `duration-drop`, stays 3 seconds (1.5 more for each line past the first, and "Importing…" until its result replaces it), then folds up and fades over `duration-fold`; reduced motion: it fades. Only one shows: a new message replaces it, and the same message again keeps it up without replaying its entrance. It's read out politely (`role="status"`).
+- Every message is a toast, never text on or under the board: a tier or the card tray is full, bulk import's progress and results, copying the image. One message at the top of the window, centered, 16px down, as wide as its words up to the window less 16px each side; an import's results take a line each, listing at most 4 problems and then how many more. A popup box (`tierbinder-popup`) with 8px by 16px padding and 500-weight text. It drops in on the spring over `duration-drop`, stays 3 seconds (1.5 more for each line past the first, and "Importing…" until its result replaces it), then folds up and fades over `duration-fold`; reduced motion: it fades. Only one shows: a new message replaces it, and the same message again keeps it up without replaying its entrance. It's read out politely (`role="status"`).
 
 ### Card tray
 
@@ -299,6 +299,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 12, 2026 · v1.9:** Every message is a toast: bulk import's progress and results and copying's moved there from under the board. Toasts stay 1.5s longer for each line past the first, "Importing…" stays until its result replaces it, and an import lists at most 4 problems.
 - **November 12, 2026 · v1.8:** Added Capitalization: title case for headings, tabs, buttons, menu items, dropdown options, field labels and messages (with no closing period), sentence case for checkbox labels, placeholders, tooltips and screen reader text. Labels and messages that were sentence case moved to title case. Bulk Import has two buttons: Import to Board (primary) and Import to Card Tray (from `b8` up).
 - **November 11, 2026 · v1.7:** The card tray: an optional box under the board for unranked cards, up to 48, shrinking to fit, with its own color, from `b8` up, and optionally in the export. Ctrl+\ or Cmd+\, or a button at the sidebar's foot, slides the sidebar out and back from `b8` up, on the new `ease-slide`. Cards grow or shrink as they're dragged between the tray and the board. The tray hugs its cards: one row shrinking to 75%, then a second row. Dropdown rows have 8px at each end, the card tray's swatch has a light stroke, and an empty tray shows a faint hint. The blank canvas's tray defaults to Petrel 100. The credits line is trimmed to its letters. A new tier list's board now uses brand colors: Storm 800 background, Petrel 850 tray, Petrel 900 lines between tiers (they were `#1F3D4B` and `#16303C`, off the palette).
 - **November 10, 2026 · v1.6:** Credits at the foot of the sidebar: one line with an info button that opens the full credits. Placeholders fill a featured pool's row past its cards, and its cards shimmer while they load.
