@@ -18,6 +18,8 @@ export default function BlankCanvasView({
   onChange,
   onSelect,
   onCardMenu,
+  onCardDrop,
+  cardDragWidth,
   tool,
   fontFamily,
 }: CanvasProps<BlankCanvas>) {
@@ -86,12 +88,23 @@ export default function BlankCanvasView({
             dividerColor={canvas.border}
             onSelect={() => onSelect(item.id)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
-            onDragEnd={(x, y) => onChange(moveCard(canvas, item.id, x, y))}
+            dragWidth={cardDragWidth}
+            onDragEnd={(x, y) => {
+              if (!onCardDrop(item.id, x, y)) onChange(moveCard(canvas, item.id, x, y));
+            }}
           />
         ))}
       </Layer>
       {/* Its own layer, so eraser strokes (destination-out) remove only ink */}
-      <Layer ref={inkRef} listening={drawing}>
+      <Layer
+        ref={inkRef}
+        listening={drawing}
+        // The stage also holds the card tray under the board: ink stays on the board
+        clipX={0}
+        clipY={0}
+        clipWidth={BOARD_WIDTH}
+        clipHeight={BOARD_HEIGHT}
+      >
         {[...canvas.strokes, ...(stroke ? [stroke] : [])].map((s) => (
           <Line
             key={s.id}

@@ -34,17 +34,254 @@
   display: contents;
 
   @variant b8 {
-    position: relative;
-    display: flex;
-    flex: none;
-    flex-direction: column;
-    width: clamp(
+    --side-width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
       100vw - var(--tb-workspace-min)
     );
+
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    width: var(--side-width);
     min-height: 0;
+    transition:
+      margin-inline-start var(--duration-move) var(--ease-slide),
+      visibility 0s;
   }
+}
+
+/* Hidden with Ctrl+\ or Cmd+\ (Editor.tsx), from b8 up only: it slides off the window's
+   left edge (ease-slide: the spring without its overshoot, which would open a gap at the
+   window's edge) as the workspace grows into its place, and once it's gone it's
+   hidden, so nothing in it can be focused. Reduced motion: it goes at once. */
+.sideColumnHidden {
+  @variant b8 {
+    margin-inline-start: calc(-1 * var(--side-width));
+    visibility: hidden;
+    transition:
+      margin-inline-start var(--duration-move) var(--ease-slide),
+      visibility 0s var(--duration-move);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideColumn,
+  .sideColumnHidden {
+    transition: none;
+  }
+
+  /* The sidebar goes at once, so its show button fades in at once */
+  .showSidebar {
+    animation-delay: 0s;
+  }
+
+  /* Toasts close as popups do under reduced motion: a quicker fade */
+  .toastClosing {
+    transition-duration: var(--duration-fold-fade);
+  }
+}
+
+/* While the sidebar is hidden: the light binder mark where the top bar's logo was (the
+   same box: as tall as the top bar, 16px in; the light logo cut to its mark), under the
+   top bar as it slides away with the colored logo. It fades in once the slide is over
+   (data-settled, Editor.tsx), and not at all when it would touch the board (data-size);
+   leaving, it fades out as the top bar comes back. */
+.floatingBrand {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-inline: var(--spacing-4);
+  cursor: pointer;
+  visibility: hidden;
+  transition: opacity var(--duration-fade) ease-out;
+
+  & img {
+    max-width: none;
+  }
+
+  &[data-settled][data-size] {
+    visibility: visible;
+    animation: view-fade var(--duration-fade) ease-out;
+  }
+}
+
+.lightLogo {
+  width: var(--logo-mark-width);
+  overflow: hidden;
+}
+
+.floatingBrandLeaving {
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* A toast: one short message at the top of the window, centered, above everything (a tier
+   or the card tray is full). It drops in on the spring over duration-drop and folds away
+   (fades up) over duration-fold, like the popups; reduced motion: it fades. */
+.toast {
+  position: fixed;
+  top: calc(var(--spacing-4) + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 40;
+  max-width: calc(100vw - 2 * var(--spacing-4));
+  padding: var(--spacing-3) var(--spacing-4);
+  translate: -50% 0;
+  color: var(--tb-text);
+  font-weight: 500;
+  pointer-events: none;
+  animation:
+    toast-in var(--duration-drop) var(--ease-spring),
+    view-fade var(--duration-fade) ease-out;
+}
+
+.toastClosing {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--spacing-3)));
+  transition:
+    opacity var(--duration-fold) var(--ease-fold),
+    transform var(--duration-fold) var(--ease-fold);
+}
+
+@keyframes toast-in {
+  from {
+    transform: translateY(calc(-1 * var(--spacing-3)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: view-fade var(--duration-fade) ease-out;
+  }
+
+  .toastClosing {
+    transform: none;
+  }
+}
+
+/* A search result's menu (right-click): at the pointer (or above it at the window's foot),
+   over the sidebar and the board, under a viewed card (which View opens as it folds away)
+   and toasts. Its "Add to" row holds a
+   chevron and opens a flyout to its right (or its left near the window's edge, data-side),
+   lined up with the row (the list's 4px inset above it), whose rows have the dropdown
+   lists' 8px ends. */
+.resultMenu {
+  position: fixed;
+  z-index: 25;
+  overflow: visible;
+}
+
+.flyoutAnchor {
+  position: relative;
+}
+
+/* On touch screens, rows are touch targets (44px tall), as the Sets popup's are */
+@media (pointer: coarse) {
+  .resultMenu [role='menuitem'] {
+    min-height: var(--tb-touch-target);
+  }
+}
+
+.flyoutItem {
+  display: flex;
+  gap: var(--spacing-4);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.flyout {
+  position: absolute;
+  top: calc(-1 * var(--spacing-2));
+  left: calc(100% + var(--spacing-2));
+
+  &[data-side='left'] {
+    right: calc(100% + var(--spacing-2));
+    left: auto;
+  }
+
+  & > button {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+/* Feather's chevron-right at the icon size, as the dropdowns' chevron, colored by the text */
+.menuChevron {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-right.svg') center / contain no-repeat;
+}
+
+/* With the sidebar hidden, the workspace's left padding clears the show button (its 8px
+   from the edge, the icon, and 8px more) */
+.canvasCollapsed {
+  padding-left: calc(2 * var(--spacing-3) + var(--tb-icon));
+}
+
+/* The sidebar's foot: the credits, then the sidebar toggle at the other end */
+.foot {
+  display: flex;
+  align-items: center;
+
+  & > :first-child {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Feather's sidebar icon, quiet until hovered, as the credits' info button is */
+.sidebarToggle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  margin-inline-end: var(--spacing-3);
+  color: var(--tb-muted);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--duration-hover) ease-out;
+
+  &:hover {
+    color: var(--tb-heading);
+  }
+}
+
+/* A touch target around the small icon on touch screens (tablets, from b8 up), as the
+   credits' info button has */
+@media (pointer: coarse) {
+  .sidebarToggle::before {
+    position: absolute;
+    inset: calc((var(--tb-icon) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
+.sidebarIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/sidebar.svg') center / contain no-repeat;
+}
+
+/* While the sidebar is hidden: at the window's bottom left, 8px in and on the line the
+   sidebar's foot had, fading in once the sidebar has slid away */
+.showSidebar {
+  position: fixed;
+
+  /* Centered on the foot's line: its padding, less half the icon's overhang past the
+     line's capital height (at the credits' caption size) */
+  bottom: calc(var(--spacing-4) + (1cap - var(--tb-icon)) / 2);
+  font-size: var(--text-caption);
+  left: var(--spacing-3);
+  z-index: 10;
+  margin: 0;
+  animation: view-fade var(--duration-fade) ease-out var(--duration-move) both;
 }
 
 /* Below the board on narrow screens (the column's header stays first); beside it, under
@@ -107,31 +344,6 @@
 
 .search:has(input:focus-visible) .searchIcon {
   background: var(--tb-icon-lit);
-}
-
-/* Feather's x-circle at the field's end, 8px in like the search icon, with the field's
-   height and that padding as its target; it lights up on hover */
-.clearSearch {
-  position: absolute;
-  inset-block: 0;
-  right: 0;
-  display: grid;
-  place-items: center;
-  padding-inline: var(--spacing-3);
-  color: var(--tb-icon-rest);
-  cursor: pointer;
-  transition: color var(--duration-hover) ease-out;
-}
-
-.clearSearch span {
-  width: var(--tb-icon);
-  height: var(--tb-icon);
-  background: currentcolor;
-  mask: url('/x-circle.svg') center / contain no-repeat;
-}
-
-.clearSearch:hover {
-  color: var(--tb-text);
 }
 
 /* A card shown large (View): over a dimmed window, as tall as --tb-view-height allows, or
@@ -320,6 +532,12 @@
 .resultTile {
   content-visibility: auto;
   contain-intrinsic-size: auto var(--tb-thumb-width) auto var(--tb-thumb-height);
+}
+
+/* A long press opens the result's menu (Editor.tsx), not iOS's own image callout */
+.resultTile,
+.resultTile img {
+  -webkit-touch-callout: none;
 }
 
 /* A result fills its column (at least --tb-thumb-width wide, stretching to share the

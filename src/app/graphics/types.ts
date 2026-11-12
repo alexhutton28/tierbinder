@@ -26,6 +26,13 @@ export type CanvasProps<G> = {
   onSelect: (id: string | null) => void;
   // A card was clicked without dragging; x, y are in the stage's on-screen pixels
   onCardMenu: (id: string, x: number, y: number) => void;
+  // A card was dragged and dropped with its top-left corner at x, y (design pixels). True
+  // if the editor took it (dropped in the card tray, under the board), in which case the
+  // graphic leaves it be; otherwise the graphic moves it.
+  onCardDrop: (id: string, x: number, y: number) => boolean;
+  // The width a dragged card shows at with its center at `center`: the board's, or over
+  // the card tray, the tray's (for CardNode's dragWidth)
+  cardDragWidth: (center: Point) => number;
   // One of `targets` was clicked, making it where the next search result goes
   onPickTarget: (index: number) => void;
   // Opens the Customize tab and focuses one of the graphic's settings (its own key)
@@ -68,6 +75,9 @@ export type GraphicType<G extends { kind: string }> = {
   // Tools beyond moving cards (e.g. a pen), shown under the board; the Canvas gets the
   // active one as `tool`
   Toolbar?: React.ComponentType<ToolbarProps<G>>;
+  // The width cards are drawn at on the board, if not CARD_WIDTH (a card dragged out of
+  // the card tray grows to it)
+  cardWidth?: (graphic: G) => number;
   // Every card and where it's drawn
   layout: (graphic: G) => CardPlacement[];
   // Changes cards, or removes them (null)

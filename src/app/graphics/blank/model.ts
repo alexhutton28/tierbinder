@@ -3,6 +3,7 @@
 import type { CardItem } from '../../cards';
 import { cardBox } from '../../canvas/CardNode';
 import { BOARD_HEIGHT, BOARD_WIDTH, CARD_WIDTH } from '../../canvas/size';
+import { defaultTray, parseTray, type Tray } from '../../canvas/tray';
 import type { CardPlacement, Point } from '../types';
 
 export type BlankCanvas = {
@@ -22,6 +23,8 @@ export type BlankCanvas = {
   penColor: string;
   penWidth: number;
   eraserWidth: number;
+  // The card tray under the board (canvas/tray.ts)
+  tray: Tray;
 };
 
 export type Stroke = {
@@ -46,6 +49,10 @@ const DEFAULT_DRAWING = {
   eraserWidth: 24,
 } satisfies Partial<BlankCanvas>;
 
+// A step darker than the white background: Petrel 100 (design/theme.css; canvas colors
+// can't read the CSS variables)
+const DEFAULT_TRAY_COLOR = '#e3e8eb';
+
 export function defaultBlankCanvas(): BlankCanvas {
   return {
     kind: 'blank',
@@ -55,6 +62,7 @@ export function defaultBlankCanvas(): BlankCanvas {
     topHalf: false,
     items: [],
     ...DEFAULT_DRAWING,
+    tray: defaultTray(DEFAULT_TRAY_COLOR),
   };
 }
 
@@ -169,5 +177,6 @@ export function parseBlankCanvas(value: unknown): BlankCanvas | null {
     penWidth: typeof canvas.penWidth === 'number' ? canvas.penWidth : DEFAULT_DRAWING.penWidth,
     eraserWidth:
       typeof canvas.eraserWidth === 'number' ? canvas.eraserWidth : DEFAULT_DRAWING.eraserWidth,
+    tray: parseTray(canvas.tray, DEFAULT_TRAY_COLOR),
   };
 }

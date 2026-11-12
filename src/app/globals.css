@@ -157,7 +157,8 @@ body * {
 /* The sidebar's tab panels: 16px under the main nav, 8px at the sides to line up with it
    (.sideHead in Editor.module.css), and 16px at the bottom */
 .tierbinder-panel {
-  padding: var(--spacing-4) var(--spacing-3);
+  /* None below: the sidebar's foot (the credits) has its own room above it */
+  padding: var(--spacing-4) var(--spacing-3) 0;
 }
 
 /* Trimmed to the capitals at the top, so the space above a heading (16px under the main
@@ -193,6 +194,32 @@ body * {
   @variant b7 {
     font-size: var(--text-body);
   }
+}
+
+/* A search field's clear button: Feather's x-circle at the field's end, 8px in, with the
+   field's height and that padding as its target; it lights up on hover. The field (in a
+   position: relative box) leaves room for it with its right padding. */
+.tierbinder-clear {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  padding-inline: var(--spacing-3);
+  color: var(--tb-icon-rest);
+  cursor: pointer;
+  transition: color var(--duration-hover) ease-out;
+}
+
+.tierbinder-clear span {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/x-circle.svg') center / contain no-repeat;
+}
+
+.tierbinder-clear:hover {
+  color: var(--tb-text);
 }
 
 .tierbinder-field::placeholder {
@@ -285,6 +312,11 @@ textarea.tierbinder-field {
 .tierbinder-list .tierbinder-option {
   border-radius: var(--tb-radius);
   font-weight: 500;
+}
+
+/* Dropdown rows have 8px at each end, close to their swatch or name */
+.tierbinder-list.dropdown .tierbinder-option {
+  padding-inline: var(--spacing-3);
 }
 
 .tierbinder-page :focus-visible {

@@ -1,7 +1,11 @@
-/* One quiet line of caption text at the sidebar's foot, with no dividing line */
+/* One quiet line of caption text at the sidebar's foot, with no dividing line. Trimmed
+   to the capitals and the baseline, so its 8px padding reaches the letters and centers
+   them top to bottom, rather than the line's empty room above and below them */
 .credits {
-  padding: var(--spacing-3);
+  /* 16px above and below, 8px at the sides, lined up with the panel above */
+  padding: var(--spacing-4) var(--spacing-3);
   color: var(--tb-muted);
+  text-box: trim-both cap alphabetic;
 
   & a {
     color: var(--tb-text);
