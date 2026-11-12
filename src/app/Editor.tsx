@@ -538,8 +538,7 @@ export default function Editor() {
   // Set from a drag's release until the click that follows it, so the drag doesn't also add the card
   const justDragged = React.useRef(false);
 
-  // From b8 up, where the board has the room beside the sidebar; the card tray only
-  // shows there
+  // From b8 up, where the board has the room beside the sidebar
   // Known from the first render (the editor only renders in the browser), so the board's
   // first fit already uses the wide layout
   const [wide, setWide] = React.useState(() => wideQuery().matches);
@@ -617,7 +616,7 @@ export default function Editor() {
   }, [wide, toggleSidebar]);
   // The card tray, under the board: its top edge in design pixels sits TRAY_GAP on-screen
   // pixels below the board, whatever the scale
-  const trayShown = wide && graphic.tray.enabled;
+  const trayShown = graphic.tray.enabled;
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
@@ -741,11 +740,11 @@ export default function Editor() {
   ]);
   // The graphic's targets, then the card tray while it shows
   const boardTargets = type.targets(graphic);
-  // The card tray is always a choice from b8 up, even while it's off: adding a card turns
-  // it on
-  const targets = wide
-    ? [...boardTargets, { name: 'Card Tray', color: graphic.tray.color, outlined: true }]
-    : boardTargets;
+  // The card tray is always a choice, even while it's off: adding a card turns it on
+  const targets = [
+    ...boardTargets,
+    { name: 'Card Tray', color: graphic.tray.color, outlined: true },
+  ];
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
   // without them
   const targetColors = boardTargets.flatMap((t) => (t.color ? [t.color] : []));
@@ -766,7 +765,7 @@ export default function Editor() {
       const old = d.graphics[kind];
       if (old && !clear) return { ...d, kind };
       // Clearing empties the card tray if it shows, keeping it on in its color; a hidden
-      // tray (turned off, or a narrow window) keeps its cards, as it promises
+      // tray (turned off) keeps its cards, as it promises
       const fresh = typeOf(kind).create();
       const keepTray = kind !== d.kind || !trayShown;
       const next = old
@@ -937,11 +936,11 @@ export default function Editor() {
     return () => window.removeEventListener('pointerdown', onDown);
   }, [cardMenu]);
 
-  // Into the board (each # group to the next tier, as the graphic places them) or the card
-  // tray (every card in order; groups mean nothing there)
-  async function runImport(into: 'board' | 'tray') {
-    const groups = parseImport(importText);
-    const lines = groups.flatMap((g) => g.cards);
+  // Cards before any # line go in the card tray; each # group goes to the board, as the
+  // graphic places them (a tier list: the next tier)
+  async function runImport() {
+    const { tray, groups } = parseImport(importText);
+    const lines = [...tray, ...groups.flatMap((g) => g.cards)];
     if (!lines.length) {
       showToast('No Cards to Import');
       return;
@@ -966,38 +965,38 @@ export default function Editor() {
         errors.push(`Line ${line.line}: Couldn't Find “${name}”`);
       }
     }
+    const trayItems = tray.flatMap((line) => found.get(line) ?? []);
     const resolvedGroups = groups.map((g) => ({
       name: g.name,
       items: g.cards.flatMap((line) => found.get(line) ?? []),
     }));
-    // Placed on the board as it is now (it may have changed, or the window narrowed, while
-    // cards were looking up), so the counts and messages match what happened
+    // Placed on the board as it is now (it may have changed while cards were looking up),
+    // so the counts and messages match what happened
     const current = currentGraphic(docRef.current);
-    const toTray = into === 'tray' && wideQuery().matches;
-    let next: Graphic;
-    let added: number;
-    if (toTray) {
-      const placed = importTrayCards(
-        current.tray,
-        resolvedGroups.flatMap((g) => g.items)
-      );
-      next = { ...current, tray: placed.tray };
-      added = placed.tray.items.length - current.tray.items.length;
+    const currentType = typeOf(current.kind);
+    let next = current;
+    const added: string[] = [];
+    const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
+    if (trayItems.length) {
+      const placed = importTrayCards(next.tray, trayItems);
+      const n = placed.tray.items.length - next.tray.items.length;
+      if (n) added.push(`Added ${count(n)} to the Card Tray`);
+      next = { ...next, tray: placed.tray };
       errors.push(...placed.errors);
-    } else {
-      const currentType = typeOf(current.kind);
-      const placed = currentType.importCards(current, resolvedGroups);
+    }
+    if (resolvedGroups.length) {
+      const placed = currentType.importCards(next, resolvedGroups);
+      const n = currentType.layout(placed.graphic).length - currentType.layout(next).length;
+      if (n) added.push(`Added ${count(n)} to the Board`);
       next = placed.graphic;
-      added = currentType.layout(next).length - currentType.layout(current).length;
       errors.push(...placed.errors);
     }
     setGraphic(() => next);
-    const where = toTray ? 'the Card Tray' : 'the Board';
     // The first few problems, so a long list doesn't cover the board
     const more = errors.length - MAX_TOAST_PROBLEMS;
     showToast(
       [
-        ...(added ? [`Added ${added} ${added === 1 ? 'Card' : 'Cards'} to ${where}`] : []),
+        ...added,
         ...errors.slice(0, MAX_TOAST_PROBLEMS),
         ...(more > 0 ? [`And ${more} More ${more === 1 ? 'Problem' : 'Problems'}`] : []),
       ].join('\n') || 'No Cards Found'
@@ -1186,7 +1185,7 @@ export default function Editor() {
   // Adds a search result to one of the Add to choices: the graphic's, or the card tray
   function addResultTo(card: CardResult, index: number) {
     applyPlaced(
-      wide && index === boardTargets.length
+      index === boardTargets.length
         ? withTray(graphic, insertTrayCard(graphic.tray, toItem(card)))
         : type.addCard(graphic, toItem(card), index)
     );
@@ -1912,24 +1911,14 @@ export default function Editor() {
                           value={importText}
                           onChange={(e) => setImportText(e.target.value)}
                         />
-                        <div className="flex flex-wrap gap-3">
-                          <Button
-                            variant="primary"
-                            onClick={() => runImport('board')}
-                            disabled={busy || !importText.trim()}
-                          >
-                            Import to Board
-                          </Button>
-                          {/* The tray is only there from b8 up */}
-                          {wide && (
-                            <Button
-                              onClick={() => runImport('tray')}
-                              disabled={busy || !importText.trim()}
-                            >
-                              Import to Card Tray
-                            </Button>
-                          )}
-                        </div>
+                        <Button
+                          variant="primary"
+                          className="self-start"
+                          onClick={runImport}
+                          disabled={busy || !importText.trim()}
+                        >
+                          Import
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -1952,38 +1941,33 @@ export default function Editor() {
               }}
             />
             <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-            {/* Not on narrow screens, where the board is under the top bar */}
-            {wide && (
-              <>
-                <h3 className="tierbinder-heading">Card Tray</h3>
-                <label className="flex gap-3 items-center">
-                  <input
-                    type="checkbox"
-                    checked={graphic.tray.enabled}
-                    onChange={(e) => {
-                      const enabled = e.target.checked;
-                      setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
-                      // Turned off while it's the Add to choice: back to the first tier, so the
-                      // next card doesn't quietly turn it on again
-                      if (!enabled && targetIndex === boardTargets.length) setTarget(0);
-                    }}
+            <>
+              <h3 className="tierbinder-heading">Card Tray</h3>
+              <label className="flex gap-3 items-center">
+                <input
+                  type="checkbox"
+                  checked={graphic.tray.enabled}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
+                    // Turned off while it's the Add to choice: back to the first tier, so the
+                    // next card doesn't quietly turn it on again
+                    if (!enabled && targetIndex === boardTargets.length) setTarget(0);
+                  }}
+                />
+                Show card tray under the board
+              </label>
+              {graphic.tray.enabled && (
+                <div className="tierbinder-prop">
+                  Tray Color
+                  <ColorField
+                    label="Card tray color"
+                    value={graphic.tray.color}
+                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
                   />
-                  Show card tray under the board
-                </label>
-                {graphic.tray.enabled && (
-                  <div className="tierbinder-prop">
-                    Tray Color
-                    <ColorField
-                      label="Card tray color"
-                      value={graphic.tray.color}
-                      onChange={(color) =>
-                        setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))
-                      }
-                    />
-                  </div>
-                )}
-              </>
-            )}
+                </div>
+              )}
+            </>
             {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
               16px above it, as between sections, so it doesn't read as part of the last one */}
             {confirmingClear ? (
