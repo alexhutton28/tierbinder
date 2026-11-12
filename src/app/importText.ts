@@ -1,5 +1,5 @@
 // Bulk import format. Cards before any `#` line go in the card tray, after the cards
-// already there. A `#` line starts the next group, named by its text (`#` alone gives no
+// already there (or on the board, where the graphic says: its `ungroupedImport`). A `#` line starts the next group, named by its text (`#` alone gives no
 // name; `\n` is a line break). Each graphic decides what groups are: a tier list fills a
 // tier per group and renames it. Each other line is a card, in deck-list form with an
 // optional count:

@@ -936,8 +936,8 @@ export default function Editor() {
     return () => window.removeEventListener('pointerdown', onDown);
   }, [cardMenu]);
 
-  // Cards before any # line go in the card tray; each # group goes to the board, as the
-  // graphic places them (a tier list: the next tier)
+  // Cards before any # line go in the card tray (or the board: `ungroupedImport`); each #
+  // group goes to the board, as the graphic places them (a tier list: the next tier)
   async function runImport() {
     const { tray, groups } = parseImport(importText);
     const lines = [...tray, ...groups.flatMap((g) => g.cards)];
@@ -966,15 +966,21 @@ export default function Editor() {
         errors.push(`Line ${line.line}: Couldn't Find “${name}”`);
       }
     }
-    const trayItems = tray.flatMap((line) => found.get(line) ?? []);
-    const resolvedGroups = groups.map((g) => ({
-      name: g.name,
-      items: g.cards.flatMap((line) => found.get(line) ?? []),
-    }));
+    const ungrouped = tray.flatMap((line) => found.get(line) ?? []);
     // Placed on the board as it is now (it may have changed while cards were looking up),
     // so the counts and messages match what happened
     const current = currentGraphic(docRef.current);
     const currentType = typeOf(current.kind);
+    // Cards before the first # go in the card tray, or on the board where the type says
+    const toBoard = currentType.ungroupedImport === 'board';
+    const trayItems = toBoard ? [] : ungrouped;
+    const resolvedGroups = [
+      ...(toBoard && ungrouped.length ? [{ items: ungrouped }] : []),
+      ...groups.map((g) => ({
+        name: g.name,
+        items: g.cards.flatMap((line) => found.get(line) ?? []),
+      })),
+    ];
     let next = current;
     const added: string[] = [];
     const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;

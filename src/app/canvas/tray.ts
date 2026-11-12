@@ -33,7 +33,7 @@ export const TRAY_GAP = 16;
 export const TRAY_RADIUS = 8;
 // The empty tray's hint, in on-screen pixels: text-body
 export const TRAY_HINT_SIZE = 14;
-export const TRAY_HINT = 'Drag Cards Here to Hold Them';
+export const TRAY_HINT = 'Send Cards to Card Tray to Hold Them';
 
 export function defaultTray(color: string): Tray {
   return { enabled: false, color, items: [] };

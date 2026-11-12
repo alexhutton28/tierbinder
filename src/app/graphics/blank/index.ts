@@ -29,6 +29,7 @@ const blank: GraphicType<BlankCanvas> = {
   addCard: (canvas, item) => addCard(canvas, item),
   dropCard,
   // Groups don't mean anything on a blank canvas: every card takes the next spot
+  ungroupedImport: 'board',
   importCards: (canvas, groups) => ({
     graphic: groups.flatMap((g) => g.items).reduce(addCard, canvas),
     errors: [],
