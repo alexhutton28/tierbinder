@@ -565,7 +565,9 @@ export default function Editor() {
     }
     let last = page.scrollTop;
     const onScroll = () => {
-      const y = page.scrollTop;
+      // Clamped to the page, so a bounce past either end (or the page getting shorter)
+      // doesn't read as scrolling back
+      const y = Math.min(Math.max(page.scrollTop, 0), page.scrollHeight - page.clientHeight);
       const height = topRef.current?.offsetHeight ?? 0;
       if (y <= height) {
         setTopTucked(false);
@@ -1530,7 +1532,10 @@ export default function Editor() {
         className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
         inert={viewing !== null}
       >
-        <header ref={topRef} className={`${styles.top} ${topTucked ? styles.topTucked : ''}`}>
+        <header
+          ref={topRef}
+          className={`${styles.top} ${!wide && topTucked ? styles.topTucked : ''}`}
+        >
           <Link href="/" className={styles.brand}>
             <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
           </Link>

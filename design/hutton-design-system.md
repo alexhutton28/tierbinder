@@ -259,7 +259,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Top bar
 
-- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding, and slides up out of the way (its own height, over `duration-drop` on `ease-slide`; at once under reduced motion) while the page scrolls down, coming back when it scrolls up 8px or more, reaches the top, or the logo has focus; the status bar's strip stays in its color. It has no line under it. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
+- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding, and slides up out of the way (its own height, over `duration-drop` on `ease-slide`, the logo fading over `duration-fade`; under reduced motion it fades out in place instead) while the page scrolls down, coming back when it scrolls up 8px or more, reaches the top, or the logo has keyboard focus; the status bar's strip stays in its color, empty. It has no line under it. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
 
 ### Settings
 

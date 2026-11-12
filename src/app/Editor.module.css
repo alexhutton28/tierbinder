@@ -11,22 +11,41 @@
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
   background: var(--tb-top);
-  transition: translate var(--duration-drop) var(--ease-slide);
+  transition:
+    translate var(--duration-drop) var(--ease-slide),
+    opacity var(--duration-fade) ease-out;
 
   @media (prefers-reduced-motion: reduce) {
+    transition: opacity var(--duration-fade) ease-out;
+  }
+
+  /* It only tucks under b8; widening the window doesn't slide it back in the sidebar */
+  @variant b8 {
     transition: none;
   }
-}
-
-/* Under b8, while the page scrolls down (Editor.tsx): slid up by its own height, leaving
-   the status bar's strip in its color; back while it holds focus */
-.topTucked:not(:focus-within) {
-  translate: 0 calc(-1 * var(--tb-top-height));
 }
 
 .brand {
   display: flex;
   flex: none;
+  transition: opacity var(--duration-fade) ease-out;
+}
+
+/* Under b8, while the page scrolls down (Editor.tsx): slid up by its own height, leaving
+   the status bar's strip in its color, with the logo faded so none of it shows there;
+   back while it holds keyboard focus. Reduced motion: it fades out in place instead. */
+.topTucked:not(:has(:focus-visible)) {
+  translate: 0 calc(-1 * var(--tb-top-height));
+
+  & .brand {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    translate: none;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 /* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the

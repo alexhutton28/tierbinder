@@ -1,10 +1,10 @@
 // Bulk import format. Cards before any `#` line go in the card tray, after the cards
-// already there (or on the board, where the graphic says: its `ungroupedImport`). A `#` line starts the next group, named by its text (`#` alone gives no
-// name; `\n` is a line break). Each graphic decides what groups are: a tier list fills a
-// tier per group and renames it. Each other line is a card, in deck-list form with an
-// optional count:
+// already there (or on the board, where the graphic says so: its `ungroupedImport`). A
+// `#` line starts the next group, named by its text (`#` alone gives no name; `\n` is a
+// line break). Each graphic decides what groups are: a tier list fills a tier per group
+// and renames it. Each other line is a card, in deck-list form with an optional count:
 //
-//   Pikachu ex SSP 57   <- before any #: the card tray
+//   Pikachu ex SSP 57   <- before any #: the card tray (the canvas on a blank canvas)
 //   # Goated
 //   Mew ex MEW 151
 //   1 Dipplin TWM 18
