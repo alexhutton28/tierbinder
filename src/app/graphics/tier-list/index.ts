@@ -13,7 +13,7 @@ import {
 
 const tierList: GraphicType<TierList> = {
   kind: 'tier-list',
-  label: 'Tier list',
+  label: 'Tier List',
   targetNoun: 'tier',
   create: defaultTierList,
   parse: parseTierList,

@@ -34,7 +34,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
         />
       </div>
       <div className="tierbinder-prop">
-        Split card border
+        Split Card Border
         <ColorField
           label="Split card border color"
           value={canvas.border}
@@ -58,7 +58,7 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
 
   return (
     <label className="flex gap-3 items-center">
-      Card size
+      Card Size
       <input
         type="number"
         min={MIN_CARD_WIDTH}

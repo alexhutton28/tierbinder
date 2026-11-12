@@ -199,7 +199,7 @@ export default function SearchFilters({
               className="self-start"
               onClick={() => onChange({ ...options, sets: [] })}
             >
-              Clear sets
+              Clear Sets
             </Button>
           )}
         </div>

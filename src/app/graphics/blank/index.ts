@@ -14,7 +14,7 @@ import {
 
 const blank: GraphicType<BlankCanvas> = {
   kind: 'blank',
-  label: 'Blank canvas',
+  label: 'Blank Canvas',
   targetNoun: 'canvas',
   create: defaultBlankCanvas,
   parse: parseBlankCanvas,

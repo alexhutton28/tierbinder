@@ -60,6 +60,31 @@ import { FOLD_CLEARANCE } from './ui/motion';
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+
+// Title case for menu items, which are also the menu's keys: short words stay lower case
+// unless first or last
+const SMALL_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'as',
+  'at',
+  'by',
+  'for',
+  'in',
+  'of',
+  'on',
+  'or',
+  'the',
+  'to',
+]);
+const titleCase = (text: string) =>
+  text
+    .split(' ')
+    .map((w, i, all) =>
+      i > 0 && i < all.length - 1 && SMALL_WORDS.has(w) ? w : w[0].toUpperCase() + w.slice(1)
+    )
+    .join(' ');
 // The Add to picker's swatch while a split card is being made: a white card
 const SPLIT_SWATCH = '#ffffff';
 
@@ -727,7 +752,7 @@ export default function Editor() {
   // The card tray is always a choice from b8 up, even while it's off: adding a card turns
   // it on
   const targets = wide
-    ? [...boardTargets, { name: 'Card tray', color: graphic.tray.color, outlined: true }]
+    ? [...boardTargets, { name: 'Card Tray', color: graphic.tray.color, outlined: true }]
     : boardTargets;
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
   // without them
@@ -1533,7 +1558,7 @@ export default function Editor() {
                 />
                 {(!picking || splitPicker) && targets.length > 1 && (
                   <Dropdown
-                    label="Add to"
+                    label="Add To"
                     hideLabel
                     chevron={false}
                     value={targetIndex}
@@ -1605,7 +1630,7 @@ export default function Editor() {
                       className="self-start"
                       onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
                     >
-                      {noResults.query ? 'Search all sets' : 'Clear sets'}
+                      {noResults.query ? 'Search All Sets' : 'Clear Sets'}
                     </Button>
                   )}
                 </div>
@@ -1833,7 +1858,7 @@ export default function Editor() {
                     aria-controls="bulk-import"
                     onClick={() => setImporting((on) => !on)}
                   >
-                    Bulk import
+                    Bulk Import
                     <span aria-hidden className={styles.disclosureChevron} />
                   </Button>
                   <div
@@ -1861,7 +1886,7 @@ export default function Editor() {
                           onClick={runImport}
                           disabled={busy || !importText.trim()}
                         >
-                          Import (adds to the board)
+                          Import (Adds to the Board)
                         </Button>
                       </div>
                     </div>
@@ -1877,7 +1902,7 @@ export default function Editor() {
             className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
           >
             <Dropdown
-              label="Board type"
+              label="Board Type"
               value={doc.kind}
               options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
               onChange={(kind) => {
@@ -1905,7 +1930,7 @@ export default function Editor() {
                 </label>
                 {graphic.tray.enabled && (
                   <div className="tierbinder-prop">
-                    Tray color
+                    Tray Color
                     <ColorField
                       label="Card tray color"
                       value={graphic.tray.color}
@@ -1929,7 +1954,7 @@ export default function Editor() {
               </div>
             ) : (
               <Button className="mt-3 self-start" onClick={() => setConfirmingClear(true)}>
-                Clear board
+                Clear Board
               </Button>
             )}
           </section>
@@ -2106,7 +2131,7 @@ export default function Editor() {
                       setCardMenu(null);
                     }}
                   >
-                    {label}
+                    {titleCase(label)}
                   </button>
                 ))}
               </div>
@@ -2156,7 +2181,7 @@ export default function Editor() {
               className={`tierbinder-option ${styles.flyoutItem}`}
               onClick={() => openResultFlyout(true)}
             >
-              {`Add to ${type.targetNoun}`}
+              {titleCase(`Add to ${type.targetNoun}`)}
               <span aria-hidden className={styles.menuChevron} />
             </button>
             {shownFlyout && (
