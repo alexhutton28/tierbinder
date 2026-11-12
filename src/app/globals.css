@@ -196,6 +196,32 @@ body * {
   }
 }
 
+/* A search field's clear button: Feather's x-circle at the field's end, 8px in, with the
+   field's height and that padding as its target; it lights up on hover. The field (in a
+   position: relative box) leaves room for it with its right padding. */
+.tierbinder-clear {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  padding-inline: var(--spacing-3);
+  color: var(--tb-icon-rest);
+  cursor: pointer;
+  transition: color var(--duration-hover) ease-out;
+}
+
+.tierbinder-clear span {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/x-circle.svg') center / contain no-repeat;
+}
+
+.tierbinder-clear:hover {
+  color: var(--tb-text);
+}
+
 .tierbinder-field::placeholder {
   color: var(--tb-muted);
 }

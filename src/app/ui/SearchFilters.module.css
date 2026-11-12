@@ -106,3 +106,16 @@
 .check:checked[data-check='dark'] {
   background-image: url('/check-dark.svg');
 }
+
+/* The set search, with room at its end for the clear button (globals.css): the button's
+   8px each side of the icon, less the field's border */
+.searchField {
+  position: relative;
+  display: flex;
+
+  & input {
+    flex: 1;
+    min-width: 0;
+    padding-right: calc(2 * var(--spacing-3) + var(--tb-icon) - var(--tb-line-width));
+  }
+}

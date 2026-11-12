@@ -2,6 +2,8 @@
    as Feather's square icon draws (20 of its 24 units, with the stroke), so it sits like
    the other buttons' icons */
 .swatchBox {
+  --swatch-size: calc(var(--tb-icon) * 20 / 24);
+
   display: grid;
   flex: none;
   place-items: center;
@@ -10,9 +12,17 @@
 }
 
 .swatch {
-  width: calc(var(--tb-icon) * 20 / 24);
+  width: var(--swatch-size);
   aspect-ratio: 1;
   border-radius: var(--radius-small);
+}
+
+/* Card-shaped, as tall as the square swatch (a card being made, as in "Splitting …"),
+   with corners half the swatch's, in step with its smaller size */
+.cardSwatch {
+  height: var(--swatch-size);
+  aspect-ratio: var(--card-ratio);
+  border-radius: calc(var(--radius-small) / 2);
 }
 
 /* A light stroke inside the swatch, for a color that would sink into the control behind

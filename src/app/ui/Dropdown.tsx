@@ -4,6 +4,7 @@ import React from 'react';
 import { useAnchored } from './anchored';
 import Button from './Button';
 import styles from './Dropdown.module.css';
+import { CARD_HEIGHT, CARD_WIDTH } from '../canvas/size';
 import { FOLD_CLEARANCE } from './motion';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
@@ -11,7 +12,10 @@ import { FOLD_CLEARANCE } from './motion';
 // through the options, Enter or Space picks one, Escape closes. An option with a color
 // shows it as a swatch before its name (the tiers); a hidden label is still the button's
 // tooltip. The list floats over the board, in the top layer (useAnchored), so a narrow
-// sidebar doesn't clip it.
+// sidebar doesn't clip it. `current` shows something else on the button than any option
+// (a mode, as in "Splitting Pikachu"), with no option selected; picking any option ends it.
+
+type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card' };
 
 export default function Dropdown<T extends string | number>({
   label,
@@ -19,14 +23,16 @@ export default function Dropdown<T extends string | number>({
   chevron = true,
   value,
   options,
+  current,
   onChange,
 }: {
   label: string;
   hideLabel?: boolean;
   chevron?: boolean;
   value: T;
-  // `outlined` gives the swatch a light stroke
-  options: { value: T; label: string; color?: string; outlined?: boolean }[];
+  // `outlined` gives the swatch a light stroke; a `card` shape draws it card-shaped
+  options: ({ value: T; label: string } & Look)[];
+  current?: { label: string } & Look;
   onChange: (value: T) => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -111,8 +117,8 @@ export default function Dropdown<T extends string | number>({
             }
           }}
         >
-          <Swatch color={options[selected]?.color} outlined={options[selected]?.outlined} />
-          {options[selected]?.label}
+          <Swatch {...(current ?? options[selected])} />
+          {(current ?? options[selected])?.label}
           {chevron && <span aria-hidden className={styles.chevron} />}
         </Button>
         {shown && (
@@ -132,7 +138,7 @@ export default function Dropdown<T extends string | number>({
                 }}
                 type="button"
                 role="option"
-                aria-selected={i === selected}
+                aria-selected={!current && i === selected}
                 tabIndex={-1}
                 className="tierbinder-option flex gap-2 items-center whitespace-nowrap aria-selected:font-semibold"
                 onClick={() => {
@@ -140,7 +146,7 @@ export default function Dropdown<T extends string | number>({
                   close();
                 }}
               >
-                <Swatch color={option.color} outlined={option.outlined} />
+                <Swatch {...option} />
                 {option.label}
               </button>
             ))}
@@ -151,12 +157,18 @@ export default function Dropdown<T extends string | number>({
   );
 }
 
-function Swatch({ color, outlined }: { color?: string; outlined?: boolean }) {
+// An option's color as a swatch (also used by the search results' menu)
+export function Swatch({ color, outlined, shape = 'square' }: Look) {
   return color ? (
     <span aria-hidden className={styles.swatchBox}>
       <span
-        className={`${styles.swatch} ${outlined ? styles.outlined : ''}`}
-        style={{ background: color }}
+        className={`${shape === 'card' ? styles.cardSwatch : styles.swatch} ${outlined ? styles.outlined : ''}`}
+        style={
+          {
+            background: color,
+            '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+          } as React.CSSProperties
+        }
       />
     </span>
   ) : null;

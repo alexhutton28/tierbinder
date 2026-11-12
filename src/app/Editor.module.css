@@ -78,11 +78,11 @@
   }
 }
 
-/* While the sidebar is hidden: the light logo where the top bar's was (the same box: as
-   tall as the top bar, 16px in), under the top bar as it slides away with the colored
-   logo. It fades in once the slide is over (data-settled, Editor.tsx), cut to the mark
-   when the full logo won't fit beside the board (data-size), and not at all when even the
-   mark won't; leaving, it fades out as the top bar comes back. */
+/* While the sidebar is hidden: the light binder mark where the top bar's logo was (the
+   same box: as tall as the top bar, 16px in; the light logo cut to its mark), under the
+   top bar as it slides away with the colored logo. It fades in once the slide is over
+   (data-settled, Editor.tsx), and not at all when it would touch the board (data-size);
+   leaving, it fades out as the top bar comes back. */
 .floatingBrand {
   position: fixed;
   top: 0;
@@ -110,10 +110,6 @@
 .lightLogo {
   width: var(--logo-mark-width);
   overflow: hidden;
-}
-
-.floatingBrand[data-size='full'] .lightLogo {
-  width: var(--logo-full-width);
 }
 
 .floatingBrandLeaving {
@@ -162,6 +158,53 @@
   .toastClosing {
     transform: none;
   }
+}
+
+/* A search result's menu (right-click): at the pointer (or above it at the window's foot),
+   over the sidebar and the board, under a viewed card (which View opens as it folds away)
+   and toasts. Its "Add to" row holds a
+   chevron and opens a flyout to its right (or its left near the window's edge, data-side),
+   lined up with the row (the list's 4px inset above it), whose rows have the dropdown
+   lists' 8px ends. */
+.resultMenu {
+  position: fixed;
+  z-index: 25;
+  overflow: visible;
+}
+
+.flyoutAnchor {
+  position: relative;
+}
+
+.flyoutItem {
+  display: flex;
+  gap: var(--spacing-4);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.flyout {
+  position: absolute;
+  top: calc(-1 * var(--spacing-2));
+  left: calc(100% + var(--spacing-2));
+
+  &[data-side='left'] {
+    right: calc(100% + var(--spacing-2));
+    left: auto;
+  }
+
+  & > button {
+    padding-inline: var(--spacing-3);
+  }
+}
+
+/* Feather's chevron-right at the icon size, as the dropdowns' chevron, colored by the text */
+.menuChevron {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-right.svg') center / contain no-repeat;
 }
 
 /* The sidebar's foot: the credits, then the sidebar toggle at the other end */
@@ -283,31 +326,6 @@
 
 .search:has(input:focus-visible) .searchIcon {
   background: var(--tb-icon-lit);
-}
-
-/* Feather's x-circle at the field's end, 8px in like the search icon, with the field's
-   height and that padding as its target; it lights up on hover */
-.clearSearch {
-  position: absolute;
-  inset-block: 0;
-  right: 0;
-  display: grid;
-  place-items: center;
-  padding-inline: var(--spacing-3);
-  color: var(--tb-icon-rest);
-  cursor: pointer;
-  transition: color var(--duration-hover) ease-out;
-}
-
-.clearSearch span {
-  width: var(--tb-icon);
-  height: var(--tb-icon);
-  background: currentcolor;
-  mask: url('/x-circle.svg') center / contain no-repeat;
-}
-
-.clearSearch:hover {
-  color: var(--tb-text);
 }
 
 /* A card shown large (View): over a dimmed window, as tall as --tb-view-height allows, or

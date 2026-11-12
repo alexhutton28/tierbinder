@@ -48,7 +48,7 @@ import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import ColorField from './ui/ColorField';
-import Dropdown from './ui/Dropdown';
+import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
 import Credits from './ui/Credits';
@@ -60,6 +60,9 @@ import { FOLD_CLEARANCE } from './ui/motion';
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+// The Add to picker's swatch while a split card is being made: a white card
+const SPLIT_SWATCH = '#ffffff';
+
 // How long a toast (a tier or the card tray being full) stays before it fades
 const TOAST_DURATION = 3000;
 
@@ -75,19 +78,33 @@ function mapEveryCard(g: Graphic, change: (item: CardItem) => CardItem | null): 
   return { ...typeOf(g.kind).mapCards(g, change), tray: mapTray(g.tray, change) } as Graphic;
 }
 
-// A graphic with a changed tray, or why the tray couldn't take the card
+// A graphic with a changed tray, or why the tray couldn't take the card. A card added to
+// the tray turns it on, if it was off.
 function withTray(g: Graphic, tray: Tray | { error: string }): Placed<Graphic> {
-  return 'error' in tray ? tray : ({ ...g, tray } as Graphic);
+  return 'error' in tray ? tray : ({ ...g, tray: { ...tray, enabled: true } } as Graphic);
 }
 
 // The card menu's narrowest width; it opens left of the pointer when this wouldn't fit
 // inside the board's right edge
 const MENU_WIDTH = 160;
 
-// The light logo shown where the top bar's was while the sidebar is hidden
-// (tierbinder-combined-light.svg, drawn at 137×28), at the top bar logo's height (25px), so
-// its mark lands where the top bar's did; cut to the mark alone when the full logo won't
-// fit beside the board, with the room either needs around it to show (space-3)
+// How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
+const EDGE = 8;
+
+// A search result's menu: which card, where it opened, and the result's tile
+type ResultMenu = {
+  card: CardResult;
+  x: number;
+  y: number;
+  tile: HTMLElement;
+  // The results it was opened on
+  of: CardResult[];
+};
+
+// The light binder mark shown where the top bar's logo was while the sidebar is hidden
+// (cut from tierbinder-combined-light.svg, drawn at 137×28), at the top bar logo's height
+// (25px), so it lands where the top bar's mark was; shown when it has this room around it
+// beside the board (space-3)
 const LOGO_HEIGHT = 25;
 const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
 const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
@@ -335,6 +352,102 @@ export default function Editor() {
     dropped?: { card: CardResult; point: Point };
   } | null>(null);
   const cardMenuRef = React.useRef<HTMLDivElement>(null);
+  // Menu for a search result, from a right-click (or the menu key): View, and Add to with
+  // a flyout of every Add to choice. At the pointer, in the window's pixels; `tile` is the
+  // result, for View's start and for focus to go back to. Like the card menu, it stays on
+  // screen while it folds closed.
+  const [resultMenu, setResultMenu] = React.useState<ResultMenu | null>(null);
+  // A new set of results replaces the one the menu was opened on: it closes
+  if (resultMenu && resultMenu.of !== results) setResultMenu(null);
+  const [shownResultMenu, setShownResultMenu] = React.useState(resultMenu);
+  if (resultMenu && resultMenu !== shownResultMenu) setShownResultMenu(resultMenu);
+  const resultMenuClosing = !resultMenu && shownResultMenu !== null;
+  React.useEffect(() => {
+    if (!resultMenuClosing) return;
+    const timer = setTimeout(() => setShownResultMenu(null), FOLD_CLEARANCE);
+    return () => clearTimeout(timer);
+  }, [resultMenuClosing]);
+  const resultMenuRef = React.useRef<HTMLDivElement>(null);
+  const resultAddToRef = React.useRef<HTMLButtonElement>(null);
+  const [resultFlyout, setResultFlyout] = React.useState(false);
+  // The flyout stays on screen while it folds closed, as the menus do
+  const [shownFlyout, setShownFlyout] = React.useState(false);
+  if (resultFlyout && !shownFlyout) setShownFlyout(true);
+  const flyoutClosing = shownFlyout && !resultFlyout;
+  React.useEffect(() => {
+    if (!flyoutClosing) return;
+    const timer = setTimeout(() => setShownFlyout(false), FOLD_CLEARANCE);
+    return () => clearTimeout(timer);
+  }, [flyoutClosing]);
+  // Kept inside the window, EDGE in: the menu opens upward from the pointer when it won't
+  // fit below, and the flyout opens to the left (and moves up) when it won't fit. Measured
+  // from layout sizes (offsetWidth and the like), since they open stretching from a scale.
+  React.useLayoutEffect(() => {
+    const menu = resultMenuRef.current;
+    if (!menu || !shownResultMenu) return;
+    const left = Math.min(shownResultMenu.x, window.innerWidth - EDGE - menu.offsetWidth);
+    const top =
+      shownResultMenu.y + menu.offsetHeight > window.innerHeight - EDGE
+        ? shownResultMenu.y - menu.offsetHeight
+        : shownResultMenu.y;
+    menu.style.left = `${Math.max(EDGE, left)}px`;
+    menu.style.top = `${Math.max(EDGE, top)}px`;
+  }, [shownResultMenu]);
+  React.useLayoutEffect(() => {
+    const menu = resultMenuRef.current;
+    const flyout = menu?.querySelector<HTMLElement>('[data-flyout]');
+    const row = flyout?.parentElement;
+    if (!menu || !flyout || !row || !resultFlyout) return;
+    const menuLeft = parseFloat(menu.style.left) || 0;
+    const menuTop = parseFloat(menu.style.top) || 0;
+    // Where it would sit to the right, by its own CSS (its offsets within its row)
+    const right =
+      menuLeft + menu.clientLeft + row.offsetLeft + flyout.offsetLeft + flyout.offsetWidth;
+    if (right > window.innerWidth - EDGE) flyout.dataset.side = 'left';
+    const bottom =
+      menuTop + menu.clientTop + row.offsetTop + flyout.offsetTop + flyout.offsetHeight;
+    const over = bottom - (window.innerHeight - EDGE);
+    if (over > 0) flyout.style.translate = `0 ${-over}px`;
+  }, [resultFlyout]);
+  // Opening focuses its first item; a press outside, Escape (back to the result) or
+  // scrolling closes it
+  React.useEffect(() => {
+    if (!resultMenu) return;
+    resultMenuRef.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
+    const close = () => setResultMenu(null);
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Node && resultMenuRef.current?.contains(e.target))) close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      // The page's Delete and Backspace (removing the selected card) don't reach the board
+      // from here
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.stopImmediatePropagation();
+        return;
+      }
+      if (e.key !== 'Escape' && e.key !== 'Tab') return;
+      e.stopImmediatePropagation();
+      // Escape in the flyout closes just the flyout, back to its "Add to" row
+      if (e.key === 'Escape' && document.activeElement?.closest('[data-flyout]')) {
+        setResultFlyout(false);
+        resultAddToRef.current?.focus();
+        return;
+      }
+      // Escape, or Tab (a menu isn't a stop in the page's tab order): closed, back to the
+      // result
+      e.preventDefault();
+      close();
+      resultMenu.tile.focus();
+    };
+    window.addEventListener('pointerdown', onDown);
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [resultMenu]);
   // The menu on screen: the open one, or the last one while it folds closed
   const [shownMenu, setShownMenu] = React.useState(cardMenu);
   if (cardMenu && cardMenu !== shownMenu) setShownMenu(cardMenu);
@@ -414,11 +527,11 @@ export default function Editor() {
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
-  // While the sidebar is hidden, the light logo fades in where the top bar's was (the colored
-  // one goes with the sidebar), once the slide is over (`data-settled`), as a button that
-  // brings the sidebar back: the full logo if the board leaves room for it, else the mark
-  // alone, else neither (`data-size`, measured as the board moves). Showing the sidebar fades
-  // it out (`logoLeaving`) as the top bar comes back.
+  // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
+  // was (the colored one goes with the sidebar), once the slide is over (`data-settled`),
+  // as a button that brings the sidebar back; only when it clears the board (`data-size`,
+  // measured as the board moves). Showing the sidebar fades it out (`logoLeaving`) as the
+  // top bar comes back.
   const floatingLogoRef = React.useRef<HTMLButtonElement>(null);
   const [logoMounted, setLogoMounted] = React.useState(false);
   if (sidebarCollapsed && !logoMounted) setLogoMounted(true);
@@ -526,7 +639,14 @@ export default function Editor() {
   // A card shown large in the middle of the window (View, in the card menu; a split card
   // shows both its cards), grown from its place on the board and shrunk back to it when
   // anything is pressed or Escape. Like the card menu, it stays on screen while it closes.
-  const [viewing, setViewing] = React.useState<{ id: string; faces: CardFace[] } | null>(null);
+  // A board card's `id`, or for a search result (View in its menu) where it grows from
+  // (`from`: its thumbnail's center and height on screen) and where focus goes back to
+  const [viewing, setViewing] = React.useState<{
+    id?: string;
+    faces: CardFace[];
+    from?: { x: number; y: number; height: number };
+    returnTo?: HTMLElement | null;
+  } | null>(null);
   const [shownView, setShownView] = React.useState(viewing);
   if (viewing && viewing !== shownView) setShownView(viewing);
   const viewClosing = !viewing && shownView !== null;
@@ -541,9 +661,9 @@ export default function Editor() {
   const viewerRef = React.useRef<HTMLDivElement>(null);
   React.useEffect(() => {
     if (!viewing) return;
-    const board = boardBoxRef.current;
+    const back = viewing.returnTo ?? boardBoxRef.current;
     viewerRef.current?.focus({ preventScroll: true });
-    return () => board?.focus({ preventScroll: true });
+    return () => back?.focus({ preventScroll: true });
   }, [viewing]);
   React.useEffect(() => {
     if (!viewing) return;
@@ -562,27 +682,46 @@ export default function Editor() {
       window.removeEventListener('keydown', onKey, true);
     };
   }, [viewing]);
-  // Where the cards grow from and shrink back to: the card on the board, as a transform
-  // of the cards' place in the middle (--from), measured without that transform
+  // Where the cards grow from and shrink back to: the card on the board (or a search
+  // result's thumbnail), as a transform of the cards' place in the middle (--from),
+  // measured without that transform
   const viewRef = React.useRef<HTMLDivElement>(null);
   const viewedPlace = placements.find((p) => p.item.id === shownView?.id);
+  const viewedFrom = shownView?.from;
   React.useLayoutEffect(() => {
     const cards = viewRef.current;
     const stage = stageRef.current;
-    if (!cards || !stage || !viewedPlace) return;
-    const board = stage.container().getBoundingClientRect();
-    const x = board.left + (viewedPlace.x + viewedPlace.width / 2) * scale;
-    const y = board.top + (viewedPlace.y + viewedPlace.height / 2) * scale;
-    const dx = x - (cards.offsetLeft + cards.offsetWidth / 2);
-    const dy = y - (cards.offsetTop + cards.offsetHeight / 2);
-    const shrink = (viewedPlace.height * scale) / cards.offsetHeight;
+    if (!cards || !stage) return;
+    let origin = viewedFrom;
+    if (viewedPlace) {
+      const board = stage.container().getBoundingClientRect();
+      origin = {
+        x: board.left + (viewedPlace.x + viewedPlace.width / 2) * scale,
+        y: board.top + (viewedPlace.y + viewedPlace.height / 2) * scale,
+        height: viewedPlace.height * scale,
+      };
+    }
+    if (!origin) return;
+    const dx = origin.x - (cards.offsetLeft + cards.offsetWidth / 2);
+    const dy = origin.y - (cards.offsetTop + cards.offsetHeight / 2);
+    const shrink = origin.height / cards.offsetHeight;
     cards.style.setProperty('--from', `translate(${dx}px, ${dy}px) scale(${shrink})`);
     // The card's place by value: placements are new objects every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewedPlace?.x, viewedPlace?.y, viewedPlace?.width, viewedPlace?.height, viewClosing, scale]);
+  }, [
+    viewedPlace?.x,
+    viewedPlace?.y,
+    viewedPlace?.width,
+    viewedPlace?.height,
+    viewedFrom,
+    viewClosing,
+    scale,
+  ]);
   // The graphic's targets, then the card tray while it shows
   const boardTargets = type.targets(graphic);
-  const targets = trayShown
+  // The card tray is always a choice from b8 up, even while it's off: adding a card turns
+  // it on
+  const targets = wide
     ? [...boardTargets, { name: 'Card tray', color: graphic.tray.color, outlined: true }]
     : boardTargets;
   // The set filter's ticks: the board's tier colors, or a new tier list's on a board
@@ -590,7 +729,6 @@ export default function Editor() {
   const targetColors = boardTargets.flatMap((t) => (t.color ? [t.color] : []));
   const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
   const targetIndex = Math.min(target, targets.length - 1);
-  const trayTargeted = trayShown && targetIndex === boardTargets.length;
 
   // Changes the board showing
   const setGraphic = React.useCallback(
@@ -700,7 +838,8 @@ export default function Editor() {
         top + LOGO_HEIGHT + LOGO_CLEARANCE <= b.top ||
         b.right + LOGO_CLEARANCE <= left ||
         b.bottom + LOGO_CLEARANCE <= top;
-      const size = clears(LIGHT_LOGO_WIDTH) ? 'full' : clears(LOGO_MARK_WIDTH) ? 'mark' : null;
+      // Only the binder mark, never the wordmark
+      const size = clears(LOGO_MARK_WIDTH) ? 'mark' : null;
       if (size) logo.dataset.size = size;
       else delete logo.dataset.size;
     };
@@ -885,6 +1024,13 @@ export default function Editor() {
   }
 
   const pickingCard = findCard(picking?.id);
+  // Making a split card (picking the bottom half of a card that isn't split yet) shows in
+  // the Add to picker, when there is one, instead of a message and Cancel
+  const splitPicker =
+    picking?.part === 'bottom' &&
+    pickingCard !== undefined &&
+    !pickingCard.split &&
+    targets.length > 1;
 
   type CardMenu = NonNullable<typeof cardMenu>;
   // A result dropped on a card goes where it was dropped: the board, or the card tray
@@ -977,6 +1123,15 @@ export default function Editor() {
     if (label === 'Unsplit') updateCard(id, (i) => ({ ...i, split: undefined }));
   }
 
+  // Adds a search result to one of the Add to choices: the graphic's, or the card tray
+  function addResultTo(card: CardResult, index: number) {
+    applyPlaced(
+      wide && index === boardTargets.length
+        ? withTray(graphic, insertTrayCard(graphic.tray, toItem(card)))
+        : type.addCard(graphic, toItem(card), index)
+    );
+  }
+
   function pickResult(card: CardResult) {
     if (picking && pickingCard) {
       const face = toFace(card);
@@ -986,11 +1141,58 @@ export default function Editor() {
       setPicking(null);
       return;
     }
-    applyPlaced(
-      trayTargeted
-        ? withTray(graphic, insertTrayCard(graphic.tray, toItem(card)))
-        : type.addCard(graphic, toItem(card), targetIndex)
+    addResultTo(card, targetIndex);
+  }
+
+  // The search result menu's View: the card large, grown from its thumbnail, with focus
+  // going back to the result after
+  function viewResult({ card, tile }: ResultMenu) {
+    const thumb = (tile.querySelector('img') ?? tile).getBoundingClientRect();
+    setViewing({
+      faces: [toFace(card)],
+      from: {
+        x: thumb.left + thumb.width / 2,
+        y: thumb.top + thumb.height / 2,
+        height: thumb.height,
+      },
+      returnTo: tile,
+    });
+  }
+
+  // The menu's keys: arrows move through its items (or the flyout's), right opens the
+  // flyout and left goes back from it; Escape is handled with the outside press
+  const onResultMenuKey = (e: React.KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+    const flyout = target.closest<HTMLElement>('[data-flyout]');
+    const scope = flyout ?? resultMenuRef.current;
+    if (!scope) return;
+    const items = [...scope.querySelectorAll<HTMLElement>('[role=menuitem]')].filter(
+      (el) => flyout || !el.closest('[data-flyout]')
     );
+    const at = items.indexOf(target);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      items[(at + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+    }
+    if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      items[e.key === 'Home' ? 0 : items.length - 1]?.focus();
+    }
+    if (e.key === 'ArrowRight' && target.hasAttribute('aria-haspopup')) {
+      e.preventDefault();
+      openResultFlyout(true);
+    }
+    if (e.key === 'ArrowLeft' && flyout) {
+      e.preventDefault();
+      setResultFlyout(false);
+      resultAddToRef.current?.focus();
+    }
+  };
+
+  // Opens the "Add to" flyout, focusing its first choice when asked (keyboard)
+  function openResultFlyout(focus: boolean) {
+    flushSync(() => setResultFlyout(true));
+    if (focus) resultMenuRef.current?.querySelector<HTMLElement>('[data-flyout] button')?.focus();
   }
 
   // A search result dropped on the board goes where the graphic puts it. Dropped on a
@@ -1145,7 +1347,6 @@ export default function Editor() {
           style={
             {
               '--logo-mark-width': `${LOGO_MARK_WIDTH}px`,
-              '--logo-full-width': `${LIGHT_LOGO_WIDTH}px`,
             } as React.CSSProperties
           }
           aria-label="Show sidebar"
@@ -1210,7 +1411,14 @@ export default function Editor() {
               label="Editor sections"
               options={TABS}
               value={tab}
-              onChange={setTab}
+              onChange={(next) => {
+                // Add Cards clicked while it's showing: straight to the search
+                // (not on touch screens, where it would bring up the keyboard over the page)
+                if (next === 'add' && tab === 'add' && !matchMedia('(pointer: coarse)').matches) {
+                  searchInputRef.current?.focus();
+                }
+                setTab(next);
+              }}
               onFullWidth={fitSidebarToNav}
             />
           </div>
@@ -1260,7 +1468,7 @@ export default function Editor() {
                   {query && (
                     <button
                       type="button"
-                      className={styles.clearSearch}
+                      className="tierbinder-clear"
                       aria-label="Clear search"
                       title="Clear search"
                       onClick={() => {
@@ -1284,7 +1492,7 @@ export default function Editor() {
                   colors={tickColors}
                   onChange={changeSearchOptions}
                 />
-                {!picking && targets.length > 1 && (
+                {(!picking || splitPicker) && targets.length > 1 && (
                   <Dropdown
                     label="Add to"
                     hideLabel
@@ -1297,7 +1505,21 @@ export default function Editor() {
                       // The tray's color is a shade of the board, so it gets a stroke
                       outlined: 'outlined' in t && t.outlined,
                     }))}
-                    onChange={setTarget}
+                    // While a split card is being made, it says so, with a white card as its
+                    // swatch; picking a target cancels the split
+                    current={
+                      splitPicker && pickingCard
+                        ? {
+                            label: `Splitting ${pickingCard.name}`,
+                            color: SPLIT_SWATCH,
+                            shape: 'card',
+                          }
+                        : undefined
+                    }
+                    onChange={(i) => {
+                      setTarget(i);
+                      if (splitPicker) setPicking(null);
+                    }}
                   />
                 )}
                 {/* Flips the order: newest or oldest set first, and each set's numbers */}
@@ -1349,7 +1571,7 @@ export default function Editor() {
                   )}
                 </div>
               )}
-              {picking && pickingCard && (
+              {picking && pickingCard && !splitPicker && (
                 <p className="flex gap-3 items-center">
                   {picking.part === 'top'
                     ? pickingCard.split
@@ -1406,6 +1628,21 @@ export default function Editor() {
                             }}
                             onClick={() => {
                               if (!justDragged.current) pickResult(card);
+                            }}
+                            // Right-click (or the menu key) opens the result's own menu
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              const tile = e.currentTarget;
+                              const box = tile.getBoundingClientRect();
+                              setResultFlyout(false);
+                              setResultMenu({
+                                card,
+                                tile,
+                                of: results,
+                                // The menu key reports no pointer: open at the result
+                                x: e.clientX || box.left + box.width / 2,
+                                y: e.clientY || box.top + box.height / 2,
+                              });
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
@@ -1586,9 +1823,13 @@ export default function Editor() {
                   <input
                     type="checkbox"
                     checked={graphic.tray.enabled}
-                    onChange={(e) =>
-                      setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled: e.target.checked } }))
-                    }
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
+                      // Turned off while it's the Add to choice: back to the first tier, so the
+                      // next card doesn't quietly turn it on again
+                      if (!enabled && targetIndex === boardTargets.length) setTarget(0);
+                    }}
                   />
                   Show card tray under the board
                 </label>
@@ -1807,6 +2048,76 @@ export default function Editor() {
           {status && <p className="whitespace-pre-line">{status}</p>}
         </div>
       </div>
+
+      {shownResultMenu && (
+        <div
+          // A new element for each menu, so each one plays the opening animation
+          key={`${shownResultMenu.x} ${shownResultMenu.y}`}
+          ref={resultMenuRef}
+          role="menu"
+          aria-label={shownResultMenu.card.name}
+          onContextMenu={(e) => e.preventDefault()}
+          onKeyDown={onResultMenuKey}
+          className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.resultMenu} flex flex-col ${resultMenuClosing ? 'closing pointer-events-none' : ''}`}
+          // At the pointer; moved inside the window once measured (above)
+          style={{ minWidth: MENU_WIDTH, left: shownResultMenu.x, top: shownResultMenu.y }}
+        >
+          <button
+            role="menuitem"
+            tabIndex={-1}
+            className="tierbinder-option"
+            onPointerEnter={() => setResultFlyout(false)}
+            onClick={() => {
+              viewResult(shownResultMenu);
+              setResultMenu(null);
+            }}
+          >
+            View
+          </button>
+          <div className={styles.flyoutAnchor} onPointerEnter={() => openResultFlyout(false)}>
+            <button
+              ref={resultAddToRef}
+              role="menuitem"
+              tabIndex={-1}
+              aria-haspopup="menu"
+              aria-expanded={resultFlyout}
+              className={`tierbinder-option ${styles.flyoutItem}`}
+              onClick={() => openResultFlyout(true)}
+            >
+              {`Add to ${type.targetNoun}`}
+              <span aria-hidden className={styles.menuChevron} />
+            </button>
+            {shownFlyout && (
+              <div
+                data-flyout
+                role="menu"
+                aria-label={`Add to ${type.targetNoun}`}
+                className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${flyoutClosing ? 'closing pointer-events-none' : ''}`}
+              >
+                {targets.map((t, i) => (
+                  <button
+                    key={i}
+                    role="menuitem"
+                    tabIndex={-1}
+                    className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
+                    onClick={() => {
+                      addResultTo(shownResultMenu.card, i);
+                      // Adding ends a split being made, as picking a target does
+                      if (splitPicker) setPicking(null);
+                      setResultMenu(null);
+                      // Focus goes back to the result, not lost with the menu
+                      shownResultMenu.tile.focus({ preventScroll: true });
+                    }}
+                  >
+                    <Swatch color={t.color} outlined={'outlined' in t && t.outlined} />
+                    {t.name.replaceAll('\n', ' ')}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {shownView && (
         <div

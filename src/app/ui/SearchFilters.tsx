@@ -140,17 +140,34 @@ export default function SearchFilters({
           }}
           className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored ${styles.popup} ${closing ? 'closing pointer-events-none' : ''}`}
         >
-          <input
-            ref={searchRef}
-            className="tierbinder-field"
-            aria-label="Search sets"
-            placeholder="Search sets"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <span className={styles.searchField}>
+            <input
+              ref={searchRef}
+              className="tierbinder-field"
+              aria-label="Search sets"
+              placeholder="Search sets"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {/* Empties the search, as the card search's does, while it has text */}
+            {query && (
+              <button
+                type="button"
+                className="tierbinder-clear"
+                aria-label="Clear set search"
+                title="Clear set search"
+                onClick={() => {
+                  setQuery('');
+                  searchRef.current?.focus();
+                }}
+              >
+                <span aria-hidden />
+              </button>
+            )}
+          </span>
           <fieldset ref={listRef} className={styles.sets}>
             <legend className="sr-only">Sets</legend>
             {sets.map((s) => {
