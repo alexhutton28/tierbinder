@@ -32,39 +32,41 @@ Semantic tokens that map onto existing palette colors and spacing steps, recorde
 - Professional but fun and friendly, with smooth transitions and rounded borders.
 - A real design tool that feels smooth and satisfying to use.
 - Dark interface in petrel and storm. Storm blue marks main actions, and the tier colors mark the main nav.
-- The window is a working tool: a docked left sidebar headed by a 48px logo bar, and the board centered in its own darker workspace, which runs the window's full height, divided by 1px lines with no floating panels. Controls are 32px tall with 14px text (text buttons are just their words), and most stay quiet until hovered. Controls and popups use `radius-small`.
+- The window is a working tool: a docked left sidebar headed by a 48px logo bar, and the board centered in its own darker workspace, which runs the window's full height, divided by 1px lines with no floating panels. From `b8` up the sidebar can slide away (the binder mark and a show button then float at the window's corners), and short messages (toasts) float at the top. Controls are 32px tall with 14px text (text buttons are just their words), and most stay quiet until hovered. Controls and popups use `radius-small`.
 - Color is used by name through tokens (`bg-petrel-900`, `var(--color-storm-300)`), not raw hex.
 
 ## 3. Color
 
 Petrel and storm are for the interface, and the tier colors are the brand's color. The look is set as `--tb-*` roles on `body` in `globals.css`.
 
-| Name        | Hex       | Semantic roles | Used for                                                                                                   |
-| ----------- | --------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
-| Petrel 50   | `#F2F5F6` |                | Section headings, the credits link and icon on hover                                                       |
-| Petrel 100  | `#E3E8EB` |                | Text, selected tool, links, default card tray (blank canvas)                                               |
-| Petrel 200  | `#CCD4D8` |                | Not used yet                                                                                               |
-| Petrel 300  | `#B3BEC4` |                | Not used yet                                                                                               |
-| Petrel 400  | `#94A2AA` |                | Muted text, the stroke on the card tray's swatch                                                           |
-| Petrel 500  | `#6C7D88` |                | Not used yet                                                                                               |
-| Petrel 600  | `#546470` |                | Search and clear icons at rest, scrollbar thumb on hover                                                   |
-| Petrel 700  | `#3E4B53` |                | Button, popup and field borders, option hover, scrollbar thumb                                             |
-| Petrel 800  | `#2D373D` |                | Dividing lines, hover, skeleton shimmer                                                                    |
-| Petrel 850  | `#232B30` |                | Popups, card placeholders and skeletons, default card tray (tier list)                                     |
-| Petrel 900  | `#1B2125` |                | Sidebar, default lines between tiers                                                                       |
-| Petrel 950  | `#12171A` |                | Workspace, fields, text on main actions; at part strength the View backdrop, scroll shade and popup shadow |
-| Storm 100   | `#DCEAF1` |                | Not used yet                                                                                               |
-| Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                                                                           |
-| Storm 300   | `#9CC0D4` |                | Main buttons, lit search icon                                                                              |
-| Storm 400   | `#78A5BD` |                | Top bar                                                                                                    |
-| Storm 600   | `#466E85` |                | Text field focus                                                                                           |
-| Storm 800   | `#2A4352` |                | Default board background (tier list)                                                                       |
-| Tier Goated | `#F0392B` |                | Default tier color. Board only                                                                             |
-| Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav                                                           |
-| Tier Mid    | `#FFCB2E` |                | Default tier color. Customize in the main nav                                                              |
-| Tier Fraud  | `#3CC65A` |                | Default tier color. Add Cards in the main nav                                                              |
+| Name        | Hex       | Semantic roles | Used for                                                                                                                                              |
+| ----------- | --------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Petrel 50   | `#F2F5F6` |                | Section headings, the credits link and icon on hover, the sidebar button on hover                                                                     |
+| Petrel 100  | `#E3E8EB` |                | Text, selected tool, links, default card tray (blank canvas)                                                                                          |
+| Petrel 200  | `#CCD4D8` |                | Not used yet                                                                                                                                          |
+| Petrel 300  | `#B3BEC4` |                | Not used yet                                                                                                                                          |
+| Petrel 400  | `#94A2AA` |                | Muted text, the stroke on the card tray's swatch                                                                                                      |
+| Petrel 500  | `#6C7D88` |                | Not used yet                                                                                                                                          |
+| Petrel 600  | `#546470` |                | Search and clear icons at rest, scrollbar thumb on hover                                                                                              |
+| Petrel 700  | `#3E4B53` |                | Button, popup and field borders, option hover, scrollbar thumb                                                                                        |
+| Petrel 800  | `#2D373D` |                | Dividing lines, hover, skeleton shimmer                                                                                                               |
+| Petrel 850  | `#232B30` |                | Popups, card placeholders and skeletons, default card tray (tier list)                                                                                |
+| Petrel 900  | `#1B2125` |                | Sidebar, default lines between tiers                                                                                                                  |
+| Petrel 950  | `#12171A` |                | Workspace, fields, text on main actions; at part strength the View backdrop, scroll shade and popup shadow, the empty card tray's hint on light trays |
+| Storm 100   | `#DCEAF1` |                | Not used yet                                                                                                                                          |
+| Storm 200   | `#BFD7E4` |                | Main button hover, focus outline                                                                                                                      |
+| Storm 300   | `#9CC0D4` |                | Main buttons, lit search icon                                                                                                                         |
+| Storm 400   | `#78A5BD` |                | Top bar                                                                                                                                               |
+| Storm 600   | `#466E85` |                | Text field focus                                                                                                                                      |
+| Storm 800   | `#2A4352` |                | Default board background (tier list)                                                                                                                  |
+| Tier Goated | `#F0392B` |                | Default tier color. Board only                                                                                                                        |
+| Tier Solid  | `#F78C1E` |                | Default tier color. Save & Share in the main nav                                                                                                      |
+| Tier Mid    | `#FFCB2E` |                | Default tier color. Customize in the main nav                                                                                                         |
+| Tier Fraud  | `#3CC65A` |                | Default tier color. Add Cards in the main nav                                                                                                         |
 
 Board colors (tier colors, backgrounds, borders) are canvas colors that users can change. See Exceptions.
+
+White (`#FFFFFF`, outside the palette, Alex's choice) is the swatch shown in the Add to picker while a split card is being made: a white card.
 
 ## 4. Typography
 
@@ -114,6 +116,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 | `radius-full`   | 9999px | Scrollbar thumbs                                                                          |
 
 - The values come from the spacing scale, but radius keeps its own tokens.
+- The split-card swatch, a card-shaped swatch smaller than the square ones, uses half of `radius-small` (2px), in step with its size.
 - The names avoid Tailwind's `sm`, `md` and `lg`.
 
 ## 7. Iconography
@@ -126,6 +129,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 - The logo is `public/tierbinder-combined-dark.svg`: a spiral-bound stack of sheets in the four tier colors, with a Petrel 900 outline, and the name set in Fraunces (weight 600, softness 50, -3.5% letter spacing) as outlines, so the font isn't loaded. Its name and outline are Petrel 900, so it needs a light background.
 - It sits directly on the Storm 400 top bar at its full size, 114 × 25. Don't place it on dark surfaces like Petrel 900, where the outline and name disappear.
+- For dark surfaces there's `public/tierbinder-combined-light.svg` (Alex's, 137 × 28): the same drawing in Petrel 50 lines on Petrel 900 sheets, without the tier colors. While the sidebar is hidden, its binder mark alone (cut at the mark's width, drawn at the top bar logo's 25px height) stands in for the top bar's logo; cutting it to the mark is allowed.
 
 ## 9. Imagery and visuals
 

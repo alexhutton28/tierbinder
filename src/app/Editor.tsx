@@ -1219,6 +1219,8 @@ export default function Editor() {
     if (longPress.current) clearTimeout(longPress.current.timer);
     longPress.current = null;
   }
+  // New results replace the tile a long press was on
+  React.useEffect(() => () => cancelLongPress(), [results]);
 
   // Opens the "Add to" flyout, focusing its first choice when asked (keyboard)
   function openResultFlyout(focus: boolean) {
@@ -1380,10 +1382,11 @@ export default function Editor() {
               '--logo-mark-width': `${LOGO_MARK_WIDTH}px`,
             } as React.CSSProperties
           }
-          aria-label="Show sidebar"
+          // A pointer shortcut only: the show button at the bottom left is the one keyboards
+          // and screen readers get, so the same control isn't met twice
+          tabIndex={-1}
+          aria-hidden
           title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
-          aria-keyshortcuts="Control+\ Meta+\"
-          aria-controls="sidebar-column"
           inert={viewing !== null || logoLeaving}
           onClick={toggleSidebar}
         >
@@ -1397,11 +1400,16 @@ export default function Editor() {
           </span>
         </button>
       )}
+      {/* The toast's words for screen readers, in a live region that's always there (one
+        that appears with its text in it is often not read out) */}
+      <p role="status" className="sr-only">
+        {toast && !toast.closing ? toast.message : ''}
+      </p>
       {toast && (
         <div
           // A new element for each new message, so it plays its entrance
           key={toast.id}
-          role="status"
+          aria-hidden
           className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
         >
           {toast.message}
@@ -1654,6 +1662,9 @@ export default function Editor() {
                             className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
                             // Mouse and pen only: on touch, a press-and-move scrolls the results
                             onPointerDown={(e) => {
+                              // A new press of any kind starts afresh (no click is fired
+                              // after a long press on some phones)
+                              longPressOpened.current = false;
                               // On touch, a long press opens the result's menu (a press and
                               // move scrolls the results instead)
                               if (e.pointerType === 'touch') {
@@ -1983,7 +1994,9 @@ export default function Editor() {
 
       <div
         ref={workspaceRef}
-        className={`${styles.canvas} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+        // With the sidebar hidden, more room at the left, so the board stays clear of the show
+        // button at the bottom left
+        className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
         inert={viewing !== null}
       >
         <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>

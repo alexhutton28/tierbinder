@@ -76,6 +76,11 @@
   .showSidebar {
     animation-delay: 0s;
   }
+
+  /* Toasts close as popups do under reduced motion: a quicker fade */
+  .toastClosing {
+    transition-duration: var(--duration-fold-fade);
+  }
 }
 
 /* While the sidebar is hidden: the light binder mark where the top bar's logo was (the
@@ -214,6 +219,12 @@
   mask: url('/chevron-right.svg') center / contain no-repeat;
 }
 
+/* With the sidebar hidden, the workspace's left padding clears the show button (its 8px
+   from the edge, the icon, and 8px more) */
+.canvasCollapsed {
+  padding-left: calc(2 * var(--spacing-3) + var(--tb-icon));
+}
+
 /* The sidebar's foot: the credits, then the sidebar toggle at the other end */
 .foot {
   display: flex;
@@ -234,7 +245,7 @@
   color: var(--tb-muted);
   cursor: pointer;
   position: relative;
-  transition: color var(--duration-hover);
+  transition: color var(--duration-hover) ease-out;
 
   &:hover {
     color: var(--tb-heading);

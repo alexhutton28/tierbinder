@@ -7,10 +7,11 @@ import CardNode from './CardNode';
 import { BOARD_HEIGHT, BOARD_WIDTH } from './size';
 import { TRAY_HINT, TRAY_HINT_SIZE, TRAY_RADIUS, layoutTray, trayHeight, type Tray } from './tray';
 
-// The hint's text on a light tray or a dark one, faint
+// The hint's text on a light tray or a dark one, faint: dark text needs more strength to
+// read on a light tray (about 3:1 on Petrel 100), as white does at less on a dark one
 const HINT_DARK = PETREL_950;
 const HINT_LIGHT = '#ffffff';
-const HINT_OPACITY = 0.45;
+const HINT_OPACITY = { light: 0.45, dark: 0.6 };
 // Feather's info icon before the hint, as tall as its text, drawn in Feather's 24-unit
 // grid, with 4 on-screen px (space-2) between them, as in the credits
 const ICON_GRID = 24;
@@ -34,21 +35,23 @@ function TrayHint({
   height,
   scale,
   fontFamily,
-  color,
+  dark,
 }: {
   width: number;
   height: number;
   scale: number;
   fontFamily: string;
-  color: string;
+  // Dark text (on a light tray), else white
+  dark: boolean;
 }) {
+  const color = dark ? HINT_DARK : HINT_LIGHT;
   const fontSize = TRAY_HINT_SIZE / (scale || 1);
   const gap = HINT_ICON_GAP / (scale || 1);
   const textW = textWidth(TRAY_HINT, fontSize, fontFamily);
   const left = (width - (fontSize + gap + textW)) / 2;
   const icon = fontSize / ICON_GRID;
   return (
-    <Group name="editor" opacity={HINT_OPACITY} listening={false}>
+    <Group name="editor" opacity={HINT_OPACITY[dark ? 'dark' : 'light']} listening={false}>
       <Group x={left} y={(height - fontSize) / 2} scaleX={icon} scaleY={icon}>
         <Circle x={12} y={12} radius={10} stroke={color} strokeWidth={2} />
         <Line points={[12, 16, 12, 12]} stroke={color} strokeWidth={2} lineCap="round" />
@@ -133,7 +136,7 @@ export default function CardTray({
             height={height}
             scale={scale}
             fontFamily={hintFont}
-            color={darkReadsBetter(tray.color, HINT_DARK) ? HINT_DARK : HINT_LIGHT}
+            dark={darkReadsBetter(tray.color, HINT_DARK)}
           />
         )}
         {layoutTray(tray).map(({ item, x, y, width }) => (
