@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.10 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.11 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -259,7 +259,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Top bar
 
-- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding. It has no line under it. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
+- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding, and slides up out of the way (its own height, over `duration-drop` on `ease-slide`; at once under reduced motion) while the page scrolls down, coming back when it scrolls up 8px or more, reaches the top, or the logo has focus; the status bar's strip stays in its color. It has no line under it. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
 
 ### Settings
 
@@ -299,6 +299,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 12, 2026 · v1.11:** On phones the top bar slides up while the page scrolls down and back as it scrolls up.
 - **November 12, 2026 · v1.10:** The card tray shows on phones too, under the board. Bulk Import has one Import button again: on a tier list, cards before the first `#` go in the card tray, `#` groups to the tiers. The empty tray's hint says "Send Cards to Card Tray to Hold Them", since results can't be dragged on touch screens.
 - **November 12, 2026 · v1.9:** Every message is a toast: bulk import's progress and results and copying's moved there from under the board. Toasts stay 1.5s longer for each line past the first, "Importing…" stays until its result replaces it, and an import lists at most 4 problems.
 - **November 12, 2026 · v1.8:** Added Capitalization: title case for headings, tabs, buttons, menu items, dropdown options, field labels and messages (with no closing period), sentence case for checkbox labels, placeholders, tooltips and screen reader text. Labels and messages that were sentence case moved to title case.

@@ -100,6 +100,10 @@ const MENU_WIDTH = 160;
 const LONG_PRESS = 500;
 const TOUCH_SLOP = 8;
 
+// Under b8 the top bar slides away as the page scrolls down and back as it scrolls up,
+// once the scroll has gone this far (px) one way, so small jitters don't toggle it
+const TOP_BAR_SCROLL = 8;
+
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
 
@@ -548,6 +552,32 @@ export default function Editor() {
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
+  // Under b8, the top bar slides up out of the way while the page scrolls down, and back
+  // when it scrolls up or reaches the top (the page's scroll container is <main>, in
+  // layout.tsx)
+  const topRef = React.useRef<HTMLElement>(null);
+  const [topTucked, setTopTucked] = React.useState(false);
+  React.useEffect(() => {
+    const page = topRef.current?.closest('main');
+    if (wide || !page) {
+      setTopTucked(false);
+      return;
+    }
+    let last = page.scrollTop;
+    const onScroll = () => {
+      const y = page.scrollTop;
+      const height = topRef.current?.offsetHeight ?? 0;
+      if (y <= height) {
+        setTopTucked(false);
+        last = y;
+      } else if (Math.abs(y - last) >= TOP_BAR_SCROLL) {
+        setTopTucked(y > last);
+        last = y;
+      }
+    };
+    page.addEventListener('scroll', onScroll, { passive: true });
+    return () => page.removeEventListener('scroll', onScroll);
+  }, [wide]);
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
   // was (the colored one goes with the sidebar), once the slide is over (`data-settled`),
   // as a button that brings the sidebar back; only when it clears the board (`data-size`,
@@ -1500,7 +1530,7 @@ export default function Editor() {
         className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
         inert={viewing !== null}
       >
-        <header className={styles.top}>
+        <header ref={topRef} className={`${styles.top} ${topTucked ? styles.topTucked : ''}`}>
           <Link href="/" className={styles.brand}>
             <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
           </Link>

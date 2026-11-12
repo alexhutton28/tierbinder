@@ -11,6 +11,17 @@
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
   background: var(--tb-top);
+  transition: translate var(--duration-drop) var(--ease-slide);
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* Under b8, while the page scrolls down (Editor.tsx): slid up by its own height, leaving
+   the status bar's strip in its color; back while it holds focus */
+.topTucked:not(:focus-within) {
+  translate: 0 calc(-1 * var(--tb-top-height));
 }
 
 .brand {
