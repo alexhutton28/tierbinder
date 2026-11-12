@@ -176,6 +176,13 @@
   position: relative;
 }
 
+/* On touch screens, rows are touch targets (44px tall), as the Sets popup's are */
+@media (pointer: coarse) {
+  .resultMenu [role='menuitem'] {
+    min-height: var(--tb-touch-target);
+  }
+}
+
 .flyoutItem {
   display: flex;
   gap: var(--spacing-4);
@@ -514,6 +521,12 @@
 .resultTile {
   content-visibility: auto;
   contain-intrinsic-size: auto var(--tb-thumb-width) auto var(--tb-thumb-height);
+}
+
+/* A long press opens the result's menu (Editor.tsx), not iOS's own image callout */
+.resultTile,
+.resultTile img {
+  -webkit-touch-callout: none;
 }
 
 /* A result fills its column (at least --tb-thumb-width wide, stretching to share the

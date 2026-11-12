@@ -217,11 +217,11 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Search result menu
 
-- Right-clicking a search result opens a menu at the pointer, like the card menu: View (the card large, growing from its thumbnail) and "Add to tier" with Feather's `chevron-right` at its end, which opens a flyout to its right listing every Add to choice with its swatch, lined up with its row and 4px from the menu. It stays 8px inside the window: it opens upward from the pointer at the window's foot, and the flyout opens to the left or moves up when it wouldn't fit. The flyout's rows have the dropdowns' 8px ends, and it folds closed like the menus. Keys follow the WAI-ARIA menu pattern: arrows and Home/End move, right opens the flyout, left or Escape leave it, Tab or Escape close the menu back to the result.
+- Right-clicking a search result (or a long press on touch screens, where its rows are 44px tall) opens a menu at the pointer, like the card menu: View (the card large, growing from its thumbnail) and "Add to tier" with Feather's `chevron-right` at its end, which opens a flyout to its right listing every Add to choice with its swatch, lined up with its row and 4px from the menu. It stays 8px inside the window: it opens upward from the pointer at the window's foot, and the flyout opens to the left or moves up when it wouldn't fit. The flyout's rows have the dropdowns' 8px ends, and it folds closed like the menus. Keys follow the WAI-ARIA menu pattern: arrows and Home/End move, right opens the flyout, left or Escape leave it, Tab or Escape close the menu back to the result.
 
 ### Making a split card
 
-- While a split card is being made, the Add to picker shows a white card-shaped swatch (as tall as the tier swatches) and "Splitting <card name>" in place of the target, with no target selected; picking any target cancels it and adds there from then on. Replacing a card still shows its message and Cancel.
+- While a split card is being made, the Add to picker shows a white card-shaped swatch (as tall as the tier swatches) and "Splitting <card name>" in place of the target, with no target selected; picking any target cancels it and adds there from then on. Screen readers are told what to do through a hidden status. Replacing a card still shows its message and Cancel.
 
 ### Toast
 

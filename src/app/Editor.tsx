@@ -88,6 +88,11 @@ function withTray(g: Graphic, tray: Tray | { error: string }): Placed<Graphic> {
 // inside the board's right edge
 const MENU_WIDTH = 160;
 
+// A touch press held this long (ms) opens a search result's menu, unless it moves more
+// than TOUCH_SLOP (px) first, as long presses go on phones
+const LONG_PRESS = 500;
+const TOUCH_SLOP = 8;
+
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
 
@@ -1189,6 +1194,32 @@ export default function Editor() {
     }
   };
 
+  function openResultMenu(card: CardResult, tile: HTMLElement, x: number, y: number) {
+    setResultFlyout(false);
+    setResultMenu({ card, tile, of: results, x, y });
+  }
+
+  // A touch press held LONG_PRESS still opens the result's menu where the finger is; moving
+  // more than TOUCH_SLOP, lifting or the page scrolling cancels it
+  const longPress = React.useRef<{ x: number; y: number; timer: number } | null>(null);
+  // Set when a long press opened the menu, until the tap it ends with (and Android's own
+  // contextmenu for it) is ignored
+  const longPressOpened = React.useRef(false);
+  function startLongPress(card: CardResult, tile: HTMLElement, x: number, y: number) {
+    cancelLongPress();
+    longPressOpened.current = false;
+    const timer = window.setTimeout(() => {
+      longPress.current = null;
+      longPressOpened.current = true;
+      openResultMenu(card, tile, x, y);
+    }, LONG_PRESS);
+    longPress.current = { x, y, timer };
+  }
+  function cancelLongPress() {
+    if (longPress.current) clearTimeout(longPress.current.timer);
+    longPress.current = null;
+  }
+
   // Opens the "Add to" flyout, focusing its first choice when asked (keyboard)
   function openResultFlyout(focus: boolean) {
     flushSync(() => setResultFlyout(true));
@@ -1587,6 +1618,12 @@ export default function Editor() {
                 search is under way, then the results. A shade over the top shows when
                 they're scrolled. */}
               {/* The skeleton and results are visual; this says what they show */}
+              {/* Making a split card shows only on the Add to picker; this says it */}
+              <p role="status" className="sr-only">
+                {splitPicker && pickingCard
+                  ? `Splitting ${pickingCard.name}: pick the bottom card from the results, or a tier to cancel.`
+                  : ''}
+              </p>
               <p role="status" className="sr-only">
                 {showingSkeleton
                   ? 'Searching…'
@@ -1617,7 +1654,13 @@ export default function Editor() {
                             className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
                             // Mouse and pen only: on touch, a press-and-move scrolls the results
                             onPointerDown={(e) => {
-                              if (e.pointerType === 'touch' || e.button !== 0) return;
+                              // On touch, a long press opens the result's menu (a press and
+                              // move scrolls the results instead)
+                              if (e.pointerType === 'touch') {
+                                startLongPress(card, e.currentTarget, e.clientX, e.clientY);
+                                return;
+                              }
+                              if (e.button !== 0) return;
                               e.preventDefault();
                               resultPress.current = {
                                 card,
@@ -1626,23 +1669,39 @@ export default function Editor() {
                                 dragging: false,
                               };
                             }}
+                            onPointerMove={(e) => {
+                              const press = longPress.current;
+                              if (
+                                press &&
+                                Math.hypot(e.clientX - press.x, e.clientY - press.y) > TOUCH_SLOP
+                              ) {
+                                cancelLongPress();
+                              }
+                            }}
+                            onPointerUp={cancelLongPress}
+                            onPointerCancel={cancelLongPress}
                             onClick={() => {
+                              // The tap that ends a long press doesn't also add the card
+                              if (longPressOpened.current) {
+                                longPressOpened.current = false;
+                                return;
+                              }
                               if (!justDragged.current) pickResult(card);
                             }}
                             // Right-click (or the menu key) opens the result's own menu
                             onContextMenu={(e) => {
                               e.preventDefault();
+                              // Android also fires this on a long press: that one's open
+                              if (longPressOpened.current) return;
                               const tile = e.currentTarget;
                               const box = tile.getBoundingClientRect();
-                              setResultFlyout(false);
-                              setResultMenu({
+                              openResultMenu(
                                 card,
                                 tile,
-                                of: results,
                                 // The menu key reports no pointer: open at the result
-                                x: e.clientX || box.left + box.width / 2,
-                                y: e.clientY || box.top + box.height / 2,
-                              });
+                                e.clientX || box.left + box.width / 2,
+                                e.clientY || box.top + box.height / 2
+                              );
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
