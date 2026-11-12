@@ -93,7 +93,7 @@ export async function searchCards(
 ): Promise<CardResult[]> {
   const res = await fetch(`/api/search?${toParams(query, options)}`, { signal });
   // A failed search is an error, not "no cards": the route says what went wrong
-  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? 'Search failed.');
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? 'Search Failed');
   return (await res.json()).results;
 }
 

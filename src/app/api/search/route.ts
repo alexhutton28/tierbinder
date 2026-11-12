@@ -11,12 +11,12 @@ export async function GET(req: Request) {
   const options = fromParams(params);
   if (query.length > 100 || (!query && !options.sets.length)) {
     return Response.json(
-      { error: 'Need a search of up to 100 characters, or some sets.' },
+      { error: 'Need a Search of up to 100 Characters, or Some Sets' },
       { status: 400 }
     );
   }
   if (options.sets.length > MAX_SETS) {
-    return Response.json({ error: `Pick up to ${MAX_SETS} sets.` }, { status: 400 });
+    return Response.json({ error: `Pick up to ${MAX_SETS} Sets` }, { status: 400 });
   }
   try {
     const results = await searchCards(query, options);
@@ -26,6 +26,6 @@ export async function GET(req: Request) {
     );
   } catch (e) {
     console.error('API /api/search error:', e);
-    return Response.json({ error: 'Search failed.' }, { status: 502 });
+    return Response.json({ error: 'Search Failed' }, { status: 502 });
   }
 }

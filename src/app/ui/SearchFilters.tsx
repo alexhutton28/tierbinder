@@ -190,9 +190,9 @@ export default function SearchFilters({
                 </label>
               );
             })}
-            {!sets.length && <p className={styles.code}>No sets match.</p>}
+            {!sets.length && <p className={styles.code}>No Sets Match</p>}
           </fieldset>
-          {full && <p className={styles.code}>Up to {MAX_SETS} sets at a time.</p>}
+          {full && <p className={styles.code}>Up to {MAX_SETS} Sets at a Time</p>}
           {count > 0 && (
             <Button
               type="button"

@@ -31,6 +31,7 @@ import CardTray from './canvas/CardTray';
 import {
   MAX_TRAY_CARDS,
   TRAY_GAP,
+  importTrayCards,
   insertTrayCard,
   layoutTray,
   mapTray,
@@ -922,7 +923,9 @@ export default function Editor() {
     return () => window.removeEventListener('pointerdown', onDown);
   }, [cardMenu]);
 
-  async function runImport() {
+  // Into the board (each # group to the next tier, as the graphic places them) or the card
+  // tray (every card in order; groups mean nothing there)
+  async function runImport(into: 'board' | 'tray') {
     const groups = parseImport(importText);
     setBusy(true);
     setStatus('Importing…');
@@ -933,7 +936,7 @@ export default function Editor() {
     for (const line of lines) {
       if (!found.get(line)) {
         const name = line.split ? `${line.name} / ${line.split.name}` : line.name;
-        errors.push(`Line ${line.line}: couldn't find "${name}".`);
+        errors.push(`Line ${line.line}: Couldn't Find "${name}"`);
       }
     }
     const resolvedGroups = groups.map((g) => ({
@@ -942,12 +945,18 @@ export default function Editor() {
     }));
     // Pure, so it runs on the latest board (it may have changed while cards were looking
     // up); the messages come from the board as it was
-    setGraphic((g) => typeOf(g.kind).importCards(g, resolvedGroups).graphic);
+    if (into === 'tray') {
+      const items = resolvedGroups.flatMap((g) => g.items);
+      setGraphic((g) => ({ ...g, tray: importTrayCards(g.tray, items).tray }));
+      errors.push(...importTrayCards(graphic.tray, items).errors);
+    } else {
+      setGraphic((g) => typeOf(g.kind).importCards(g, resolvedGroups).graphic);
+      errors.push(...type.importCards(graphic, resolvedGroups).errors);
+    }
     setBusy(false);
-    errors.push(...type.importCards(graphic, resolvedGroups).errors);
     const added = resolved.filter(Boolean).length;
     setStatus(
-      errors.length ? errors.join('\n') : `Added ${added} ${added === 1 ? 'card' : 'cards'}.`
+      errors.length ? errors.join('\n') : `Added ${added} ${added === 1 ? 'Card' : 'Cards'}`
     );
   }
 
@@ -991,7 +1000,7 @@ export default function Editor() {
       if (count !== searchCount.current) return;
       setResults([]);
       setSearchedFor(null);
-      setSearchError(e instanceof Error ? e.message : 'Search failed.');
+      setSearchError(e instanceof Error ? e.message : 'Search Failed');
     } finally {
       if (count === searchCount.current) setSearching(false);
     }
@@ -1362,9 +1371,9 @@ export default function Editor() {
     if (!blob) return;
     try {
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      setStatus('Copied to clipboard.');
+      setStatus('Copied to Clipboard');
     } catch {
-      setStatus("Couldn't copy; use Export PNG.");
+      setStatus("Couldn't Copy; Use Export PNG");
     }
   }
 
@@ -1591,13 +1600,13 @@ export default function Editor() {
               {noResults && !importing && !searching && (
                 <div role="status" className="flex flex-col gap-3">
                   <div className="flex flex-col gap-1">
-                    <p className="font-semibold">No cards found</p>
+                    <p className="font-semibold">No Cards Found</p>
                     {(noResults.query || noResults.sets.length > 0) && (
                       <p className="text-(--tb-muted)">
-                        {noResults.query && `for “${noResults.query}”`}
+                        {noResults.query && `For “${noResults.query}”`}
                         {noResults.query && noResults.sets.length > 0 && ' '}
                         {noResults.sets.length > 0 &&
-                          `in ${new Intl.ListFormat('en').format(noResults.sets)}`}
+                          `${noResults.query ? 'in' : 'In'} ${new Intl.ListFormat('en').format(noResults.sets)}`}
                       </p>
                     )}
                   </div>
@@ -1616,11 +1625,11 @@ export default function Editor() {
                 <p className="flex gap-3 items-center">
                   {picking.part === 'top'
                     ? pickingCard.split
-                      ? `Replacing the top half (${pickingCard.name})`
+                      ? `Replacing the Top Half (${pickingCard.name})`
                       : `Replacing ${pickingCard.name}`
                     : pickingCard.split
-                      ? `Replacing the bottom half (${pickingCard.split.name})`
-                      : `Splitting ${pickingCard.name}: pick the bottom card`}
+                      ? `Replacing the Bottom Half (${pickingCard.split.name})`
+                      : `Splitting ${pickingCard.name}: Pick the Bottom Card`}
                   <Button onClick={() => setPicking(null)}>Cancel</Button>
                 </p>
               )}
@@ -1858,13 +1867,24 @@ export default function Editor() {
                           value={importText}
                           onChange={(e) => setImportText(e.target.value)}
                         />
-                        <Button
-                          variant="primary"
-                          onClick={runImport}
-                          disabled={busy || !importText.trim()}
-                        >
-                          Import (Adds to the Board)
-                        </Button>
+                        <div className="flex flex-wrap gap-3">
+                          <Button
+                            variant="primary"
+                            onClick={() => runImport('board')}
+                            disabled={busy || !importText.trim()}
+                          >
+                            Import to Board
+                          </Button>
+                          {/* The tray is only there from b8 up */}
+                          {wide && (
+                            <Button
+                              onClick={() => runImport('tray')}
+                              disabled={busy || !importText.trim()}
+                            >
+                              Import to Card Tray
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1924,8 +1944,8 @@ export default function Editor() {
             {confirmingClear ? (
               <div className="mt-3 flex flex-wrap gap-3 items-center">
                 {trayShown && graphic.tray.items.length
-                  ? 'Clear the board and card tray?'
-                  : 'Clear the board?'}
+                  ? 'Clear the Board and Card Tray?'
+                  : 'Clear the Board?'}
                 <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
                 <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
               </div>
