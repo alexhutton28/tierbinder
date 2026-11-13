@@ -2235,8 +2235,9 @@ export default function Editor() {
             onContextMenu={(e) => e.preventDefault()}
             onKeyDown={onResultMenuKey}
             className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.resultMenu} flex flex-col ${resultMenuClosing ? 'closing pointer-events-none' : ''}`}
-            // At the pointer; moved inside the window once measured (above)
-            style={{ minWidth: MENU_WIDTH, left: shownResultMenu.x, top: shownResultMenu.y }}
+            // At the pointer; moved inside the window once measured (above). As wide as its
+            // rows, unlike the card menu
+            style={{ left: shownResultMenu.x, top: shownResultMenu.y }}
           >
             <button
               role="menuitem"

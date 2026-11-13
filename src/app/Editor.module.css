@@ -225,11 +225,11 @@
   }
 }
 
+/* Its chevron 4px after the words, as Bulk Import's is */
 .flyoutItem {
   display: flex;
-  gap: var(--spacing-4);
+  gap: var(--spacing-2);
   align-items: center;
-  justify-content: space-between;
   width: 100%;
 }
 
