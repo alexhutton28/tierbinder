@@ -125,6 +125,7 @@ export default function CardNode({
   onMenu,
   onDragEnd,
   dragWidth,
+  hidden = false,
 }: {
   item: CardItem;
   x: number;
@@ -148,6 +149,8 @@ export default function CardNode({
   // pixels): the card grows or shrinks to it, keeping its center under the same spot
   // of the pointer. Without it, it keeps its size.
   dragWidth?: (center: Point) => number;
+  // Not drawn yet, while a copy of it flies in from the sidebar (Editor's flyIn)
+  hidden?: boolean;
 }) {
   // Where the card is drawn while it isn't dragged: its parent and place in it
   const home = React.useRef<{ parent: Konva.Container; zIndex: number } | null>(null);
@@ -229,6 +232,7 @@ export default function CardNode({
       id={item.id}
       x={x}
       y={y}
+      visible={!hidden}
       scaleX={scale}
       scaleY={scale}
       // Rounded like the card images; a split card's bottom half (the middle of a card)

@@ -517,8 +517,9 @@
   opacity: 1;
 }
 
-/* A featured card pool in Add Cards: its name over a row of card placeholders, on the
-   field color */
+/* A featured card pool in Add Cards: a button, its name over a row of its cards, on the
+   field color, lighting up under the pointer.
+   Clicking it sends its cards flying to the card tray (Editor.tsx, ui/flights.ts). */
 .pool {
   display: flex;
   flex-direction: column;
@@ -526,21 +527,54 @@
   padding: var(--spacing-3);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-hover) ease-out;
 }
 
-/* The pool's name with Feather's chevron-right after it, the size of the text */
+/* Only where the pointer can hover, so it doesn't stay lit after a tap */
+@media (hover: hover) {
+  .pool:hover {
+    background: var(--tb-control-hover);
+  }
+
+  /* Its label brightens with it, so it reads as the button's, not a caption */
+  .pool:hover .poolAction {
+    color: var(--tb-text);
+  }
+}
+
+/* Pressed: brighter, so the press shows before the cards fly (or at once, without motion) */
+.pool:active {
+  background: var(--tb-option-hover);
+}
+
+/* The pool's name, then at the row's end where its cards go, muted: Feather's plus, the
+   size of the text, and "Add to Card Tray", wrapping under the name in a narrow sidebar */
 .poolName {
   display: flex;
   gap: var(--spacing-2);
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
 }
 
-.poolChevron {
+.poolAction {
+  display: flex;
+  flex: none;
+  gap: var(--spacing-2);
+  align-items: center;
+  color: var(--tb-muted);
+  transition: color var(--duration-hover) ease-out;
+}
+
+.poolIcon {
   flex: none;
   width: 1em;
   height: 1em;
   background: currentcolor;
-  mask: url('/chevron-right.svg') center / contain no-repeat;
+  mask: url('/plus.svg') center / contain no-repeat;
 }
 
 .poolCards {

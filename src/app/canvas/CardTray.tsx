@@ -89,6 +89,7 @@ export default function CardTray({
   boardCardWidth,
   hintFont,
   showHint,
+  arriving,
 }: {
   tray: Tray;
   // Its top edge, in design pixels
@@ -112,6 +113,8 @@ export default function CardTray({
   hintFont: string;
   // Whether an empty tray shows its hint (only until a card has been in one this session)
   showHint: boolean;
+  // Cards not drawn yet: copies of them are flying in from the sidebar
+  arriving: ReadonlySet<string>;
 }) {
   const height = trayHeight(tray.items.length);
   return (
@@ -151,6 +154,7 @@ export default function CardTray({
             dividerColor={border}
             onSelect={() => onSelect(item.id)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
+            hidden={arriving.has(item.id)}
             dragWidth={(center) => (center.y > BOARD_HEIGHT ? width : boardCardWidth)}
             onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX, cardY + top)}
           />

@@ -33,6 +33,8 @@ export type CanvasProps<G> = {
   // The width a dragged card shows at with its center at `center`: the board's, or over
   // the card tray, the tray's (for CardNode's dragWidth)
   cardDragWidth: (center: Point) => number;
+  // Cards not drawn yet: copies of them are flying in from the sidebar (CardNode's `hidden`)
+  arriving: ReadonlySet<string>;
   // One of `targets` was clicked, making it where the next search result goes
   onPickTarget: (index: number) => void;
   // Opens the Customize tab and focuses one of the graphic's settings (its own key)

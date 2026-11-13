@@ -20,6 +20,7 @@ export default function BlankCanvasView({
   onCardMenu,
   onCardDrop,
   cardDragWidth,
+  arriving,
   tool,
   fontFamily,
 }: CanvasProps<BlankCanvas>) {
@@ -89,6 +90,7 @@ export default function BlankCanvasView({
             onSelect={() => onSelect(item.id)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
             dragWidth={cardDragWidth}
+            hidden={arriving.has(item.id)}
             onDragEnd={(x, y) => {
               if (!onCardDrop(item.id, x, y)) onChange(moveCard(canvas, item.id, x, y));
             }}

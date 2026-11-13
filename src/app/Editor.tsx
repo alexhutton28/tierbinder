@@ -57,6 +57,7 @@ import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
+import { launchFlights, wholeOnScreen, type Flight } from './ui/flights';
 import { titleCase } from './text';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
@@ -160,10 +161,15 @@ const TABS = [
 type Tab = (typeof TABS)[number]['value'];
 
 // Card pools shown in Add Cards before a search: each previews up to POOL_PREVIEW_CARDS
-// cards in a row, or card-shaped placeholders while it has none. They don't open yet.
+// cards in a row, or card-shaped placeholders while it has none. Clicking one adds its
+// cards to the card tray, flying in from the preview (addPool).
 type Pool = { name: string; cards: CardResult[] };
 // How long the search options must stay unchanged before they rerun the search
 const SEARCH_DELAY = 300;
+
+// The longest a pool's cards wait (ms) for the page to scroll the card tray into view before
+// they fly, where the browser doesn't say when the scroll is over
+const SCROLL_WAIT = 800;
 
 // Placeholders shown while a search is under way: about three rows at most widths
 const SKELETON_TILES = 18;
@@ -688,7 +694,39 @@ export default function Editor() {
   const trayPlacements = trayShown
     ? layoutTray(graphic.tray).map((p) => ({ ...p, y: p.y + trayTop }))
     : [];
+
   const placements = [...boardPlacements, ...trayPlacements];
+
+  // Cards not drawn yet while copies of them fly in from the sidebar (flyIn), and where
+  // each lands: its spot on the board or in the tray on screen, read every frame (from the latest render)
+  // so it follows the board as it rescales or the page scrolls
+  const [arriving, setArriving] = React.useState<ReadonlySet<string>>(new Set());
+  const landingRef = React.useRef({ placements, scale });
+  // Before the browser's next frame, so the flights' first frame sees the cards just added
+  React.useLayoutEffect(() => {
+    landingRef.current = { placements, scale };
+  });
+  const stopFlights = React.useRef(new Set<() => void>());
+  React.useEffect(() => {
+    const stops = stopFlights.current;
+    return () => stops.forEach((stop) => stop());
+  }, []);
+  // Measured once a frame: the board's place on screen, then each card's spot from it
+  const landing = () => {
+    const board = stageRef.current?.container().getBoundingClientRect();
+    const { placements: places, scale: s } = landingRef.current;
+    return (id: string) => {
+      const place = places.find((p) => p.item.id === id);
+      if (!board || !place) return null;
+      return {
+        left: board.left + place.x * s,
+        top: board.top + place.y * s,
+        width: place.width * s,
+        height: place.height * s,
+        radius: ((CARD_CORNER_RADIUS * place.width) / CARD_WIDTH) * s,
+      };
+    };
+  };
 
   // A card shown large in the middle of the window (View, in the card menu; a split card
   // shows both its cards), grown from its place on the board and shrunk back to it when
@@ -1235,16 +1273,167 @@ export default function Editor() {
     if (label === 'Unsplit') updateCard(id, (i) => ({ ...i, split: undefined }));
   }
 
-  // Adds a search result to one of the Add to choices: the graphic's, or the card tray
-  function addResultTo(card: CardResult, index: number) {
-    applyPlaced(
+  // Cards just added fly in from the sidebar, unless motion is reduced: a copy of each
+  // leaves its thumbnail (`thumb`, else from `src`) for its spot on the board or in the
+  // card tray, where the card is hidden until it lands (`arriving`). A card whose spot is
+  // off screen (on a phone, the board scrolled away above the results) appears there at
+  // once; a pool's cards instead scroll the tray into view first, then fly up to it.
+  function flyIn(
+    cards: { id: string; thumb: HTMLImageElement | undefined; src: string }[],
+    { pool = false } = {}
+  ) {
+    if (!cards.length) return;
+    const ids = cards.map((c) => c.id);
+    // Whether the last new card's spot (in the tray's lowest row) is partly off screen, once
+    // the cards are laid out (React has drawn them by the next task; not the next frame,
+    // which never comes in a hidden tab)
+    const trayHidden = () => {
+      const spot = landing()(ids[ids.length - 1]);
+      return spot !== null && !wholeOnScreen(spot);
+    };
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // No flight, but a pool still shows where its cards went, at once
+      if (pool) {
+        setTimeout(() => {
+          if (trayHidden()) boardBoxRef.current?.scrollIntoView({ block: 'end' });
+        });
+      }
+      return;
+    }
+    setArriving((a) => new Set([...a, ...ids]));
+    const land = (landed: string[]) =>
+      setArriving((a) => new Set([...a].filter((id) => !landed.includes(id))));
+    // Until they leave (a pool waiting for the page to scroll), landing them (before an
+    // export, or on leaving the page) shows them and stops the wait
+    let cleanUp = () => {};
+    const waiting = () => {
+      stopFlights.current.delete(waiting);
+      cleanUp();
+      land(ids);
+    };
+    stopFlights.current.add(waiting);
+    const launch = () => {
+      if (!stopFlights.current.delete(waiting)) return;
+      cleanUp();
+      // A copy shows what its thumbnail loaded (the proxy, if the CDN failed it), or its own
+      // image if the thumbnail hasn't loaded yet
+      const flights: Flight[] = cards.flatMap(({ id, thumb, src }) => {
+        if (!thumb?.isConnected) return [];
+        const box = thumb.getBoundingClientRect();
+        // In a hidden panel (another tab was opened meanwhile): nowhere to fly from
+        if (!box.width) return [];
+        const from = {
+          left: box.left,
+          top: box.top,
+          width: box.width,
+          height: box.height,
+          radius: parseFloat(getComputedStyle(thumb).borderTopLeftRadius) || 0,
+        };
+        return [{ id, src: (thumb.complete && thumb.currentSrc) || src, from }];
+      });
+      // Cards whose thumbnail has gone (a search replaced the pools) just appear
+      const stay = ids.filter((id) => !flights.some((f) => f.id === id));
+      if (stay.length) land(stay);
+      if (!flights.length) return;
+      let flying = flights.length;
+      const stop = launchFlights(
+        flights,
+        landing,
+        (landed) => {
+          land(landed);
+          flying -= landed.length;
+          if (flying === 0) stopFlights.current.delete(stop);
+        },
+        { onScreenOnly: !pool }
+      );
+      stopFlights.current.add(stop);
+    };
+    if (!pool) {
+      launch();
+      return;
+    }
+    // Scrolls the board's foot, the tray, into view if any of it is off screen, and flies
+    // them when the scroll is over: the page's (<main>, on phones) or the workspace's
+    const start = window.setTimeout(() => {
+      if (!trayHidden()) {
+        launch();
+        return;
+      }
+      const scrollers = [boardBoxRef.current?.closest('main'), workspaceRef.current].filter(
+        (el): el is HTMLElement => !!el
+      );
+      scrollers.forEach((el) => el.addEventListener('scrollend', launch));
+      // Where scrollend isn't fired (or the scroll is cut short)
+      const timer = window.setTimeout(launch, SCROLL_WAIT);
+      cleanUp = () => {
+        clearTimeout(timer);
+        scrollers.forEach((el) => el.removeEventListener('scrollend', launch));
+      };
+      boardBoxRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    });
+    cleanUp = () => clearTimeout(start);
+  }
+
+  // Adds a search result to one of the Add to choices (the graphic's, or the card tray),
+  // flying in from its thumbnail (`tile`'s image) when there is one
+  function addResultTo(card: CardResult, index: number, tile?: HTMLElement) {
+    const item = toItem(card);
+    const placed =
       index === boardTargets.length
-        ? withTray(graphic, insertTrayCard(graphic.tray, toItem(card)))
-        : type.addCard(graphic, toItem(card), index)
+        ? withTray(graphic, insertTrayCard(graphic.tray, item))
+        : type.addCard(graphic, item, index);
+    applyPlaced(placed);
+    if ('error' in placed || !tile) return;
+    flyIn([{ id: item.id, thumb: tile.querySelector('img') ?? undefined, src: card.thumb }]);
+  }
+
+  // A featured pool's cards go in the card tray, at the end, as many as fit (turning it on),
+  // leaving out any already on the board or in the tray. Each flies there from its
+  // thumbnail in the pool (`button`), or the last one's for cards past the preview.
+  function addPool(pool: Pool, button: HTMLElement) {
+    // Adding ends a split being made, as the result menu's choices do
+    if (splitPicker) setPicking(null);
+    const cards = pool.cards.filter((card) => !failedPoolCards.has(`${card.set} ${card.number}`));
+    if (!cards.length) {
+      showToast("Couldn't Load This Pool");
+      return;
+    }
+    const key = (face: CardFace) => `${face.set} ${face.number}`;
+    const have = new Set(
+      [...boardPlacements.map((p) => p.item), ...graphic.tray.items].flatMap((item) =>
+        [item, ...(item.split ? [item.split] : [])].map(key)
+      )
+    );
+    // Each new card with its place in the preview
+    const fresh = cards.flatMap((card, i) => (have.has(key(card)) ? [] : [{ card, i }]));
+    const items = fresh.map(({ card }) => toItem(card));
+    const placed = importTrayCards(graphic.tray, items);
+    const added = items.slice(0, placed.tray.items.length - graphic.tray.items.length);
+    // From this render's board, as applyPlaced is
+    if (added.length) setGraphic(() => ({ ...graphic, tray: placed.tray }));
+    const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
+    const already = cards.length - fresh.length;
+    const failed = pool.cards.length - cards.length;
+    showToast(
+      [
+        ...(added.length ? [`Added ${count(added.length)} to the Card Tray`] : []),
+        ...(already ? [`${count(already)} Already on the Board or in the Tray`] : []),
+        ...(failed ? [`${count(failed)} Couldn't Load`] : []),
+        ...placed.errors,
+      ].join('\n')
+    );
+    const thumbs = [...button.querySelectorAll('img')];
+    flyIn(
+      added.map((item, n) => ({
+        id: item.id,
+        thumb: thumbs[fresh[n].i] ?? thumbs.at(-1),
+        src: fresh[n].card.thumb,
+      })),
+      { pool: true }
     );
   }
 
-  function pickResult(card: CardResult) {
+  function pickResult(card: CardResult, tile?: HTMLElement) {
     if (picking && pickingCard) {
       const face = toFace(card);
       updateCard(picking.id, (i) =>
@@ -1253,7 +1442,7 @@ export default function Editor() {
       setPicking(null);
       return;
     }
-    addResultTo(card, targetIndex);
+    addResultTo(card, targetIndex, tile);
   }
 
   // The search result menu's View: the card large, grown from its thumbnail, with focus
@@ -1407,6 +1596,8 @@ export default function Editor() {
     const stage = stageRef.current;
     if (!stage) return null;
     setSelectedId(null);
+    // Cards still flying in from the sidebar land now, so they're in the image
+    stopFlights.current.forEach((stop) => stop());
     await Promise.allSettled(
       [...boardPlacements, ...(exportTray ? trayPlacements : [])]
         .flatMap(({ item }) => [item.image, ...(item.split ? [item.split.image] : [])])
@@ -1803,13 +1994,13 @@ export default function Editor() {
                               }}
                               onPointerUp={cancelLongPress}
                               onPointerCancel={cancelLongPress}
-                              onClick={() => {
+                              onClick={(e) => {
                                 // The tap that ends a long press doesn't also add the card
                                 if (longPressOpened.current) {
                                   longPressOpened.current = false;
                                   return;
                                 }
-                                if (!justDragged.current) pickResult(card);
+                                if (!justDragged.current) pickResult(card, e.currentTarget);
                               }}
                               // Right-click (or the menu key) opens the result's own menu
                               onContextMenu={(e) => {
@@ -1829,7 +2020,7 @@ export default function Editor() {
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   e.preventDefault();
-                                  pickResult(card);
+                                  pickResult(card, e.currentTarget);
                                 }
                               }}
                             >
@@ -1875,20 +2066,30 @@ export default function Editor() {
                 )}
               </div>
 
-              {/* Card pools to browse and Advanced, until a search shows results or finds none; they come
-              back when the search is emptied or the board is cleared. The pools are
-              placeholders for now: they don't open yet. */}
+              {/* Card pools and Advanced, until a search shows results or finds none; they come
+              back when the search is emptied or the board is cleared. Each pool is a button
+              that adds its cards to the card tray. */}
               {!searchShown && (
                 <div className="flex flex-col gap-3">
                   <h3 className="tierbinder-heading">Featured Card Pools</h3>
                   {FEATURED_POOLS.map((pool) => (
-                    <div key={pool.name} className={styles.pool}>
-                      <span className={`${styles.poolName} text-caption font-semibold`}>
-                        {pool.name}
-                        <span className={styles.poolChevron} aria-hidden />
+                    <button
+                      key={pool.name}
+                      type="button"
+                      className={styles.pool}
+                      aria-label={`${pool.name}: add to card tray`}
+                      onClick={(e) => addPool(pool, e.currentTarget)}
+                    >
+                      {/* Its name, and where its cards go */}
+                      <span className={`${styles.poolName} text-caption`}>
+                        <span className="font-semibold">{pool.name}</span>
+                        <span className={styles.poolAction} aria-hidden>
+                          <span className={styles.poolIcon} />
+                          Add to Card Tray
+                        </span>
                       </span>
                       {/* A fixed number of columns, so every pool's cards are the same size */}
-                      <div
+                      <span
                         className={styles.poolCards}
                         style={
                           {
@@ -1930,8 +2131,8 @@ export default function Editor() {
                             <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
                           )
                         )}
-                      </div>
-                    </div>
+                      </span>
+                    </button>
                   ))}
                 </div>
               )}
@@ -2133,6 +2334,7 @@ export default function Editor() {
                   onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                   onCardDrop={boardCardDrop}
                   cardDragWidth={cardDragWidth}
+                  arriving={arriving}
                   onPickTarget={setTarget}
                   onEditSetting={(key) => {
                     setTab('customize');
@@ -2155,6 +2357,7 @@ export default function Editor() {
                     boardCardWidth={boardCardWidth}
                     hintFont={interfaceFont}
                     showHint={!trayHintSeen}
+                    arriving={arriving}
                     // Ignores presses while drawing (pen, eraser), as the board does
                     listening={tool === DEFAULT_TOOL}
                   />
@@ -2279,7 +2482,7 @@ export default function Editor() {
                       tabIndex={-1}
                       className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
                       onClick={() => {
-                        addResultTo(shownResultMenu.card, i);
+                        addResultTo(shownResultMenu.card, i, shownResultMenu.tile);
                         // Adding ends a split being made, as picking a target does
                         if (splitPicker) setPicking(null);
                         setResultMenu(null);

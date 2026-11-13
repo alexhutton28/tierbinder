@@ -1,0 +1,13 @@
+/* A card flying to the board or the card tray (flights.ts), taking no presses, over everything: the
+   toast (40) included, deliberately: on phones they cross the top of the page, where it shows */
+.flight {
+  position: fixed;
+  z-index: 50;
+  margin: 0;
+  object-fit: cover;
+
+  /* A card shown as its top half (the blank canvas's setting) keeps its top */
+  object-position: top;
+  pointer-events: none;
+  box-shadow: var(--tb-popup-shadow);
+}
