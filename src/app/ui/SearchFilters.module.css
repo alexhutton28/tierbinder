@@ -1,5 +1,15 @@
 @reference "../globals.css";
 
+/* The ticked set's name on the Sets button, cut short with an ellipsis past 12em (about
+   24 characters, chosen by eye: most set names fit, and the row rarely wraps) */
+.setsLabel {
+  --sets-label-max: 12em;
+
+  overflow: hidden;
+  max-width: var(--sets-label-max);
+  text-overflow: ellipsis;
+}
+
 /* Feather's filter icon, colored by the button's text */
 .icon {
   flex: none;
