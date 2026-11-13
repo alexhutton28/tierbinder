@@ -1423,12 +1423,13 @@ export default function Editor() {
   }
 
   // Cards just added fly in from the sidebar, unless motion is reduced: a copy of each
-  // leaves its thumbnail (`thumb`, else from `src`) for its spot on the board or in the
+  // leaves `thumb` (its own thumbnail, or for a pool's card past the preview, the last one),
+  // showing that thumbnail's picture when it's its own (`own`), else `src`, for its spot on the board or in the
   // card tray, where the card is hidden until it lands (`arriving`). A card whose spot is
   // off screen (on a phone, the board scrolled away above the results) appears there at
   // once; a pool's cards instead scroll the tray into view first, then fly up to it.
   function flyIn(
-    cards: { id: string; thumb: HTMLImageElement | undefined; src: string }[],
+    cards: { id: string; thumb: HTMLImageElement | undefined; own: boolean; src: string }[],
     { pool = false, onDone = () => {} } = {}
   ) {
     if (!cards.length) {
@@ -1475,7 +1476,7 @@ export default function Editor() {
       cleanUp();
       // A copy shows what its thumbnail loaded (the proxy, if the CDN failed it), or its own
       // image if the thumbnail hasn't loaded yet
-      const flights: Flight[] = cards.flatMap(({ id, thumb, src }) => {
+      const flights: Flight[] = cards.flatMap(({ id, thumb, own, src }) => {
         if (!thumb?.isConnected) return [];
         const box = thumb.getBoundingClientRect();
         // In a hidden panel (another tab was opened meanwhile): nowhere to fly from
@@ -1487,7 +1488,7 @@ export default function Editor() {
           height: box.height,
           radius: parseFloat(getComputedStyle(thumb).borderTopLeftRadius) || 0,
         };
-        return [{ id, src: (thumb.complete && thumb.currentSrc) || src, from }];
+        return [{ id, src: (own && thumb.complete && thumb.currentSrc) || src, from }];
       });
       // Cards whose thumbnail has gone (a search replaced the pools) just appear
       const stay = ids.filter((id) => !flights.some((f) => f.id === id));
@@ -1542,7 +1543,8 @@ export default function Editor() {
         : type.addCard(graphic, item, index);
     applyPlaced(placed);
     if ('error' in placed || !tile) return;
-    flyIn([{ id: item.id, thumb: tile.querySelector('img') ?? undefined, src: card.thumb }]);
+    const thumb = tile.querySelector('img') ?? undefined;
+    flyIn([{ id: item.id, thumb, own: true, src: card.thumb }]);
   }
 
   // A featured pool's cards go in the card tray, at the end, as many as fit (turning it on),
@@ -1588,6 +1590,7 @@ export default function Editor() {
       added.map((item, n) => ({
         id: item.id,
         thumb: thumbs[fresh[n].i] ?? thumbs.at(-1),
+        own: fresh[n].i < thumbs.length,
         src: fresh[n].card.thumb,
       })),
       {
@@ -1595,6 +1598,14 @@ export default function Editor() {
         onDone: () => setFlyingPools((f) => new Set([...f].filter((name) => name !== pool.name))),
       }
     );
+  }
+
+  // Starts loading a pool's thumbnails past its preview (once each; the browser caches them)
+  const preloaded = React.useRef(new Set<string>());
+  function preloadPool(pool: Pool) {
+    if (pool.filter || preloaded.current.has(pool.name)) return;
+    preloaded.current.add(pool.name);
+    for (const card of pool.cards.slice(POOL_PREVIEW_CARDS)) new window.Image().src = card.thumb;
   }
 
   // A pool's cards that load
@@ -1635,16 +1646,19 @@ export default function Editor() {
     // some of its cards), or the last one's for cards past it
     const thumbs = [...button.querySelectorAll('img')];
     const cards = loadablePoolCards(pool);
-    const thumbOf = (id: string) => {
+    const placeOf = (id: string) => {
       const item = graphic.tray.items.find((i) => i.id === id);
-      const at = cards.findIndex((c) => c.set === item?.set && c.number === item?.number);
-      return thumbs[at] ?? thumbs.at(-1);
+      return cards.findIndex((c) => c.set === item?.set && c.number === item?.number);
     };
+    const thumbOf = (id: string) => thumbs[placeOf(id)] ?? thumbs.at(-1);
     const flights: Flight[] = ids.flatMap((id, i) => {
       const thumb = thumbOf(id);
       const box = from[i];
       if (!thumb || !box) return [];
-      return [{ id, src: (thumb.complete && thumb.currentSrc) || thumb.src, from: box }];
+      // Its own picture: the preview's, or past the preview, its own thumbnail's
+      const at = placeOf(id);
+      const own = thumbs[at] && thumb.complete && thumb.currentSrc;
+      return [{ id, src: own || cards[at]?.thumb || thumb.src, from: box }];
     });
     if (!flights.length) return;
     // Where each lands: its thumbnail as it is now (gone, if the pools closed meanwhile)
@@ -2332,6 +2346,10 @@ export default function Editor() {
                         type="button"
                         className={styles.pool}
                         aria-label={`${pool.name}: ${POOL_ACTIONS[action].aria}`}
+                        // Its cards past the preview load ahead of a click, so they fly showing
+                        // their own picture rather than an empty one
+                        onPointerEnter={() => preloadPool(pool)}
+                        onFocus={() => preloadPool(pool)}
                         onClick={(e) => {
                           if (pool.filter) filterToSet(pool.filter);
                           else if (inTray) removePool(pool, inTray, e.currentTarget);
