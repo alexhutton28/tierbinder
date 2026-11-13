@@ -106,8 +106,8 @@ export default function CardTray({
   onCardDrop: (id: string, x: number, y: number) => void;
   // The tray's own space was clicked, making it the Add to target
   onPick: () => void;
-  // The tray's own space was right-clicked, while it holds cards: its menu (Clear Card
-  // Tray), at x, y in the stage's on-screen pixels
+  // The tray's own space was right-clicked: its menu (Hide Card Tray, and Clear Card Tray
+  // while it holds cards), at x, y in the stage's on-screen pixels
   onTrayMenu: (x: number, y: number) => void;
   // Off while a drawing tool is active
   listening: boolean;
@@ -136,7 +136,6 @@ export default function CardTray({
           }}
           onTap={onPick}
           onContextMenu={(e) => {
-            if (!tray.items.length) return;
             e.evt.preventDefault();
             const pointer = e.target.getStage()?.getPointerPosition();
             if (pointer) onTrayMenu(pointer.x, pointer.y);

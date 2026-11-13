@@ -452,7 +452,8 @@ export default function Editor() {
   const [tab, setTab] = React.useState<Tab>('add');
   // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
   // result, and the point it was dropped at), positioned in the board's on-screen pixels
-  // The card tray's own menu shares it, with `id` TRAY_MENU (opened on the tray's space);
+  // The card tray's own menu shares it, with `id` TRAY_MENU (opened on the tray's space:
+  // Hide Card Tray, and Clear Card Tray, which a tray card's menu has last too);
   // `confirming`, while it asks whether to clear the tray, is how many cards that clears
   // (kept, so the label holds while the menu folds closed)
   const [cardMenu, setCardMenu] = React.useState<{
@@ -563,6 +564,15 @@ export default function Editor() {
   const [shownMenu, setShownMenu] = React.useState(cardMenu);
   if (cardMenu && cardMenu !== shownMenu) setShownMenu(cardMenu);
   const menuClosing = !cardMenu && shownMenu !== null;
+  // Confirming Clear Card Tray says how many it clears: kept up to date if cards come or go
+  // meanwhile (a pool's still flying in)
+  if (
+    cardMenu?.confirming &&
+    graphic.tray.items.length &&
+    cardMenu.confirming !== graphic.tray.items.length
+  ) {
+    setCardMenu({ ...cardMenu, confirming: graphic.tray.items.length });
+  }
   // Removed on a timer just after its 180ms fold (globals.css) rather than on
   // animationend, which doesn't fire in a tab that isn't painting
   React.useEffect(() => {
@@ -1065,6 +1075,13 @@ export default function Editor() {
     setConfirmingTrayClear(false);
   }
 
+  // Turns the card tray on or off (its cards stay saved). Turned off while it's the Add to
+  // choice: back to the first tier, so the next card doesn't quietly turn it on again
+  function showTray(enabled: boolean) {
+    setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
+    if (!enabled && targetIndex === boardTargets.length) setTarget(0);
+  }
+
   // Empties the card tray, keeping it on; a selected tray card goes with it
   function clearTray() {
     const count = graphic.tray.items.length;
@@ -1327,14 +1344,17 @@ export default function Editor() {
     applyPlaced(type.dropCard(without, place.item, center));
   };
 
-  // The card menu's items: for a clicked card, or for a search result dropped on it
+  // The card menu's items: confirming Clear Card Tray, the tray's own menu, a clicked card's
+  // (a tray card's ending with Clear Card Tray), or a search result's dropped on a card
   const cardMenuItems = (menu: CardMenu) => {
     const { id, dropped } = menu;
-    // The tray's own menu: Clear Card Tray, then once picked, how many it would clear (or
-    // Cancel) to confirm it, in the menu itself
+    // Clear Card Tray, once picked, asks in the menu itself: how many it would clear, or
+    // Cancel
+    const n = menu.confirming;
+    if (n) return [`Clear ${n} ${n === 1 ? 'card' : 'cards'}`, 'Cancel'];
+    // The tray's own menu: Hide Card Tray, then while it holds cards, Clear Card Tray
     if (id === TRAY_MENU) {
-      const n = menu.confirming;
-      return n ? [`Clear ${n} ${n === 1 ? 'card' : 'cards'}`, 'Cancel'] : ['Clear card tray'];
+      return graphic.tray.items.length ? ['Hide card tray', 'Clear card tray'] : ['Hide card tray'];
     }
     const split = findCard(id)?.split;
     if (dropped) {
@@ -1342,22 +1362,39 @@ export default function Editor() {
         ? ['Replace top half', 'Replace bottom half', addToTarget(menu)]
         : ['Add as split card', addToTarget(menu)];
     }
-    return split
+    const items = split
       ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
       : ['View', 'Remove card', 'Replace card', 'Make split card'];
+    // A card in the tray can clear the whole tray, last (not the tray's only card, where
+    // Remove Card does the same)
+    const inTray = trayPlacements.some((p) => p.item.id === id);
+    return inTray && graphic.tray.items.length > 1 ? [...items, 'Clear card tray'] : items;
   };
 
-  // Runs a menu item; true when the menu stays open (the tray's, asking to confirm)
+  // Runs a menu item; true when the menu stays open (Clear Card Tray, asking to confirm).
+  // Hiding or clearing the tray moves what the menu was anchored to, so it goes at once
+  // rather than folding closed in the wrong place
   function runCardMenuItem(menu: CardMenu, label: string) {
     const { id, dropped } = menu;
-    if (id === TRAY_MENU) {
-      if (label === 'Clear card tray') {
-        // Its items change under the focus: it goes to the first new one
-        flushSync(() => setCardMenu({ ...menu, confirming: graphic.tray.items.length }));
-        cardMenuRef.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
-        return true;
+    if (label === 'Clear card tray') {
+      // Its items change under the focus: it goes to Cancel, as Customize's confirmation's
+      // does, so Enter twice doesn't clear the tray
+      flushSync(() => setCardMenu({ ...menu, confirming: graphic.tray.items.length }));
+      cardMenuRef.current?.querySelectorAll<HTMLElement>('[role=menuitem]')[1]?.focus();
+      return true;
+    }
+    if (menu.confirming) {
+      if (label !== 'Cancel') {
+        clearTray();
+        setShownMenu(null);
       }
-      if (label.startsWith('Clear ')) clearTray();
+      return false;
+    }
+    if (label === 'Hide card tray') {
+      showTray(false);
+      setShownMenu(null);
+      // Where it went, and how to get it back
+      showToast('Card Tray Hidden: Turn It On in Customize');
       return false;
     }
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
@@ -2427,15 +2464,7 @@ export default function Editor() {
               />
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
               <h3 className="tierbinder-heading">Card Tray</h3>
-              <Checkbox
-                checked={graphic.tray.enabled}
-                onChange={(enabled) => {
-                  setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
-                  // Turned off while it's the Add to choice: back to the first tier, so the
-                  // next card doesn't quietly turn it on again
-                  if (!enabled && targetIndex === boardTargets.length) setTarget(0);
-                }}
-              >
+              <Checkbox checked={graphic.tray.enabled} onChange={showTray}>
                 Show card tray under the board
               </Checkbox>
               {graphic.tray.enabled && (
@@ -2661,12 +2690,14 @@ export default function Editor() {
               {shownMenu &&
                 (menuClosing ||
                   findCard(shownMenu.id) ||
-                  (shownMenu.id === TRAY_MENU && trayShown && graphic.tray.items.length > 0)) && (
+                  (shownMenu.id === TRAY_MENU && trayShown)) && (
                   <div
                     // A new element for each menu, so each one plays the opening animation
                     key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
                     ref={cardMenuRef}
                     role="menu"
+                    // Asking to clear the tray: the question its two items answer
+                    aria-label={shownMenu.confirming ? 'Clear the card tray?' : undefined}
                     onContextMenu={(e) => e.preventDefault()}
                     className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
                     // Kept inside the board's right edge
