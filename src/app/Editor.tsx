@@ -49,7 +49,7 @@ import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import Checkbox from './ui/Checkbox';
-import ColorField from './ui/ColorField';
+import ColorField, { BoardColors, boardColors } from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
@@ -782,6 +782,19 @@ export default function Editor() {
   // without them
   const targetColors = boardTargets.flatMap((t) => (t.color ? [t.color] : []));
   const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
+  // Every color field's Board Colors: the tiers', then the board's own, and white
+  const colorChoices = boardColors([
+    // Named after their tiers, on one line, or "Tier 2" for a tier with no name
+    ...boardTargets.flatMap((t, i) =>
+      t.color
+        ? [{ name: t.name.replace(/\s+/g, ' ').trim() || `Tier ${i + 1}`, color: t.color }]
+        : []
+    ),
+    { name: 'Background', color: graphic.background },
+    { name: 'Border', color: graphic.border },
+    { name: 'Card tray', color: graphic.tray.color },
+    { name: 'White', color: '#ffffff' },
+  ]);
   const targetIndex = Math.min(target, targets.length - 1);
 
   // Changes the board showing
@@ -1465,860 +1478,870 @@ export default function Editor() {
     // narrow screens the column dissolves (Editor.module.css): the header stays at the top,
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
-    <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
-      {logoMounted && (
-        <button
-          ref={floatingLogoRef}
-          type="button"
-          className={`${styles.floatingBrand} ${logoLeaving ? styles.floatingBrandLeaving : ''}`}
-          style={
-            {
-              '--logo-mark-width': `${LOGO_MARK_WIDTH}px`,
-            } as React.CSSProperties
-          }
-          // A pointer shortcut only: the show button at the bottom left is the one keyboards
-          // and screen readers get, so the same control isn't met twice
-          tabIndex={-1}
-          aria-hidden
-          title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
-          inert={viewing !== null || logoLeaving}
-          onClick={toggleSidebar}
-        >
-          <span className={styles.lightLogo}>
-            <Image
-              src="/tierbinder-combined-light.svg"
-              alt=""
-              width={LIGHT_LOGO_WIDTH}
-              height={LOGO_HEIGHT}
-            />
-          </span>
-        </button>
-      )}
-      {/* The toast's words for screen readers, in a live region that's always there (one
+    <BoardColors value={colorChoices}>
+      <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
+        {logoMounted && (
+          <button
+            ref={floatingLogoRef}
+            type="button"
+            className={`${styles.floatingBrand} ${logoLeaving ? styles.floatingBrandLeaving : ''}`}
+            style={
+              {
+                '--logo-mark-width': `${LOGO_MARK_WIDTH}px`,
+              } as React.CSSProperties
+            }
+            // A pointer shortcut only: the show button at the bottom left is the one keyboards
+            // and screen readers get, so the same control isn't met twice
+            tabIndex={-1}
+            aria-hidden
+            title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
+            inert={viewing !== null || logoLeaving}
+            onClick={toggleSidebar}
+          >
+            <span className={styles.lightLogo}>
+              <Image
+                src="/tierbinder-combined-light.svg"
+                alt=""
+                width={LIGHT_LOGO_WIDTH}
+                height={LOGO_HEIGHT}
+              />
+            </span>
+          </button>
+        )}
+        {/* The toast's words for screen readers, in a live region that's always there (one
         that appears with its text in it is often not read out) */}
-      <div role="status" className="sr-only">
-        {/* A new element for each showing, so the same message again is read again */}
-        {toast && !toast.closing && <p key={toast.n}>{toast.message}</p>}
-      </div>
-      {toast && (
-        <div
-          // A new element for each new message, so it plays its entrance
-          key={toast.id}
-          aria-hidden
-          className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
-        >
-          {toast.message}
+        <div role="status" className="sr-only">
+          {/* A new element for each showing, so the same message again is read again */}
+          {toast && !toast.closing && <p key={toast.n}>{toast.message}</p>}
         </div>
-      )}
-      {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
-      {sidebarCollapsed && (
-        <button
-          ref={showSidebarRef}
-          type="button"
-          className={`${styles.sidebarToggle} ${styles.showSidebar}`}
-          // Behind a viewed card, as the rest of the page is
-          inert={viewing !== null}
-          aria-label="Show sidebar"
-          title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
-          aria-keyshortcuts="Control+\ Meta+\"
-          aria-controls="sidebar-column"
-          onClick={toggleSidebar}
-        >
-          <span aria-hidden className={styles.sidebarIcon} />
-        </button>
-      )}
-      <div
-        id="sidebar-column"
-        ref={sideColumnRef}
-        className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
-        inert={viewing !== null}
-      >
-        <header
-          ref={topRef}
-          className={`${styles.top} ${!wide && topTucked ? styles.topTucked : ''}`}
-        >
-          <Link href="/" className={styles.brand}>
-            <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
-          </Link>
-        </header>
-        <SidebarHandle />
-        <aside className={`${styles.side} flex flex-col min-w-0 b8:flex-1 b8:min-h-0`}>
-          <div className={styles.sideHead}>
-            <RadioBar
-              label="Editor sections"
-              options={TABS}
-              value={tab}
-              onChange={(next) => {
-                // Add Cards clicked while it's showing: straight to the search
-                // (not on touch screens, where it would bring up the keyboard over the page)
-                if (next === 'add' && tab === 'add' && !matchMedia('(pointer: coarse)').matches) {
-                  searchInputRef.current?.focus();
-                }
-                setTab(next);
-              }}
-              onFullWidth={fitSidebarToNav}
-            />
+        {toast && (
+          <div
+            // A new element for each new message, so it plays its entrance
+            key={toast.id}
+            aria-hidden
+            className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
+          >
+            {toast.message}
           </div>
+        )}
+        {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
+        {sidebarCollapsed && (
+          <button
+            ref={showSidebarRef}
+            type="button"
+            className={`${styles.sidebarToggle} ${styles.showSidebar}`}
+            // Behind a viewed card, as the rest of the page is
+            inert={viewing !== null}
+            aria-label="Show sidebar"
+            title={`Show sidebar (${SIDEBAR_SHORTCUT()})`}
+            aria-keyshortcuts="Control+\ Meta+\"
+            aria-controls="sidebar-column"
+            onClick={toggleSidebar}
+          >
+            <span aria-hidden className={styles.sidebarIcon} />
+          </button>
+        )}
+        <div
+          id="sidebar-column"
+          ref={sideColumnRef}
+          className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
+          inert={viewing !== null}
+        >
+          <header
+            ref={topRef}
+            className={`${styles.top} ${!wide && topTucked ? styles.topTucked : ''}`}
+          >
+            <Link href="/" className={styles.brand}>
+              <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
+            </Link>
+          </header>
+          <SidebarHandle />
+          <aside className={`${styles.side} flex flex-col min-w-0 b8:flex-1 b8:min-h-0`}>
+            <div className={styles.sideHead}>
+              <RadioBar
+                label="Editor sections"
+                options={TABS}
+                value={tab}
+                onChange={(next) => {
+                  // Add Cards clicked while it's showing: straight to the search
+                  // (not on touch screens, where it would bring up the keyboard over the page)
+                  if (next === 'add' && tab === 'add' && !matchMedia('(pointer: coarse)').matches) {
+                    searchInputRef.current?.focus();
+                  }
+                  setTab(next);
+                }}
+                onFullWidth={fitSidebarToNav}
+              />
+            </div>
 
-          {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
+            {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
             so the results scroll instead of widening the sidebar; on wide screens they
             fill the sidebar's height and scroll on their own, and the panel scrolls when
             the pools and Advanced don't fit */}
-          <section
-            role="tabpanel"
-            hidden={tab !== 'add'}
-            className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
-          >
-            {/* Grows to fill the sidebar while it shows search results */}
-            <div
-              className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
+            <section
+              role="tabpanel"
+              hidden={tab !== 'add'}
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              <h3 id="card-search-heading" className="tierbinder-heading">
-                Add a Card
-              </h3>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  search(query);
-                }}
-                className={`${styles.searchRow} flex gap-3`}
+              {/* Grows to fill the sidebar while it shows search results */}
+              <div
+                className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
               >
-                <label className={styles.search}>
-                  <span className={styles.searchIcon} aria-hidden />
-                  <input
-                    ref={searchInputRef}
-                    className="tierbinder-field"
-                    aria-labelledby="card-search-heading"
-                    // Card names aren't real words: don't let phones "fix" them
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck={false}
-                    placeholder="Card name"
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      // Emptying the field clears the results, bringing the other sections
-                      // back, or goes back to listing the filter's sets
-                      if (!e.target.value.trim()) search('');
-                    }}
-                  />
-                  {query && (
-                    <button
-                      type="button"
-                      className="tierbinder-clear"
-                      aria-label="Clear search"
-                      title="Clear search"
-                      onClick={() => {
-                        setQuery('');
-                        search('');
-                        searchInputRef.current?.focus();
+                <h3 id="card-search-heading" className="tierbinder-heading">
+                  Add a Card
+                </h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    search(query);
+                  }}
+                  className={`${styles.searchRow} flex gap-3`}
+                >
+                  <label className={styles.search}>
+                    <span className={styles.searchIcon} aria-hidden />
+                    <input
+                      ref={searchInputRef}
+                      className="tierbinder-field"
+                      aria-labelledby="card-search-heading"
+                      // Card names aren't real words: don't let phones "fix" them
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      placeholder="Card name"
+                      value={query}
+                      onChange={(e) => {
+                        setQuery(e.target.value);
+                        // Emptying the field clears the results, bringing the other sections
+                        // back, or goes back to listing the filter's sets
+                        if (!e.target.value.trim()) search('');
                       }}
-                    >
-                      <span aria-hidden />
-                    </button>
-                  )}
-                </label>
-                <Button variant="primary">Search</Button>
-              </form>
-              {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        className="tierbinder-clear"
+                        aria-label="Clear search"
+                        title="Clear search"
+                        onClick={() => {
+                          setQuery('');
+                          search('');
+                          searchInputRef.current?.focus();
+                        }}
+                      >
+                        <span aria-hidden />
+                      </button>
+                    )}
+                  </label>
+                  <Button variant="primary">Search</Button>
+                </form>
+                {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
                 picker when there's a choice (a blank canvas has one place for cards),
                 always; and while there are results (or none found), Sort, at the right */}
-              <div className="flex flex-wrap gap-3 items-center">
-                <SearchFilters
-                  options={searchOptions}
-                  colors={tickColors}
-                  onChange={changeSearchOptions}
-                />
-                {(!picking || splitPicker) && targets.length > 1 && (
-                  <Dropdown
-                    label="Add to"
-                    hideLabel
-                    chevron={false}
-                    value={targetIndex}
-                    options={targets.map((t, i) => ({
-                      value: i,
-                      label: t.name.replaceAll('\n', ' '),
-                      color: t.color,
-                      // The tray's color is a shade of the board, so it gets a stroke
-                      outlined: 'outlined' in t && t.outlined,
-                    }))}
-                    // While a split card is being made, it says so, with a white card as its
-                    // swatch; picking a target cancels the split
-                    current={
-                      splitPicker && pickingCard
-                        ? {
-                            label: `Splitting ${pickingCard.name}`,
-                            color: SPLIT_SWATCH,
-                            shape: 'card',
-                          }
-                        : undefined
-                    }
-                    onChange={(i) => {
-                      setTarget(i);
-                      if (splitPicker) setPicking(null);
-                    }}
+                <div className="flex flex-wrap gap-3 items-center">
+                  <SearchFilters
+                    options={searchOptions}
+                    colors={tickColors}
+                    onChange={changeSearchOptions}
                   />
-                )}
-                {/* Flips the order: newest or oldest set first, and each set's numbers */}
-                {searchShown && (
-                  <Button
-                    type="button"
-                    variant="icon"
-                    className="ml-auto"
-                    aria-label={`Sort: ${sortDirection}`}
-                    title={`Sort: ${sortDirection}`}
-                    onClick={() =>
-                      changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
-                    }
-                  >
-                    <span
-                      aria-hidden
-                      className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                  {(!picking || splitPicker) && targets.length > 1 && (
+                    <Dropdown
+                      label="Add to"
+                      hideLabel
+                      chevron={false}
+                      value={targetIndex}
+                      options={targets.map((t, i) => ({
+                        value: i,
+                        label: t.name.replaceAll('\n', ' '),
+                        color: t.color,
+                        // The tray's color is a shade of the board, so it gets a stroke
+                        outlined: 'outlined' in t && t.outlined,
+                      }))}
+                      // While a split card is being made, it says so, with a white card as its
+                      // swatch; picking a target cancels the split
+                      current={
+                        splitPicker && pickingCard
+                          ? {
+                              label: `Splitting ${pickingCard.name}`,
+                              color: SPLIT_SWATCH,
+                              shape: 'card',
+                            }
+                          : undefined
+                      }
+                      onChange={(i) => {
+                        setTarget(i);
+                        if (splitPicker) setPicking(null);
+                      }}
                     />
-                  </Button>
-                )}
-              </div>
-              {/* What the search was for, and with sets ticked, a way to search them all */}
-              {searchError && !importing && !searching && (
-                <p role="alert" className="text-(--tb-muted)">
-                  {searchError}
-                </p>
-              )}
-              {noResults && !importing && !searching && (
-                <div role="status" className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1">
-                    <p className="font-semibold">No Cards Found</p>
-                    {(noResults.query || noResults.sets.length > 0) && (
-                      <p className="text-(--tb-muted)">
-                        {noResults.query && `For “${noResults.query}”`}
-                        {noResults.query && noResults.sets.length > 0 && ' '}
-                        {noResults.sets.length > 0 &&
-                          `${noResults.query ? 'in' : 'In'} ${new Intl.ListFormat('en').format(noResults.sets)}`}
-                      </p>
-                    )}
-                  </div>
-                  {noResults.sets.length > 0 && (
+                  )}
+                  {/* Flips the order: newest or oldest set first, and each set's numbers */}
+                  {searchShown && (
                     <Button
                       type="button"
-                      className="self-start"
-                      onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
+                      variant="icon"
+                      className="ml-auto"
+                      aria-label={`Sort: ${sortDirection}`}
+                      title={`Sort: ${sortDirection}`}
+                      onClick={() =>
+                        changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
+                      }
                     >
-                      {noResults.query ? 'Search All Sets' : 'Clear Sets'}
+                      <span
+                        aria-hidden
+                        className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                      />
                     </Button>
                   )}
                 </div>
-              )}
-              {picking && pickingCard && !splitPicker && (
-                <p className="flex gap-3 items-center">
-                  {picking.part === 'top'
-                    ? pickingCard.split
-                      ? `Replacing the Top Half (${pickingCard.name})`
-                      : `Replacing ${pickingCard.name}`
-                    : pickingCard.split
-                      ? `Replacing the Bottom Half (${pickingCard.split.name})`
-                      : `Splitting ${pickingCard.name}: Pick the Bottom Card`}
-                  <Button onClick={() => setPicking(null)}>Cancel</Button>
-                </p>
-              )}
-              {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
-                search is under way, then the results. A shade over the top shows when
-                they're scrolled. */}
-              {/* The skeleton and results are visual; this says what they show */}
-              {/* Making a split card shows only on the Add to picker; this says it */}
-              <p role="status" className="sr-only">
-                {splitPicker && pickingCard
-                  ? `Splitting ${pickingCard.name}: pick the bottom card from the results, or a tier to cancel.`
-                  : ''}
-              </p>
-              <p role="status" className="sr-only">
-                {showingSkeleton
-                  ? 'Searching…'
-                  : showingResults
-                    ? `${shownResults.length} cards`
-                    : ''}
-              </p>
-              {(showingResults || showingSkeleton) && (
-                <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
-                  <div
-                    ref={resultsRef}
-                    className={`${styles.results} overflow-y-auto overflow-x-hidden`}
-                    style={
-                      { '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}` } as React.CSSProperties
-                    }
-                    onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
-                  >
-                    {showingSkeleton
-                      ? Array.from({ length: SKELETON_TILES }, (_, i) => (
-                          <span key={i} aria-hidden className={styles.resultThumb} />
-                        ))
-                      : visibleResults.map((card) => (
-                          <div
-                            key={`${card.set}-${card.number}`}
-                            role="button"
-                            tabIndex={0}
-                            title={`${card.set} ${card.number}`}
-                            className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
-                            // Mouse and pen only: on touch, a press-and-move scrolls the results
-                            onPointerDown={(e) => {
-                              // A new press of any kind starts afresh (no click is fired
-                              // after a long press on some phones)
-                              longPressOpened.current = false;
-                              // On touch, a long press opens the result's menu (a press and
-                              // move scrolls the results instead)
-                              if (e.pointerType === 'touch') {
-                                startLongPress(card, e.currentTarget, e.clientX, e.clientY);
-                                return;
-                              }
-                              if (e.button !== 0) return;
-                              e.preventDefault();
-                              resultPress.current = {
-                                card,
-                                x: e.clientX,
-                                y: e.clientY,
-                                dragging: false,
-                              };
-                            }}
-                            onPointerMove={(e) => {
-                              const press = longPress.current;
-                              if (
-                                press &&
-                                Math.hypot(e.clientX - press.x, e.clientY - press.y) > TOUCH_SLOP
-                              ) {
-                                cancelLongPress();
-                              }
-                            }}
-                            onPointerUp={cancelLongPress}
-                            onPointerCancel={cancelLongPress}
-                            onClick={() => {
-                              // The tap that ends a long press doesn't also add the card
-                              if (longPressOpened.current) {
-                                longPressOpened.current = false;
-                                return;
-                              }
-                              if (!justDragged.current) pickResult(card);
-                            }}
-                            // Right-click (or the menu key) opens the result's own menu
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              // Android also fires this on a long press: that one's open
-                              if (longPressOpened.current) return;
-                              const tile = e.currentTarget;
-                              const box = tile.getBoundingClientRect();
-                              openResultMenu(
-                                card,
-                                tile,
-                                // The menu key reports no pointer: open at the result
-                                e.clientX || box.left + box.width / 2,
-                                e.clientY || box.top + box.height / 2
-                              );
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                pickResult(card);
-                              }
-                            }}
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                            <img
-                              src={card.thumb}
-                              alt={`${card.name} (${card.set} ${card.number})`}
-                              className={`${styles.resultThumb} object-contain`}
-                              // Shimmers until it's loaded (Editor.module.css)
-                              onLoad={(e) => {
-                                e.currentTarget.dataset.loaded = '';
-                              }}
-                              loading="lazy"
-                              draggable={false}
-                              // The CDN occasionally fails a load; retry once through the image
-                              // proxy, and hide the result if that fails too
-                              onError={(e) => {
-                                const proxy = proxied(card.thumb);
-                                if (!e.currentTarget.src.endsWith(proxy)) {
-                                  e.currentTarget.src = proxy;
-                                  return;
-                                }
-                                const key = `${card.set} ${card.number}`;
-                                setUnshown((u) => ({
-                                  of: results,
-                                  keys: new Set([...(u.of === results ? u.keys : []), key]),
-                                }));
-                              }}
-                            />
-                          </div>
-                        ))}
-                    {/* Reaching it draws the next page */}
-                    {!showingSkeleton && visibleResults.length < shownResults.length && (
-                      <span ref={moreResultsRef} aria-hidden className="col-span-full" />
-                    )}
-                  </div>
-                  <span aria-hidden className={styles.resultsShade} data-shown={resultsScrolled} />
-                </div>
-              )}
-            </div>
-
-            {/* Card pools to browse and Advanced, until a search shows results or finds none; they come
-              back when the search is emptied or the board is cleared. The pools are
-              placeholders for now: they don't open yet. */}
-            {!searchShown && (
-              <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Featured Card Pools</h3>
-                {FEATURED_POOLS.map((pool) => (
-                  <div key={pool.name} className={styles.pool}>
-                    <span className={`${styles.poolName} text-caption font-semibold`}>
-                      {pool.name}
-                      <span className={styles.poolChevron} aria-hidden />
-                    </span>
-                    {/* A fixed number of columns, so every pool's cards are the same size */}
-                    <div
-                      className={styles.poolCards}
-                      style={
-                        {
-                          '--pool-columns': POOL_PREVIEW_CARDS,
-                          '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
-                        } as React.CSSProperties
-                      }
-                    >
-                      {poolPreview(pool).map((card) => (
-                        // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
-                        <img
-                          key={`${card.set}-${card.number}`}
-                          src={card.thumb}
-                          alt={`${card.name} (${card.set} ${card.number})`}
-                          title={`${card.name} (${card.set} ${card.number})`}
-                          className={styles.poolCard}
-                          // Shimmers until it's loaded, as search results do
-                          onLoad={(e) => {
-                            e.currentTarget.dataset.loaded = '';
-                          }}
-                          loading="lazy"
-                          draggable={false}
-                          // The CDN occasionally fails a load; retry once through the proxy, and
-                          // if that fails too, a placeholder takes its place
-                          onError={(e) => {
-                            const proxy = proxied(card.thumb);
-                            if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
-                            else
-                              setFailedPoolCards((failed) =>
-                                new Set(failed).add(`${card.set} ${card.number}`)
-                              );
-                          }}
-                        />
-                      ))}
-                      {/* Card-shaped placeholders fill the rest of the row */}
-                      {Array.from(
-                        { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
-                        (_, i) => (
-                          <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
-                        )
+                {/* What the search was for, and with sets ticked, a way to search them all */}
+                {searchError && !importing && !searching && (
+                  <p role="alert" className="text-(--tb-muted)">
+                    {searchError}
+                  </p>
+                )}
+                {noResults && !importing && !searching && (
+                  <div role="status" className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="font-semibold">No Cards Found</p>
+                      {(noResults.query || noResults.sets.length > 0) && (
+                        <p className="text-(--tb-muted)">
+                          {noResults.query && `For “${noResults.query}”`}
+                          {noResults.query && noResults.sets.length > 0 && ' '}
+                          {noResults.sets.length > 0 &&
+                            `${noResults.query ? 'in' : 'In'} ${new Intl.ListFormat('en').format(noResults.sets)}`}
+                        </p>
                       )}
                     </div>
+                    {noResults.sets.length > 0 && (
+                      <Button
+                        type="button"
+                        className="self-start"
+                        onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
+                      >
+                        {noResults.query ? 'Search All Sets' : 'Clear Sets'}
+                      </Button>
+                    )}
                   </div>
-                ))}
+                )}
+                {picking && pickingCard && !splitPicker && (
+                  <p className="flex gap-3 items-center">
+                    {picking.part === 'top'
+                      ? pickingCard.split
+                        ? `Replacing the Top Half (${pickingCard.name})`
+                        : `Replacing ${pickingCard.name}`
+                      : pickingCard.split
+                        ? `Replacing the Bottom Half (${pickingCard.split.name})`
+                        : `Splitting ${pickingCard.name}: Pick the Bottom Card`}
+                    <Button onClick={() => setPicking(null)}>Cancel</Button>
+                  </p>
+                )}
+                {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
+                search is under way, then the results. A shade over the top shows when
+                they're scrolled. */}
+                {/* The skeleton and results are visual; this says what they show */}
+                {/* Making a split card shows only on the Add to picker; this says it */}
+                <p role="status" className="sr-only">
+                  {splitPicker && pickingCard
+                    ? `Splitting ${pickingCard.name}: pick the bottom card from the results, or a tier to cancel.`
+                    : ''}
+                </p>
+                <p role="status" className="sr-only">
+                  {showingSkeleton
+                    ? 'Searching…'
+                    : showingResults
+                      ? `${shownResults.length} cards`
+                      : ''}
+                </p>
+                {(showingResults || showingSkeleton) && (
+                  <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
+                    <div
+                      ref={resultsRef}
+                      className={`${styles.results} overflow-y-auto overflow-x-hidden`}
+                      style={
+                        { '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}` } as React.CSSProperties
+                      }
+                      onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
+                    >
+                      {showingSkeleton
+                        ? Array.from({ length: SKELETON_TILES }, (_, i) => (
+                            <span key={i} aria-hidden className={styles.resultThumb} />
+                          ))
+                        : visibleResults.map((card) => (
+                            <div
+                              key={`${card.set}-${card.number}`}
+                              role="button"
+                              tabIndex={0}
+                              title={`${card.set} ${card.number}`}
+                              className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
+                              // Mouse and pen only: on touch, a press-and-move scrolls the results
+                              onPointerDown={(e) => {
+                                // A new press of any kind starts afresh (no click is fired
+                                // after a long press on some phones)
+                                longPressOpened.current = false;
+                                // On touch, a long press opens the result's menu (a press and
+                                // move scrolls the results instead)
+                                if (e.pointerType === 'touch') {
+                                  startLongPress(card, e.currentTarget, e.clientX, e.clientY);
+                                  return;
+                                }
+                                if (e.button !== 0) return;
+                                e.preventDefault();
+                                resultPress.current = {
+                                  card,
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                  dragging: false,
+                                };
+                              }}
+                              onPointerMove={(e) => {
+                                const press = longPress.current;
+                                if (
+                                  press &&
+                                  Math.hypot(e.clientX - press.x, e.clientY - press.y) > TOUCH_SLOP
+                                ) {
+                                  cancelLongPress();
+                                }
+                              }}
+                              onPointerUp={cancelLongPress}
+                              onPointerCancel={cancelLongPress}
+                              onClick={() => {
+                                // The tap that ends a long press doesn't also add the card
+                                if (longPressOpened.current) {
+                                  longPressOpened.current = false;
+                                  return;
+                                }
+                                if (!justDragged.current) pickResult(card);
+                              }}
+                              // Right-click (or the menu key) opens the result's own menu
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                // Android also fires this on a long press: that one's open
+                                if (longPressOpened.current) return;
+                                const tile = e.currentTarget;
+                                const box = tile.getBoundingClientRect();
+                                openResultMenu(
+                                  card,
+                                  tile,
+                                  // The menu key reports no pointer: open at the result
+                                  e.clientX || box.left + box.width / 2,
+                                  e.clientY || box.top + box.height / 2
+                                );
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  pickResult(card);
+                                }
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                              <img
+                                src={card.thumb}
+                                alt={`${card.name} (${card.set} ${card.number})`}
+                                className={`${styles.resultThumb} object-contain`}
+                                // Shimmers until it's loaded (Editor.module.css)
+                                onLoad={(e) => {
+                                  e.currentTarget.dataset.loaded = '';
+                                }}
+                                loading="lazy"
+                                draggable={false}
+                                // The CDN occasionally fails a load; retry once through the image
+                                // proxy, and hide the result if that fails too
+                                onError={(e) => {
+                                  const proxy = proxied(card.thumb);
+                                  if (!e.currentTarget.src.endsWith(proxy)) {
+                                    e.currentTarget.src = proxy;
+                                    return;
+                                  }
+                                  const key = `${card.set} ${card.number}`;
+                                  setUnshown((u) => ({
+                                    of: results,
+                                    keys: new Set([...(u.of === results ? u.keys : []), key]),
+                                  }));
+                                }}
+                              />
+                            </div>
+                          ))}
+                      {/* Reaching it draws the next page */}
+                      {!showingSkeleton && visibleResults.length < shownResults.length && (
+                        <span ref={moreResultsRef} aria-hidden className="col-span-full" />
+                      )}
+                    </div>
+                    <span
+                      aria-hidden
+                      className={styles.resultsShade}
+                      data-shown={resultsScrolled}
+                    />
+                  </div>
+                )}
               </div>
-            )}
 
-            {!searchShown && (
-              <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Advanced</h3>
-                {/* A disclosure: the button names the import below it, which slides open */}
-                <div className="flex flex-col">
-                  <Button
-                    id="bulk-import-label"
-                    variant="text"
-                    className="self-start"
-                    aria-expanded={importing}
-                    aria-controls="bulk-import"
-                    onClick={() => setImporting((on) => !on)}
-                  >
-                    Bulk Import
-                    <span aria-hidden className={styles.disclosureChevron} />
-                  </Button>
-                  <div
-                    id="bulk-import"
-                    className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
-                    inert={!importing}
-                  >
-                    <div>
-                      <div className="flex flex-col gap-3 pt-3">
-                        <textarea
-                          rows={10}
-                          aria-labelledby="bulk-import-label"
-                          autoCorrect="off"
-                          autoCapitalize="off"
-                          spellCheck={false}
-                          className="tierbinder-field font-mono"
-                          placeholder={
-                            'Pikachu ex SSP 57\n# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
-                          }
-                          value={importText}
-                          onChange={(e) => setImportText(e.target.value)}
-                        />
-                        <Button
-                          variant="primary"
-                          className="self-start"
-                          onClick={runImport}
-                          disabled={busy || !importText.trim()}
-                        >
-                          Import
-                        </Button>
+              {/* Card pools to browse and Advanced, until a search shows results or finds none; they come
+              back when the search is emptied or the board is cleared. The pools are
+              placeholders for now: they don't open yet. */}
+              {!searchShown && (
+                <div className="flex flex-col gap-3">
+                  <h3 className="tierbinder-heading">Featured Card Pools</h3>
+                  {FEATURED_POOLS.map((pool) => (
+                    <div key={pool.name} className={styles.pool}>
+                      <span className={`${styles.poolName} text-caption font-semibold`}>
+                        {pool.name}
+                        <span className={styles.poolChevron} aria-hidden />
+                      </span>
+                      {/* A fixed number of columns, so every pool's cards are the same size */}
+                      <div
+                        className={styles.poolCards}
+                        style={
+                          {
+                            '--pool-columns': POOL_PREVIEW_CARDS,
+                            '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                          } as React.CSSProperties
+                        }
+                      >
+                        {poolPreview(pool).map((card) => (
+                          // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                          <img
+                            key={`${card.set}-${card.number}`}
+                            src={card.thumb}
+                            alt={`${card.name} (${card.set} ${card.number})`}
+                            title={`${card.name} (${card.set} ${card.number})`}
+                            className={styles.poolCard}
+                            // Shimmers until it's loaded, as search results do
+                            onLoad={(e) => {
+                              e.currentTarget.dataset.loaded = '';
+                            }}
+                            loading="lazy"
+                            draggable={false}
+                            // The CDN occasionally fails a load; retry once through the proxy, and
+                            // if that fails too, a placeholder takes its place
+                            onError={(e) => {
+                              const proxy = proxied(card.thumb);
+                              if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
+                              else
+                                setFailedPoolCards((failed) =>
+                                  new Set(failed).add(`${card.set} ${card.number}`)
+                                );
+                            }}
+                          />
+                        ))}
+                        {/* Card-shaped placeholders fill the rest of the row */}
+                        {Array.from(
+                          { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
+                          (_, i) => (
+                            <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
+                          )
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!searchShown && (
+                <div className="flex flex-col gap-3">
+                  <h3 className="tierbinder-heading">Advanced</h3>
+                  {/* A disclosure: the button names the import below it, which slides open */}
+                  <div className="flex flex-col">
+                    <Button
+                      id="bulk-import-label"
+                      variant="text"
+                      className="self-start"
+                      aria-expanded={importing}
+                      aria-controls="bulk-import"
+                      onClick={() => setImporting((on) => !on)}
+                    >
+                      Bulk Import
+                      <span aria-hidden className={styles.disclosureChevron} />
+                    </Button>
+                    <div
+                      id="bulk-import"
+                      className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
+                      inert={!importing}
+                    >
+                      <div>
+                        <div className="flex flex-col gap-3 pt-3">
+                          <textarea
+                            rows={10}
+                            aria-labelledby="bulk-import-label"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            className="tierbinder-field font-mono"
+                            placeholder={
+                              'Pikachu ex SSP 57\n# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                            }
+                            value={importText}
+                            onChange={(e) => setImportText(e.target.value)}
+                          />
+                          <Button
+                            variant="primary"
+                            className="self-start"
+                            onClick={runImport}
+                            disabled={busy || !importText.trim()}
+                          >
+                            Import
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </section>
-
-          <section
-            role="tabpanel"
-            hidden={tab !== 'customize'}
-            className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
-          >
-            <Dropdown
-              label="Board Type"
-              value={doc.kind}
-              options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-              onChange={(kind) => {
-                if (kind !== doc.kind) showBoard(kind);
-              }}
-            />
-            <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-            <h3 className="tierbinder-heading">Card Tray</h3>
-            <Checkbox
-              checked={graphic.tray.enabled}
-              onChange={(enabled) => {
-                setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
-                // Turned off while it's the Add to choice: back to the first tier, so the
-                // next card doesn't quietly turn it on again
-                if (!enabled && targetIndex === boardTargets.length) setTarget(0);
-              }}
-            >
-              Show card tray under the board
-            </Checkbox>
-            {graphic.tray.enabled && (
-              <div className="tierbinder-prop">
-                Tray Color
-                <ColorField
-                  label="Card tray color"
-                  value={graphic.tray.color}
-                  onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
-                />
-              </div>
-            )}
-            {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
-              16px above it, as between sections, so it doesn't read as part of the last one */}
-            {confirmingClear ? (
-              <div className="mt-3 flex flex-wrap gap-3 items-center">
-                {trayShown && graphic.tray.items.length
-                  ? 'Clear the Board and Card Tray?'
-                  : 'Clear the Board?'}
-                <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
-                <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
-              </div>
-            ) : (
-              <Button className="mt-3 self-start" onClick={() => setConfirmingClear(true)}>
-                Clear Board
-              </Button>
-            )}
-          </section>
-
-          <section
-            role="tabpanel"
-            hidden={tab !== 'save'}
-            className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
-          >
-            <h3 className="tierbinder-heading">Image</h3>
-            <div className="tierbinder-prop">
-              Size
-              <span className="text-(--tb-text)">
-                {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
-              </span>
-            </div>
-            <div className="tierbinder-prop">
-              Format
-              <span className="text-(--tb-text)">PNG</span>
-            </div>
-            {trayShown && (
-              <Checkbox checked={includeTray} onChange={setIncludeTray}>
-                Include card tray in export
-              </Checkbox>
-            )}
-            <div className="flex flex-wrap gap-3">
-              <Button variant="primary" onClick={exportPng} disabled={busy}>
-                Export PNG
-              </Button>
-              <Button onClick={copyPng} disabled={busy}>
-                Copy PNG
-              </Button>
-            </div>
-          </section>
-
-          {/* At the sidebar's foot under every tab, until the credits find a better home */}
-          {/* The credits, and from b8 up the button that hides the sidebar at its other end */}
-          <footer className={styles.foot}>
-            <Credits />
-            {wide && (
-              <button
-                ref={hideSidebarRef}
-                type="button"
-                className={styles.sidebarToggle}
-                aria-label="Hide sidebar"
-                title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
-                aria-keyshortcuts="Control+\ Meta+\"
-                aria-controls="sidebar-column"
-                onClick={toggleSidebar}
-              >
-                <span aria-hidden className={styles.sidebarIcon} />
-              </button>
-            )}
-          </footer>
-        </aside>
-      </div>
-
-      <div
-        ref={workspaceRef}
-        // With the sidebar hidden, more room at the left, so the board stays clear of the show
-        // button at the bottom left
-        className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
-        inert={viewing !== null}
-      >
-        <div ref={boardRef} className="flex flex-col gap-4" style={{ width: BOARD_WIDTH * scale }}>
-          <div ref={boardBoxRef} tabIndex={-1} className={`${styles.boardBox} w-full relative`}>
-            <Stage
-              ref={(stage) => {
-                stageRef.current = stage;
-              }}
-              width={BOARD_WIDTH * scale}
-              height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + shownTrayHeight * scale : 0)}
-              scaleX={scale}
-              scaleY={scale}
-              onMouseDown={(e) => {
-                if (e.target === e.target.getStage() || e.target.hasName('background')) {
-                  setSelectedId(null);
-                }
-              }}
-              onDragMove={moveOutline}
-              // After the card's own dragend has put it back at its laid-out spot; React only
-              // moves the outline when that spot changes
-              onDragEnd={moveOutline}
-            >
-              <type.Canvas
-                graphic={graphic}
-                fontFamily={fontFamily}
-                onChange={(next) => setGraphic(() => next)}
-                onSelect={setSelectedId}
-                onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-                onCardDrop={boardCardDrop}
-                cardDragWidth={cardDragWidth}
-                onPickTarget={setTarget}
-                onEditSetting={(key) => {
-                  setTab('customize');
-                  setSidebarHidden(false);
-                  setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
-                }}
-                tool={tool}
-              />
-              {trayShown && (
-                <CardTray
-                  tray={graphic.tray}
-                  top={trayTop}
-                  scale={scale}
-                  border={graphic.border}
-                  fontFamily={fontFamily}
-                  onSelect={setSelectedId}
-                  onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-                  onCardDrop={trayCardDrop}
-                  onPick={() => setTarget(boardTargets.length)}
-                  boardCardWidth={boardCardWidth}
-                  hintFont={interfaceFont}
-                  showHint={!trayHintSeen}
-                  // Ignores presses while drawing (pen, eraser), as the board does
-                  listening={tool === DEFAULT_TOOL}
-                />
               )}
-              {/* Editor-only layer: hidden while exporting */}
-              {/* Listening, so the dragged card's events (moved here) still reach the stage and
-                move the outline with it; the outline itself takes no presses */}
-              <Layer name="editor">
-                {/* The card being dragged, over the board and the tray and under the outline
-                  (CardNode moves it here) */}
-                <Group name="drag" />
-                {placements
-                  .filter((p) => p.item.id === selectedId)
-                  .map((p) => (
-                    <Rect
-                      key={p.item.id}
-                      ref={outlineRef}
-                      x={p.x - OUTLINE.width}
-                      y={p.y - OUTLINE.width}
-                      width={p.width + 2 * OUTLINE.width}
-                      height={p.height + 2 * OUTLINE.width}
-                      stroke={OUTLINE.color}
-                      strokeWidth={OUTLINE.width}
-                      cornerRadius={OUTLINE.radius}
-                      listening={false}
-                    />
-                  ))}
-              </Layer>
-            </Stage>
-            {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
-              <div
-                // A new element for each menu, so each one plays the opening animation
-                key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
-                ref={cardMenuRef}
-                role="menu"
-                onContextMenu={(e) => e.preventDefault()}
-                className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
-                // Kept inside the board's right edge
-                style={{
-                  minWidth: MENU_WIDTH,
-                  left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
-                  // In the card tray, at the board's foot, it opens upward from the pointer
-                  ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
-                    ? { bottom: `calc(100% - ${shownMenu.y}px)` }
-                    : { top: shownMenu.y }),
+            </section>
+
+            <section
+              role="tabpanel"
+              hidden={tab !== 'customize'}
+              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+            >
+              <Dropdown
+                label="Board Type"
+                value={doc.kind}
+                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+                onChange={(kind) => {
+                  if (kind !== doc.kind) showBoard(kind);
+                }}
+              />
+              <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+              <h3 className="tierbinder-heading">Card Tray</h3>
+              <Checkbox
+                checked={graphic.tray.enabled}
+                onChange={(enabled) => {
+                  setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
+                  // Turned off while it's the Add to choice: back to the first tier, so the
+                  // next card doesn't quietly turn it on again
+                  if (!enabled && targetIndex === boardTargets.length) setTarget(0);
                 }}
               >
-                {cardMenuItems(shownMenu).map((label) => (
-                  <button
-                    key={label}
-                    role="menuitem"
-                    className="tierbinder-option"
-                    onClick={() => {
-                      runCardMenuItem(shownMenu, label);
-                      setCardMenu(null);
-                    }}
-                  >
-                    {titleCase(label)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+                Show card tray under the board
+              </Checkbox>
+              {graphic.tray.enabled && (
+                <div className="tierbinder-prop">
+                  Tray Color
+                  <ColorField
+                    label="Card tray color"
+                    value={graphic.tray.color}
+                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
+                  />
+                </div>
+              )}
+              {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
+              16px above it, as between sections, so it doesn't read as part of the last one */}
+              {confirmingClear ? (
+                <div className="mt-3 flex flex-wrap gap-3 items-center">
+                  {trayShown && graphic.tray.items.length
+                    ? 'Clear the Board and Card Tray?'
+                    : 'Clear the Board?'}
+                  <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
+                  <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
+                </div>
+              ) : (
+                <Button className="mt-3 self-start" onClick={() => setConfirmingClear(true)}>
+                  Clear Board
+                </Button>
+              )}
+            </section>
 
-          {type.Toolbar && (
-            <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
-          )}
-        </div>
-      </div>
-
-      {shownResultMenu && (
-        <div
-          // A new element for each menu, so each one plays the opening animation
-          key={`${shownResultMenu.x} ${shownResultMenu.y}`}
-          ref={resultMenuRef}
-          role="menu"
-          aria-label={shownResultMenu.card.name}
-          onContextMenu={(e) => e.preventDefault()}
-          onKeyDown={onResultMenuKey}
-          className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.resultMenu} flex flex-col ${resultMenuClosing ? 'closing pointer-events-none' : ''}`}
-          // At the pointer; moved inside the window once measured (above)
-          style={{ minWidth: MENU_WIDTH, left: shownResultMenu.x, top: shownResultMenu.y }}
-        >
-          <button
-            role="menuitem"
-            tabIndex={-1}
-            className="tierbinder-option"
-            onPointerEnter={() => setResultFlyout(false)}
-            onClick={() => {
-              viewResult(shownResultMenu);
-              setResultMenu(null);
-            }}
-          >
-            View
-          </button>
-          <div className={styles.flyoutAnchor} onPointerEnter={() => openResultFlyout(false)}>
-            <button
-              ref={resultAddToRef}
-              role="menuitem"
-              tabIndex={-1}
-              aria-haspopup="menu"
-              aria-expanded={resultFlyout}
-              className={`tierbinder-option ${styles.flyoutItem}`}
-              onClick={() => openResultFlyout(true)}
+            <section
+              role="tabpanel"
+              hidden={tab !== 'save'}
+              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
             >
-              {titleCase(`Add to ${type.targetNoun}`)}
-              <span aria-hidden className={styles.menuChevron} />
-            </button>
-            {shownFlyout && (
-              <div
-                data-flyout
-                role="menu"
-                aria-label={`Add to ${type.targetNoun}`}
-                className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${flyoutClosing ? 'closing pointer-events-none' : ''}`}
-              >
-                {targets.map((t, i) => (
-                  <button
-                    key={i}
-                    role="menuitem"
-                    tabIndex={-1}
-                    className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
-                    onClick={() => {
-                      addResultTo(shownResultMenu.card, i);
-                      // Adding ends a split being made, as picking a target does
-                      if (splitPicker) setPicking(null);
-                      setResultMenu(null);
-                      // Focus goes back to the result, not lost with the menu
-                      shownResultMenu.tile.focus({ preventScroll: true });
-                    }}
-                  >
-                    <Swatch color={t.color} outlined={'outlined' in t && t.outlined} />
-                    {t.name.replaceAll('\n', ' ')}
-                  </button>
-                ))}
+              <h3 className="tierbinder-heading">Image</h3>
+              <div className="tierbinder-prop">
+                Size
+                <span className="text-(--tb-text)">
+                  {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
+                </span>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+              <div className="tierbinder-prop">
+                Format
+                <span className="text-(--tb-text)">PNG</span>
+              </div>
+              {trayShown && (
+                <Checkbox checked={includeTray} onChange={setIncludeTray}>
+                  Include card tray in export
+                </Checkbox>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <Button variant="primary" onClick={exportPng} disabled={busy}>
+                  Export PNG
+                </Button>
+                <Button onClick={copyPng} disabled={busy}>
+                  Copy PNG
+                </Button>
+              </div>
+            </section>
 
-      {shownView && (
+            {/* At the sidebar's foot under every tab, until the credits find a better home */}
+            {/* The credits, and from b8 up the button that hides the sidebar at its other end */}
+            <footer className={styles.foot}>
+              <Credits />
+              {wide && (
+                <button
+                  ref={hideSidebarRef}
+                  type="button"
+                  className={styles.sidebarToggle}
+                  aria-label="Hide sidebar"
+                  title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
+                  aria-keyshortcuts="Control+\ Meta+\"
+                  aria-controls="sidebar-column"
+                  onClick={toggleSidebar}
+                >
+                  <span aria-hidden className={styles.sidebarIcon} />
+                </button>
+              )}
+            </footer>
+          </aside>
+        </div>
+
         <div
-          ref={viewerRef}
-          role="dialog"
-          aria-modal="true"
-          tabIndex={-1}
-          aria-label={shownView.faces.map((f) => f.name).join(' / ')}
-          className={`${styles.viewer} ${viewClosing ? styles.viewerClosing : ''}`}
+          ref={workspaceRef}
+          // With the sidebar hidden, more room at the left, so the board stays clear of the show
+          // button at the bottom left
+          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          inert={viewing !== null}
         >
           <div
-            ref={viewRef}
-            className={styles.viewCards}
-            style={
-              {
-                '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
-                '--count': shownView.faces.length,
-              } as React.CSSProperties
-            }
+            ref={boardRef}
+            className="flex flex-col gap-4"
+            style={{ width: BOARD_WIDTH * scale }}
           >
-            {shownView.faces.map((face, i) => (
-              // eslint-disable-next-line @next/next/no-img-element -- the board's own image, already loaded through the proxy
-              <img
-                key={i}
-                src={proxied(face.image)}
-                alt={face.name}
-                draggable={false}
-                className={styles.viewCard}
-                // The card images' rounded corners, as on the board
-                style={{
-                  borderRadius: `${(CARD_CORNER_RADIUS / CARD_WIDTH) * 100}% / ${(CARD_CORNER_RADIUS / CARD_HEIGHT) * 100}%`,
+            <div ref={boardBoxRef} tabIndex={-1} className={`${styles.boardBox} w-full relative`}>
+              <Stage
+                ref={(stage) => {
+                  stageRef.current = stage;
                 }}
-              />
-            ))}
+                width={BOARD_WIDTH * scale}
+                height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + shownTrayHeight * scale : 0)}
+                scaleX={scale}
+                scaleY={scale}
+                onMouseDown={(e) => {
+                  if (e.target === e.target.getStage() || e.target.hasName('background')) {
+                    setSelectedId(null);
+                  }
+                }}
+                onDragMove={moveOutline}
+                // After the card's own dragend has put it back at its laid-out spot; React only
+                // moves the outline when that spot changes
+                onDragEnd={moveOutline}
+              >
+                <type.Canvas
+                  graphic={graphic}
+                  fontFamily={fontFamily}
+                  onChange={(next) => setGraphic(() => next)}
+                  onSelect={setSelectedId}
+                  onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                  onCardDrop={boardCardDrop}
+                  cardDragWidth={cardDragWidth}
+                  onPickTarget={setTarget}
+                  onEditSetting={(key) => {
+                    setTab('customize');
+                    setSidebarHidden(false);
+                    setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+                  }}
+                  tool={tool}
+                />
+                {trayShown && (
+                  <CardTray
+                    tray={graphic.tray}
+                    top={trayTop}
+                    scale={scale}
+                    border={graphic.border}
+                    fontFamily={fontFamily}
+                    onSelect={setSelectedId}
+                    onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                    onCardDrop={trayCardDrop}
+                    onPick={() => setTarget(boardTargets.length)}
+                    boardCardWidth={boardCardWidth}
+                    hintFont={interfaceFont}
+                    showHint={!trayHintSeen}
+                    // Ignores presses while drawing (pen, eraser), as the board does
+                    listening={tool === DEFAULT_TOOL}
+                  />
+                )}
+                {/* Editor-only layer: hidden while exporting */}
+                {/* Listening, so the dragged card's events (moved here) still reach the stage and
+                move the outline with it; the outline itself takes no presses */}
+                <Layer name="editor">
+                  {/* The card being dragged, over the board and the tray and under the outline
+                  (CardNode moves it here) */}
+                  <Group name="drag" />
+                  {placements
+                    .filter((p) => p.item.id === selectedId)
+                    .map((p) => (
+                      <Rect
+                        key={p.item.id}
+                        ref={outlineRef}
+                        x={p.x - OUTLINE.width}
+                        y={p.y - OUTLINE.width}
+                        width={p.width + 2 * OUTLINE.width}
+                        height={p.height + 2 * OUTLINE.width}
+                        stroke={OUTLINE.color}
+                        strokeWidth={OUTLINE.width}
+                        cornerRadius={OUTLINE.radius}
+                        listening={false}
+                      />
+                    ))}
+                </Layer>
+              </Stage>
+              {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
+                <div
+                  // A new element for each menu, so each one plays the opening animation
+                  key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
+                  ref={cardMenuRef}
+                  role="menu"
+                  onContextMenu={(e) => e.preventDefault()}
+                  className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                  // Kept inside the board's right edge
+                  style={{
+                    minWidth: MENU_WIDTH,
+                    left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
+                    // In the card tray, at the board's foot, it opens upward from the pointer
+                    ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
+                      ? { bottom: `calc(100% - ${shownMenu.y}px)` }
+                      : { top: shownMenu.y }),
+                  }}
+                >
+                  {cardMenuItems(shownMenu).map((label) => (
+                    <button
+                      key={label}
+                      role="menuitem"
+                      className="tierbinder-option"
+                      onClick={() => {
+                        runCardMenuItem(shownMenu, label);
+                        setCardMenu(null);
+                      }}
+                    >
+                      {titleCase(label)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {type.Toolbar && (
+              <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
+            )}
           </div>
         </div>
-      )}
 
-      {dragGhost && (
-        // eslint-disable-next-line @next/next/no-img-element -- remote thumbnail, as in the results
-        <img
-          src={dragGhost.card.thumb}
-          alt=""
-          className={`${styles.thumb} fixed z-20 -translate-1/2 object-contain pointer-events-none opacity-80`}
-          style={{ left: dragGhost.x, top: dragGhost.y }}
-        />
-      )}
-    </div>
+        {shownResultMenu && (
+          <div
+            // A new element for each menu, so each one plays the opening animation
+            key={`${shownResultMenu.x} ${shownResultMenu.y}`}
+            ref={resultMenuRef}
+            role="menu"
+            aria-label={shownResultMenu.card.name}
+            onContextMenu={(e) => e.preventDefault()}
+            onKeyDown={onResultMenuKey}
+            className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.resultMenu} flex flex-col ${resultMenuClosing ? 'closing pointer-events-none' : ''}`}
+            // At the pointer; moved inside the window once measured (above)
+            style={{ minWidth: MENU_WIDTH, left: shownResultMenu.x, top: shownResultMenu.y }}
+          >
+            <button
+              role="menuitem"
+              tabIndex={-1}
+              className="tierbinder-option"
+              onPointerEnter={() => setResultFlyout(false)}
+              onClick={() => {
+                viewResult(shownResultMenu);
+                setResultMenu(null);
+              }}
+            >
+              View
+            </button>
+            <div className={styles.flyoutAnchor} onPointerEnter={() => openResultFlyout(false)}>
+              <button
+                ref={resultAddToRef}
+                role="menuitem"
+                tabIndex={-1}
+                aria-haspopup="menu"
+                aria-expanded={resultFlyout}
+                className={`tierbinder-option ${styles.flyoutItem}`}
+                onClick={() => openResultFlyout(true)}
+              >
+                {titleCase(`Add to ${type.targetNoun}`)}
+                <span aria-hidden className={styles.menuChevron} />
+              </button>
+              {shownFlyout && (
+                <div
+                  data-flyout
+                  role="menu"
+                  aria-label={`Add to ${type.targetNoun}`}
+                  className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${flyoutClosing ? 'closing pointer-events-none' : ''}`}
+                >
+                  {targets.map((t, i) => (
+                    <button
+                      key={i}
+                      role="menuitem"
+                      tabIndex={-1}
+                      className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
+                      onClick={() => {
+                        addResultTo(shownResultMenu.card, i);
+                        // Adding ends a split being made, as picking a target does
+                        if (splitPicker) setPicking(null);
+                        setResultMenu(null);
+                        // Focus goes back to the result, not lost with the menu
+                        shownResultMenu.tile.focus({ preventScroll: true });
+                      }}
+                    >
+                      <Swatch color={t.color} outlined={'outlined' in t && t.outlined} />
+                      {t.name.replaceAll('\n', ' ')}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {shownView && (
+          <div
+            ref={viewerRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+            aria-label={shownView.faces.map((f) => f.name).join(' / ')}
+            className={`${styles.viewer} ${viewClosing ? styles.viewerClosing : ''}`}
+          >
+            <div
+              ref={viewRef}
+              className={styles.viewCards}
+              style={
+                {
+                  '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                  '--count': shownView.faces.length,
+                } as React.CSSProperties
+              }
+            >
+              {shownView.faces.map((face, i) => (
+                // eslint-disable-next-line @next/next/no-img-element -- the board's own image, already loaded through the proxy
+                <img
+                  key={i}
+                  src={proxied(face.image)}
+                  alt={face.name}
+                  draggable={false}
+                  className={styles.viewCard}
+                  // The card images' rounded corners, as on the board
+                  style={{
+                    borderRadius: `${(CARD_CORNER_RADIUS / CARD_WIDTH) * 100}% / ${(CARD_CORNER_RADIUS / CARD_HEIGHT) * 100}%`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {dragGhost && (
+          // eslint-disable-next-line @next/next/no-img-element -- remote thumbnail, as in the results
+          <img
+            src={dragGhost.card.thumb}
+            alt=""
+            className={`${styles.thumb} fixed z-20 -translate-1/2 object-contain pointer-events-none opacity-80`}
+            style={{ left: dragGhost.x, top: dragGhost.y }}
+          />
+        )}
+      </div>
+    </BoardColors>
   );
 }
