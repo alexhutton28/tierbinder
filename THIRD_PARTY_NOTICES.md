@@ -29,7 +29,7 @@ license; the images are hosted by Scrydex and pokemontcg.io and aren't copied he
 
 ## Feather
 
-The interface icons in `public/` (all but the logo) come from [Feather](https://feathericons.com).
+The interface icons in `public/` (all but the logo and the main nav's `add-card.svg`, which was drawn for TierBinder) come from [Feather](https://feathericons.com), set to 16px with lighter lines.
 
 ```
 The MIT License (MIT)

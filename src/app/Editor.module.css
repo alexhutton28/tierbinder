@@ -355,10 +355,13 @@
 }
 
 /* The text starts 8px past the icon's ink, not its box: Feather draws on a 24px grid whose
-   ink ends 2 units from the right (11/12 of the width). The padding is inside the field's
-   border, which the icon's position isn't. */
+   ink, with its 1.5 line, ends 2.25 units from the right (29/32 of the width). The padding
+   is inside the field's border, which the icon's position isn't. */
 .search input {
-  --icon-ink: calc(var(--tb-icon) * 11 / 12);
+  --icon-ink: calc(var(--tb-icon) * 29 / 32);
+
+  /* x-circle's ink starts 1.25 units in, so it reaches 22.75 units (91/96) from the right */
+  --clear-ink: calc(var(--tb-icon) * 91 / 96);
 
   flex: 1;
   min-width: 0;
@@ -366,8 +369,10 @@
   padding-block: var(--spacing-3);
   padding-left: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
 
-  /* The same on the right, for the clear button */
-  padding-right: calc(var(--spacing-3) + var(--icon-ink) + var(--spacing-3) - var(--tb-line-width));
+  /* 8px before the clear button's ink on the right */
+  padding-right: calc(
+    var(--spacing-3) + var(--clear-ink) + var(--spacing-3) - var(--tb-line-width)
+  );
 }
 
 /* The search field is taller than other controls: its padding sets its height (8px above

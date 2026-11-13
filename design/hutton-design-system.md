@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.15 · November 12, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.16 · November 13, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -131,8 +131,11 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 ## 7. Iconography
 
 - Icons and logos are SVGs in `public/`, with no icon library package.
-- Icons come from [Feather](https://feathericons.com) (MIT license). Copy the icon's SVG into `public/` under its Feather name, unchanged. Where it needs to follow the text color, use it as a CSS mask over `currentcolor` (see `.chevron` in `ui/Dropdown.module.css`).
+- Icons are 16px (`--tb-icon`) with 1px lines, round caps and round joins. Draw a new icon on a 16-unit grid with 1-unit strokes, or start from Feather.
+- Icons come from [Feather](https://feathericons.com) (MIT license), set to our style: copy the icon's SVG into `public/` under its Feather name, change its `width` and `height` to 16 and its `stroke-width` from 2 to 1.5 (1px on Feather's 24-unit grid at 16px), and change nothing else. Where it needs to follow the text color, use it as a CSS mask over `currentcolor` (see `.chevron` in `ui/Dropdown.module.css`). Konva draws the empty tray's info icon from Feather's paths, with the same 1.5 line (`ICON_LINE` in `canvas/CardTray.tsx`).
+- An icon drawn at its text's size (the info icons, the featured pools' action icons) keeps its file's proportions, so its line is a little under 1px.
 - One exception: the checkboxes' checkmarks (`check.svg`, `check-dark.svg`) are Feather's `check` with a heavier 3.5 stroke, in white or Petrel 950, since they're drawn as the checkbox's background image, which a mask can't color.
+- The main nav's Add Cards icon (`add-card.svg`) is Alex's own, drawn on a 17-unit grid and set to 16px with a 1.06 line (1px).
 
 ## 8. Logo
 
@@ -284,7 +287,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Main nav
 
-- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 400 (600 for the selected tab), and columns size to their labels. The bar hugs its tabs rather than filling the sidebar's width. Each label has a 16px Feather icon before it, 4px away: `plus`, `sliders` and `share`. These are stand-ins until Alex draws TierBinder's own.
+- A radio bar (`ui/RadioBar.tsx`): Add Cards, Customize and Save & Share, in `tier-fraud`, `tier-mid` and `tier-solid`. Text is Figtree 14px at weight 400 (600 for the selected tab), and columns size to their labels. The bar hugs its tabs rather than filling the sidebar's width. Each label has a 16px icon before it, 4px away: TierBinder's own `add-card`, and Feather's `sliders` and `share` (set to 1px lines, as every icon is), stand-ins until Alex draws TierBinder's own.
 - When the tabs don't fit the sidebar, they show icons with only the selected tab named, then only icons. Hidden labels are tooltips and stay for screen readers. The named-selected step is measured with the longest label, so switching tabs never changes the step.
 - Labels fold closed and open on the same spring and `duration-move` as the block, so switching tabs feels like the color sliding over, as at full size. The block slides straight to where the selected name settles. Reduced motion: names fade only. Which one shows is measured from the real text widths, not set at breakpoints.
 - The bar has 4px of padding inside, and 8px at its ends from `b3` up. Tabs are 2px apart (`space-1`).
@@ -307,6 +310,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 13, 2026 · v1.16:** Icons are 16px with 1px lines: Feather's are set to that (16px, a 1.5 stroke on their 24 grid) in place of being copied unchanged at 2. The main nav's Add Cards icon is TierBinder's own (`add-card`) in place of Feather's `plus`; Customize and Save & Share keep Feather's `sliders` and `share` for now.
 - **November 12, 2026 · v1.15:** Cards fly in: clicking a search result or a featured pool sends a copy of each card from its thumbnail to its spot on the board or in the card tray, along a slight arc toward where it lands (picked from a demo of six flights); added `ease-flight` and `duration-flight`. Featured card pools are buttons that add their cards to the card tray, labeled "Add to Card Tray" at the right with Feather's `plus`, in place of the chevron after the name; Delta Reign's filters the search to its set instead. Clear Card Tray empties the tray, from Customize, a tray card's menu, or the tray's own right-click menu (which can also hide the tray), and clicking a pool whose cards are all in the tray flies them back out. Clear Card Tray in a menu opens a flyout to confirm, as Add to does. While sets are ticked a Clear sets half (Feather's `x`) slides out of the Sets button and unticks them all. The Sets button names the ticked set ("Delta Reign +2") instead of its code.
 - **November 12, 2026 · v1.14:** The color picker's handles stay inside its square and a slimmer hue bar, and it adds the board's colors and the hex field (chosen from four looks); added `--tb-hue-handle`, `--tb-hue-handle-height`, `--tb-handle-edge` and `--tb-handle-shadow`.
 - **November 12, 2026 · v1.13:** Color swatches open our own color picker (react-colorful, restyled) in place of the browser's, and have a Petrel 700 edge; added `--tb-field-border-hover` and `--tb-picker-handle`.

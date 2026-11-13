@@ -113,7 +113,7 @@
 /* stylelint-disable selector-pseudo-class-no-unknown, selector-class-pattern -- :global
    reaches react-colorful's own class names */
 .picker:global(.react-colorful) {
-  /* Feather's icon size */
+  /* The icon size */
   --handle: var(--tb-icon);
   --hue-handle: var(--tb-hue-handle);
 
