@@ -86,7 +86,7 @@ export default function SearchFilters({
     });
 
   return (
-    <div ref={boxRef} className="relative">
+    <div ref={boxRef} className="relative flex gap-3 items-center">
       <Button
         ref={buttonRef}
         type="button"
@@ -102,6 +102,24 @@ export default function SearchFilters({
         {count ? `${options.sets[0]}${count > 1 ? ` +${count - 1}` : ''}` : 'Sets'}
         {count > 1 && <span className="sr-only"> ({options.sets.join(', ')})</span>}
       </Button>
+      {/* While sets are ticked, one press unticks them all (a set's featured pool ticks one,
+          maybe by accident), closing the popup if it's open, focus going back to Sets */}
+      {count > 0 && (
+        <Button
+          type="button"
+          variant="icon"
+          className={styles.clear}
+          aria-label="Clear sets"
+          title="Clear sets"
+          onClick={() => {
+            onChange({ ...options, sets: [] });
+            setOpen(false);
+            buttonRef.current?.focus();
+          }}
+        >
+          <span aria-hidden className={styles.clearIcon} />
+        </Button>
+      )}
       {shown && (
         <div
           ref={popupRef}

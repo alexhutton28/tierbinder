@@ -9,6 +9,30 @@
   mask: url('/filter.svg') center / contain no-repeat;
 }
 
+/* The clear button after it while sets are ticked: Feather's x in a square icon button. On
+   touch screens it's a 44px target, giving the extra back as negative margin so the row
+   keeps its size, as the checkboxes do */
+.clearIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/x.svg') center / contain no-repeat;
+}
+
+@media (pointer: coarse) {
+  .clear {
+    --grow: calc((var(--tb-touch-target) - var(--tb-control-height)) / 2);
+
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: calc(-1 * var(--grow));
+    }
+  }
+}
+
 /* A set width (enough for the longest set names), so it doesn't shrink as the set search
    narrows the list; placed by .tierbinder-anchored */
 .popup {
