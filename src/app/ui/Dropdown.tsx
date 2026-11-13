@@ -74,11 +74,12 @@ export default function Dropdown<T extends string | number>({
   };
 
   return (
-    <div className="flex gap-3 items-center">
+    // Shrinks to fit (its button's words cut short with an ellipsis) rather than overflowing
+    <div className="flex gap-3 items-center min-w-0">
       <span id={`${id}-label`} className={hideLabel ? 'sr-only' : undefined}>
         {label}
       </span>
-      <div ref={boxRef} className="relative">
+      <div ref={boxRef} className="relative min-w-0">
         <Button
           ref={buttonRef}
           id={`${id}-button`}
@@ -87,7 +88,7 @@ export default function Dropdown<T extends string | number>({
           aria-expanded={open}
           aria-labelledby={`${id}-label ${id}-button`}
           title={hideLabel ? label : undefined}
-          className="flex gap-2 items-center"
+          className="flex gap-2 items-center max-w-full"
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -97,7 +98,7 @@ export default function Dropdown<T extends string | number>({
           }}
         >
           <Swatch {...(current ?? options[selected])} />
-          {(current ?? options[selected])?.label}
+          <span className="truncate">{(current ?? options[selected])?.label}</span>
           {chevron && <span aria-hidden className={styles.chevron} />}
         </Button>
         {shown && (

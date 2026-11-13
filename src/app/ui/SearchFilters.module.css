@@ -1,12 +1,10 @@
 @reference "../globals.css";
 
-/* The ticked set's name on the Sets button, cut short with an ellipsis past 12em (about
-   24 characters, chosen by eye: most set names fit, and the row rarely wraps) */
+/* The ticked set's name on the Sets button: in full when the row has room, else cut short
+   with an ellipsis (the box shrinks before the row would wrap) */
 .setsLabel {
-  --sets-label-max: 12em;
-
   overflow: hidden;
-  max-width: var(--sets-label-max);
+  min-width: 0;
   text-overflow: ellipsis;
 }
 
@@ -30,6 +28,7 @@
   --inner-radius: calc(var(--tb-radius) - var(--tb-line-width));
 
   display: flex;
+  min-width: 0;
   border: var(--tb-line-width) solid var(--tb-control-border);
   border-radius: var(--tb-radius);
 }
@@ -48,6 +47,7 @@ button.splitMain {
 
 button.splitEnd {
   position: relative;
+  flex: none;
   width: 0;
   padding: 0;
   border-start-end-radius: var(--inner-radius);

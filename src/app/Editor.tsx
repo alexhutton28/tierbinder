@@ -2188,41 +2188,45 @@ export default function Editor() {
                 picker when there's a choice (a blank canvas has one place for cards),
                 always; and while there are results (or none found), Sort, at the right */}
                 <div className="flex flex-wrap gap-3 items-center">
-                  <SearchFilters
-                    options={searchOptions}
-                    colors={tickColors}
-                    onChange={changeSearchOptions}
-                  />
-                  {(!picking || splitPicker) && targets.length > 1 && (
-                    <Dropdown
-                      label="Add to"
-                      hideLabel
-                      chevron={false}
-                      value={targetIndex}
-                      options={targets.map((t, i) => ({
-                        value: i,
-                        label: t.name.replaceAll('\n', ' '),
-                        color: t.color,
-                        // The tray's color is a shade of the board, so it gets a stroke
-                        outlined: 'outlined' in t && t.outlined,
-                      }))}
-                      // While a split card is being made, it says so, with a white card as its
-                      // swatch; picking a target cancels the split
-                      current={
-                        splitPicker && pickingCard
-                          ? {
-                              label: `Splitting ${pickingCard.name}`,
-                              color: SPLIT_SWATCH,
-                              shape: 'card',
-                            }
-                          : undefined
-                      }
-                      onChange={(i) => {
-                        setTarget(i);
-                        if (splitPicker) setPicking(null);
-                      }}
+                  {/* Sets and Add to stay on one line, their names cut short with an ellipsis
+                      when they don't fit rather than wrapping */}
+                  <div className="flex flex-1 min-w-0 gap-3 items-center">
+                    <SearchFilters
+                      options={searchOptions}
+                      colors={tickColors}
+                      onChange={changeSearchOptions}
                     />
-                  )}
+                    {(!picking || splitPicker) && targets.length > 1 && (
+                      <Dropdown
+                        label="Add to"
+                        hideLabel
+                        chevron={false}
+                        value={targetIndex}
+                        options={targets.map((t, i) => ({
+                          value: i,
+                          label: t.name.replaceAll('\n', ' '),
+                          color: t.color,
+                          // The tray's color is a shade of the board, so it gets a stroke
+                          outlined: 'outlined' in t && t.outlined,
+                        }))}
+                        // While a split card is being made, it says so, with a white card as its
+                        // swatch; picking a target cancels the split
+                        current={
+                          splitPicker && pickingCard
+                            ? {
+                                label: `Splitting ${pickingCard.name}`,
+                                color: SPLIT_SWATCH,
+                                shape: 'card',
+                              }
+                            : undefined
+                        }
+                        onChange={(i) => {
+                          setTarget(i);
+                          if (splitPicker) setPicking(null);
+                        }}
+                      />
+                    )}
+                  </div>
                   {/* Flips the order: newest or oldest set first, and each set's numbers */}
                   {searchShown && (
                     <Button

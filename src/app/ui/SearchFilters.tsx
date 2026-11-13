@@ -98,12 +98,12 @@ export default function SearchFilters({
         aria-controls={`${id}-popup`}
         // Every ticked set in full, for a name cut short or the ones behind "+2"
         title={count ? names.join(', ') : undefined}
-        className={`${styles.splitMain} flex gap-2 items-center`}
+        className={`${styles.splitMain} flex gap-2 items-center min-w-0`}
         onClick={() => setOpen((o) => !o)}
       >
         <span aria-hidden className={styles.icon} />
         {/* The ticked set's name, or the first one's and how many more ("Delta Reign +2"),
-            cut short with an ellipsis past --sets-label-max */}
+            in full when it fits, else cut short with an ellipsis */}
         {/* Screen readers hear what it filters and every ticked set, around the words shown */}
         {count > 0 && <span className="sr-only">Sets: </span>}
         {count ? (
