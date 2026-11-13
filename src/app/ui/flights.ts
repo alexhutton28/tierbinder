@@ -76,7 +76,9 @@ export const onScreen = (box: Box) =>
 // Flies each card from its `from` box to where it lands, calling `onLand` with the cards
 // that arrived (or whose landing spot went away: the board cleared mid-flight), once a frame.
 // With `onScreenOnly`, a card whose landing spot is off screen when it would leave (on a
-// phone, the board scrolled away above the results) lands there at once instead.
+// phone, the board scrolled away above the results) lands there at once instead. A copy
+// shows only once it leaves, so ones waiting their turn don't pile up where they start,
+// unless `showWaiting` (cards flying back out of the tray, which wait where they were).
 // `measure` is called once a frame, before anything moves, and gives each card's landing
 // spot, so the page's layout is read once a frame however many cards fly. Returns a function
 // that lands them all at once.
@@ -84,7 +86,7 @@ export function launchFlights(
   flights: Flight[],
   measure: () => (id: string) => Box | null,
   onLand: (ids: string[]) => void,
-  { onScreenOnly = false } = {}
+  { onScreenOnly = false, showWaiting = false } = {}
 ) {
   const ease = readEasing();
   const duration = ease ? readDuration('--duration-flight') : 0;
@@ -95,6 +97,7 @@ export function launchFlights(
     img.alt = '';
     img.className = styles.flight;
     img.setAttribute('aria-hidden', 'true');
+    if (!showWaiting) img.style.visibility = 'hidden';
     document.body.append(img);
     return { ...flight, img, delay: i * FLIGHT_STAGGER, landed: false };
   });
@@ -129,7 +132,10 @@ export function launchFlights(
         else remove(flight.img);
         continue;
       }
-      const p = ease ? ease(Math.max(0, t)) : 1;
+      // Waiting its turn: unseen (or, with showWaiting, where it starts)
+      if (t <= 0) continue;
+      flight.img.style.visibility = '';
+      const p = ease ? ease(t) : 1;
       const { from } = flight;
       // The arc: off the straight line between the boxes' centers, at right angles to it,
       // most at the middle; (-dy, dx) is that right angle, at the distance's length, turned
@@ -164,7 +170,7 @@ export function launchFlights(
     }
     if (landed.length) onLand(landed.map((f) => f.id));
   };
-  // Each copy sits over its thumbnail at once, then they leave one by one
+  // Each copy starts at its thumbnail, then they leave one by one
   for (const flight of live) place(flight.img, flight.from);
   frame = requestAnimationFrame(step);
   // Frames stop in a tab that isn't painting (hidden): the cards land anyway once their

@@ -1498,7 +1498,8 @@ export default function Editor() {
   }
 
   // Cards just added fly in from the sidebar, unless motion is reduced: a copy of each
-  // leaves `thumb` (its own thumbnail, or for a pool's card past the preview, the last one),
+  // leaves `thumb` (its own thumbnail, or for a pool's card past the preview, the preview's
+  // thumbnails again in turn, so a big pool goes out in waves across the row),
   // showing that thumbnail's picture when it's its own (`own`), else `src`, for its spot on the board or in the
   // card tray, where the card is hidden until it lands (`arriving`). A card whose spot is
   // off screen (on a phone, the board scrolled away above the results) appears there at
@@ -1664,7 +1665,7 @@ export default function Editor() {
     flyIn(
       added.map((item, n) => ({
         id: item.id,
-        thumb: thumbs[fresh[n].i] ?? thumbs.at(-1),
+        thumb: thumbs[fresh[n].i % thumbs.length],
         own: fresh[n].i < thumbs.length,
         src: fresh[n].card.thumb,
       })),
@@ -1718,14 +1719,17 @@ export default function Editor() {
     showToast(removedMessage(ids.length));
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // Each card's thumbnail: its place in the pool's preview (the pool may have added only
-    // some of its cards), or the last one's for cards past it
+    // some of its cards), or past it, the preview's again in turn, as they flew in
     const thumbs = [...button.querySelectorAll('img')];
     const cards = loadablePoolCards(pool);
     const placeOf = (id: string) => {
       const item = graphic.tray.items.find((i) => i.id === id);
       return cards.findIndex((c) => c.set === item?.set && c.number === item?.number);
     };
-    const thumbOf = (id: string) => thumbs[placeOf(id)] ?? thumbs.at(-1);
+    const thumbOf = (id: string) => {
+      const at = placeOf(id);
+      return at < 0 ? thumbs.at(-1) : thumbs[at % thumbs.length];
+    };
     const flights: Flight[] = ids.flatMap((id, i) => {
       const thumb = thumbOf(id);
       const box = from[i];
@@ -1751,10 +1755,16 @@ export default function Editor() {
       };
     };
     let flying = flights.length;
-    const stop = launchFlights(flights, back, (landed) => {
-      flying -= landed.length;
-      if (flying === 0) stopFlights.current.delete(stop);
-    });
+    const stop = launchFlights(
+      flights,
+      back,
+      (landed) => {
+        flying -= landed.length;
+        if (flying === 0) stopFlights.current.delete(stop);
+      },
+      // They wait where they were in the tray, since the cards themselves are gone
+      { showWaiting: true }
+    );
     stopFlights.current.add(stop);
   }
 
