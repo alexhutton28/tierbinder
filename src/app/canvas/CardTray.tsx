@@ -15,6 +15,8 @@ const HINT_OPACITY = { light: 0.45, dark: 0.6 };
 // Feather's info icon before the hint, as tall as its text, drawn in Feather's 24-unit
 // grid, with 4 on-screen px (space-2) between them, as in the credits
 const ICON_GRID = 24;
+// Its line: 1px at 16px, as every icon's is (1.5 on the 24 grid)
+const ICON_LINE = 1.5;
 const HINT_ICON_GAP = 4;
 
 let measureContext: CanvasRenderingContext2D | null = null;
@@ -53,9 +55,9 @@ function TrayHint({
   return (
     <Group name="editor" opacity={HINT_OPACITY[dark ? 'dark' : 'light']} listening={false}>
       <Group x={left} y={(height - fontSize) / 2} scaleX={icon} scaleY={icon}>
-        <Circle x={12} y={12} radius={10} stroke={color} strokeWidth={2} />
-        <Line points={[12, 16, 12, 12]} stroke={color} strokeWidth={2} lineCap="round" />
-        <Line points={[12, 8, 12, 8.01]} stroke={color} strokeWidth={2} lineCap="round" />
+        <Circle x={12} y={12} radius={10} stroke={color} strokeWidth={ICON_LINE} />
+        <Line points={[12, 16, 12, 12]} stroke={color} strokeWidth={ICON_LINE} lineCap="round" />
+        <Line points={[12, 8, 12, 8.01]} stroke={color} strokeWidth={ICON_LINE} lineCap="round" />
       </Group>
       <Text
         x={left + fontSize + gap}

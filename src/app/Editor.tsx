@@ -169,7 +169,7 @@ function loadSaved() {
 
 // The sidebar's main nav, in the tier list's default colors
 const TABS = [
-  { value: 'add', label: 'Add Cards', icon: 'plus', color: 'var(--color-tier-fraud)' },
+  { value: 'add', label: 'Add Cards', icon: 'add-card', color: 'var(--color-tier-fraud)' },
   { value: 'customize', label: 'Customize', icon: 'sliders', color: 'var(--color-tier-mid)' },
   { value: 'save', label: 'Save & Share', icon: 'share', color: 'var(--color-tier-solid)' },
 ] as const;

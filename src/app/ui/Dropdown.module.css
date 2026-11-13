@@ -1,8 +1,8 @@
 /* An option's color (a tier's): a slightly rounded box in an icon-sized space, as large
-   as Feather's square icon draws (20 of its 24 units, with the stroke), so it sits like
-   the other buttons' icons */
+   as a square icon draws (Feather's, 19.5 of its 24 units with its 1.5 line), so it sits
+   like the other buttons' icons */
 .swatchBox {
-  --swatch-size: calc(var(--tb-icon) * 20 / 24);
+  --swatch-size: calc(var(--tb-icon) * 13 / 16);
 
   display: grid;
   flex: none;
