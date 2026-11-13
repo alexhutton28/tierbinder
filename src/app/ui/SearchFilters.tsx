@@ -86,13 +86,14 @@ export default function SearchFilters({
     });
 
   return (
-    <div ref={boxRef} className="relative flex gap-3 items-center">
+    // Sets and its clear button, joined as one split button
+    <div ref={boxRef} className="relative flex items-center">
       <Button
         ref={buttonRef}
         type="button"
         aria-expanded={open}
         aria-controls={`${id}-popup`}
-        className="flex gap-2 items-center"
+        className={`${styles.splitMain} flex gap-2 items-center`}
         onClick={() => setOpen((o) => !o)}
       >
         <span aria-hidden className={styles.icon} />
@@ -102,24 +103,24 @@ export default function SearchFilters({
         {count ? `${options.sets[0]}${count > 1 ? ` +${count - 1}` : ''}` : 'Sets'}
         {count > 1 && <span className="sr-only"> ({options.sets.join(', ')})</span>}
       </Button>
-      {/* While sets are ticked, one press unticks them all (a set's featured pool ticks one,
-          maybe by accident), closing the popup if it's open, focus going back to Sets */}
-      {count > 0 && (
-        <Button
-          type="button"
-          variant="icon"
-          className={styles.clear}
-          aria-label="Clear sets"
-          title="Clear sets"
-          onClick={() => {
-            onChange({ ...options, sets: [] });
-            setOpen(false);
-            buttonRef.current?.focus();
-          }}
-        >
-          <span aria-hidden className={styles.clearIcon} />
-        </Button>
-      )}
+      {/* Always there, so the row never shifts; while sets are ticked, one press unticks them
+          all (a set's featured pool ticks one, maybe by accident), closing the popup if it's
+          open, focus going back to Sets. With none ticked it's dimmed and does nothing. */}
+      <Button
+        type="button"
+        variant="icon"
+        className={`${styles.splitEnd} ${styles.clear}`}
+        aria-label="Clear sets"
+        title="Clear sets"
+        disabled={count === 0}
+        onClick={() => {
+          onChange({ ...options, sets: [] });
+          setOpen(false);
+          buttonRef.current?.focus();
+        }}
+      >
+        <span aria-hidden className={styles.clearIcon} />
+      </Button>
       {shown && (
         <div
           ref={popupRef}
