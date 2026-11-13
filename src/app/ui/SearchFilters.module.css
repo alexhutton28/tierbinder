@@ -9,36 +9,87 @@
   mask: url('/filter.svg') center / contain no-repeat;
 }
 
-/* Sets and its clear button, joined as a split button: one box, its halves sharing the
-   line between them (the clear button's edge laid over Sets'), each lighting up on its own.
-   A focused half's ring draws over its neighbor. */
+/* Sets and its clear button: one box with one edge around both (the halves have none of
+   their own), each half lighting up on its own inside it. While sets are ticked
+   (data-filtered) the clear half slides out of Sets on the spring, a short line between
+   them (60% of the height); with none, it's tucked away to nothing and Sets has the whole
+   box. Pressing doesn't shrink a half, which would pull the box apart. A focused half's
+   ring sits just inside the box. */
+.split {
+  --inner-height: calc(var(--tb-control-height) - 2 * var(--tb-line-width));
+  --inner-radius: calc(var(--tb-radius) - var(--tb-line-width));
+
+  display: flex;
+  border: var(--tb-line-width) solid var(--tb-control-border);
+  border-radius: var(--tb-radius);
+}
+
+button.splitMain,
+button.splitEnd {
+  height: var(--inner-height);
+  border: 0;
+  border-radius: 0;
+  transform: none;
+}
+
 button.splitMain {
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
+  border-radius: var(--inner-radius);
 }
 
 button.splitEnd {
-  margin-inline-start: calc(-1 * var(--tb-line-width));
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
+  position: relative;
+  width: 0;
+  padding: 0;
+  border-start-end-radius: var(--inner-radius);
+  border-end-end-radius: var(--inner-radius);
+  opacity: 0;
+  transition:
+    width var(--duration-move) var(--ease-spring),
+    opacity var(--duration-fade) ease-out,
+    background-color var(--duration-hover) ease-out,
+    color var(--duration-hover) ease-out;
+
+  /* The line between the halves */
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: 20%;
+    left: 0;
+    width: var(--tb-line-width);
+    background: var(--tb-control-border);
+  }
+}
+
+/* Tucked away it's disabled too: kept unseen, not at a disabled button's half strength */
+button.splitEnd:disabled {
+  opacity: 0;
 }
 
 button.splitMain:focus-visible,
 button.splitEnd:focus-visible {
-  position: relative;
-  z-index: 1;
+  outline-offset: calc(-1 * var(--tb-focus-width));
 }
 
-/* With no sets ticked the clear half stays whole (its edge is part of the box), only its
-   icon dimmed, in the resting icon color */
-button.splitEnd:disabled {
+.split[data-filtered] button.splitMain {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.split[data-filtered] button.splitEnd {
+  width: var(--inner-height);
   opacity: 1;
-  color: var(--tb-icon-rest);
 }
 
-/* Feather's x */
+@media (prefers-reduced-motion: reduce) {
+  button.splitEnd {
+    transition: opacity var(--duration-fade) ease-out;
+  }
+}
+
+/* Feather's x, as wide as the half allows, so it grows out with it rather than spilling
+   over Sets while it slides */
 .clearIcon {
-  width: var(--tb-icon);
+  width: min(var(--tb-icon), 100%);
   height: var(--tb-icon);
   background: currentcolor;
   mask: url('/x.svg') center / contain no-repeat;

@@ -449,6 +449,8 @@ export default function Editor() {
   // The tray cards each pool added last, by pool name (for this visit; a reload forgets),
   // so clicking it again takes back exactly those
   const [poolAdds, setPoolAdds] = React.useState<Record<string, string[]>>({});
+  // Keyed by board type and pool, since each board has its own tray
+  const poolAddsKey = (pool: Pool) => `${graphic.kind} ${pool.name}`;
   const [tab, setTab] = React.useState<Tab>('add');
   // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
   // result, and the point it was dropped at), positioned in the board's on-screen pixels
@@ -1469,7 +1471,7 @@ export default function Editor() {
       // Its menu is gone with it: focus goes to the board, as closing View's does
       boardBoxRef.current?.focus({ preventScroll: true });
       // Where it went, and how to get it back
-      showToast('Card Tray Hidden: Turn It On in Customize');
+      showToast('Card Tray Hidden; Show It Again in Customize');
       return;
     }
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
@@ -1499,9 +1501,9 @@ export default function Editor() {
 
   // Cards just added fly in from the sidebar, unless motion is reduced: a copy of each
   // leaves `thumb` (its own thumbnail, or for a pool's card past the preview, the preview's
-  // thumbnails again in turn, so a big pool goes out in waves across the row),
-  // showing that thumbnail's picture when it's its own (`own`), else `src`, for its spot on the board or in the
-  // card tray, where the card is hidden until it lands (`arriving`). A card whose spot is
+  // thumbnails again in turn, so a big pool goes out in waves across the row), showing
+  // that thumbnail's picture when it's its own (`own`), else `src`, for its spot on the
+  // board or in the card tray, where the card is hidden until it lands (`arriving`). A card whose spot is
   // off screen (on a phone, the board scrolled away above the results) appears there at
   // once; a pool's cards instead scroll the tray into view first, then fly up to it.
   function flyIn(
@@ -1647,19 +1649,27 @@ export default function Editor() {
     const added = items.slice(0, placed.tray.items.length - graphic.tray.items.length);
     // From this render's board, as applyPlaced is
     if (added.length) setGraphic(() => ({ ...graphic, tray: placed.tray }));
+    // Nothing new, but some of its cards are in a hidden tray: show it, so the click shows
+    // where they are
+    else if (
+      !graphic.tray.enabled &&
+      graphic.tray.items.some((item) => cards.some((c) => key(c) === key(item)))
+    ) {
+      showTray(true);
+    }
     const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
     const already = cards.length - fresh.length;
     const failed = pool.cards.length - cards.length;
     showToast(
       [
         ...(added.length ? [`Added ${count(added.length)} to the Card Tray`] : []),
-        ...(already ? [`${count(already)} Already on the Board or in the Tray`] : []),
+        ...(already ? [`${count(already)} Already on the Board or in the Card Tray`] : []),
         ...(failed ? [`${count(failed)} Couldn't Load`] : []),
         ...placed.errors,
       ].join('\n')
     );
     if (!added.length) return;
-    setPoolAdds((adds) => ({ ...adds, [pool.name]: added.map((item) => item.id) }));
+    setPoolAdds((adds) => ({ ...adds, [poolAddsKey(pool)]: added.map((item) => item.id) }));
     const thumbs = [...button.querySelectorAll('img')];
     setFlyingPools((f) => new Set(f).add(pool.name));
     flyIn(
@@ -1691,7 +1701,7 @@ export default function Editor() {
   // moved to the board or removed) and none is still flying in: clicking the pool again then
   // takes them back out (removePool)
   function poolInTray(pool: Pool) {
-    const ids = poolAdds[pool.name];
+    const ids = poolAdds[poolAddsKey(pool)];
     if (pool.filter || !ids?.length || !trayShown || flyingPools.has(pool.name)) return null;
     const inTray = new Set(graphic.tray.items.map((i) => i.id));
     return ids.every((id) => inTray.has(id)) ? ids : null;
@@ -1708,7 +1718,7 @@ export default function Editor() {
     });
     const gone = new Set(ids);
     setPoolAdds((adds) =>
-      Object.fromEntries(Object.entries(adds).filter(([name]) => name !== pool.name))
+      Object.fromEntries(Object.entries(adds).filter(([k]) => k !== poolAddsKey(pool)))
     );
     setPicking((p) => (p && gone.has(p.id) ? null : p));
     setGraphic(() => ({
@@ -2436,6 +2446,9 @@ export default function Editor() {
                         onPointerEnter={() => preloadPool(pool)}
                         onFocus={() => preloadPool(pool)}
                         onClick={(e) => {
+                          // A double click's second click would take straight back what
+                          // its first added (under reduced motion nothing flies to wait for)
+                          if (e.detail > 1 && !pool.filter) return;
                           if (pool.filter) filterToSet(pool.filter);
                           else if (inTray) removePool(pool, inTray, e.currentTarget);
                           else addPool(pool, e.currentTarget);
@@ -2589,10 +2602,11 @@ export default function Editor() {
                 (confirmingTrayClear ? (
                   <div
                     role="group"
-                    aria-label="Clear the card tray?"
+                    // Named by its question, read once
+                    aria-labelledby="clear-tray-question"
                     className="flex flex-wrap gap-3 items-center"
                   >
-                    Clear the Card Tray?
+                    <span id="clear-tray-question">Clear the Card Tray?</span>
                     <Button
                       onClick={() => {
                         flushSync(clearTray);
@@ -2616,7 +2630,12 @@ export default function Editor() {
                     ref={clearTrayRef}
                     className="self-start"
                     onClick={() => {
-                      flushSync(() => setConfirmingTrayClear(true));
+                      // One confirmation at a time, so Yes always has Clear Board to hand
+                      // focus to
+                      flushSync(() => {
+                        setConfirmingClear(false);
+                        setConfirmingTrayClear(true);
+                      });
                       cancelTrayClearRef.current?.focus();
                     }}
                   >

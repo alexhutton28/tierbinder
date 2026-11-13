@@ -561,8 +561,8 @@
 }
 
 /* The pool's name, then at the row's end what clicking it does, muted: a Feather icon the
-   size of the text (plus, or minus or filter by its data-action) and "Add to Card Tray", "Remove From Card Tray" or "Filter", wrapping under
-   the name in a narrow sidebar */
+   size of the text (plus, or minus or filter by its data-action) and "Add to Card Tray",
+   "Remove From Card Tray" or "Filter", wrapping under the name in a narrow sidebar */
 .poolName {
   display: flex;
   gap: var(--spacing-2);

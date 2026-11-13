@@ -5,6 +5,9 @@
 // since it's redrawn every frame; the landing spot is asked for every frame too, so it
 // follows the board as it rescales or the page scrolls.
 
+// Reduced motion is the caller's to check (Editor.tsx's flyIn and removePool skip flights
+// under it): these always fly.
+
 import styles from './flights.module.css';
 
 export type Box = { left: number; top: number; width: number; height: number; radius: number };

@@ -86,8 +86,9 @@ export default function SearchFilters({
     });
 
   return (
-    // Sets and its clear button, joined as one split button
-    <div ref={boxRef} className="relative flex items-center">
+    // Sets and its clear button, one box (`split`): the clear half slides out of it while
+    // sets are ticked (data-filtered)
+    <div ref={boxRef} className={`${styles.split} relative`} data-filtered={count > 0 || undefined}>
       <Button
         ref={buttonRef}
         type="button"
@@ -103,9 +104,9 @@ export default function SearchFilters({
         {count ? `${options.sets[0]}${count > 1 ? ` +${count - 1}` : ''}` : 'Sets'}
         {count > 1 && <span className="sr-only"> ({options.sets.join(', ')})</span>}
       </Button>
-      {/* Always there, so the row never shifts; while sets are ticked, one press unticks them
-          all (a set's featured pool ticks one, maybe by accident), closing the popup if it's
-          open, focus going back to Sets. With none ticked it's dimmed and does nothing. */}
+      {/* Out while sets are ticked: one press unticks them all (a set's featured pool ticks
+          one, maybe by accident), closing the popup if it's open, focus going back to Sets.
+          Tucked away (and inert) with none. */}
       <Button
         type="button"
         variant="icon"
@@ -113,6 +114,7 @@ export default function SearchFilters({
         aria-label="Clear sets"
         title="Clear sets"
         disabled={count === 0}
+        inert={count === 0}
         onClick={() => {
           onChange({ ...options, sets: [] });
           setOpen(false);
