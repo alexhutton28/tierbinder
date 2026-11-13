@@ -85,10 +85,12 @@ export default function CardTray({
   onCardMenu,
   onCardDrop,
   onPick,
+  onTrayMenu,
   listening,
   boardCardWidth,
   hintFont,
   showHint,
+  arriving,
 }: {
   tray: Tray;
   // Its top edge, in design pixels
@@ -104,6 +106,9 @@ export default function CardTray({
   onCardDrop: (id: string, x: number, y: number) => void;
   // The tray's own space was clicked, making it the Add to target
   onPick: () => void;
+  // The tray's own space was right-clicked: its menu (Hide Card Tray, and Clear Card Tray
+  // while it holds cards), at x, y in the stage's on-screen pixels
+  onTrayMenu: (x: number, y: number) => void;
   // Off while a drawing tool is active
   listening: boolean;
   // The board's card width: a card dragged out of the tray grows to it
@@ -112,6 +117,8 @@ export default function CardTray({
   hintFont: string;
   // Whether an empty tray shows its hint (only until a card has been in one this session)
   showHint: boolean;
+  // Cards not drawn yet: copies of them are flying in from the sidebar
+  arriving: ReadonlySet<string>;
 }) {
   const height = trayHeight(tray.items.length);
   return (
@@ -128,6 +135,11 @@ export default function CardTray({
             if (e.evt.button === 0) onPick();
           }}
           onTap={onPick}
+          onContextMenu={(e) => {
+            e.evt.preventDefault();
+            const pointer = e.target.getStage()?.getPointerPosition();
+            if (pointer) onTrayMenu(pointer.x, pointer.y);
+          }}
         />
         {showHint && tray.items.length === 0 && (
           // What it's for, quietly, while it's empty
@@ -151,6 +163,7 @@ export default function CardTray({
             dividerColor={border}
             onSelect={() => onSelect(item.id)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
+            hidden={arriving.has(item.id)}
             dragWidth={(center) => (center.y > BOARD_HEIGHT ? width : boardCardWidth)}
             onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX, cardY + top)}
           />

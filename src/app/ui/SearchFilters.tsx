@@ -72,6 +72,8 @@ export default function SearchFilters({
   }, [open]);
 
   const count = activeFilters(options);
+  // The ticked sets' names, or the code of one too new to be listed yet
+  const names = options.sets.map((code) => CARD_SETS.find((s) => s.code === code)?.name ?? code);
   const full = count >= MAX_SETS;
   const term = query.trim().toLowerCase();
   const sets = term
@@ -86,21 +88,52 @@ export default function SearchFilters({
     });
 
   return (
-    <div ref={boxRef} className="relative">
+    // Sets and its clear button, one box (`split`): the clear half slides out of it while
+    // sets are ticked (data-filtered)
+    <div ref={boxRef} className={`${styles.split} relative`} data-filtered={count > 0 || undefined}>
       <Button
         ref={buttonRef}
         type="button"
         aria-expanded={open}
         aria-controls={`${id}-popup`}
-        className="flex gap-2 items-center"
+        // Every ticked set in full, for a name cut short or the ones behind "+2"
+        title={count ? names.join(', ') : undefined}
+        className={`${styles.splitMain} flex gap-2 items-center min-w-0`}
         onClick={() => setOpen((o) => !o)}
       >
         <span aria-hidden className={styles.icon} />
-        {/* The ticked set's code, or the first one's and how many more ("TWM +2") */}
-        {/* Screen readers hear what it filters and every ticked code, around the words shown */}
+        {/* The ticked set's name, or the first one's and how many more ("Delta Reign +2"),
+            in full when it fits, else cut short with an ellipsis */}
+        {/* Screen readers hear what it filters and every ticked set, around the words shown */}
         {count > 0 && <span className="sr-only">Sets: </span>}
-        {count ? `${options.sets[0]}${count > 1 ? ` +${count - 1}` : ''}` : 'Sets'}
-        {count > 1 && <span className="sr-only"> ({options.sets.join(', ')})</span>}
+        {count ? (
+          <>
+            <span className={styles.setsLabel}>{names[0]}</span>
+            {count > 1 && ` +${count - 1}`}
+          </>
+        ) : (
+          'Sets'
+        )}
+        {count > 1 && <span className="sr-only"> ({names.join(', ')})</span>}
+      </Button>
+      {/* Out while sets are ticked: one press unticks them all (a set's featured pool ticks
+          one, maybe by accident), closing the popup if it's open, focus going back to Sets.
+          Tucked away (and inert) with none. */}
+      <Button
+        type="button"
+        variant="icon"
+        className={`${styles.splitEnd} ${styles.clear}`}
+        aria-label="Clear sets"
+        title="Clear sets"
+        disabled={count === 0}
+        inert={count === 0}
+        onClick={() => {
+          onChange({ ...options, sets: [] });
+          setOpen(false);
+          buttonRef.current?.focus();
+        }}
+      >
+        <span aria-hidden className={styles.clearIcon} />
       </Button>
       {shown && (
         <div

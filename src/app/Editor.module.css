@@ -204,23 +204,32 @@
 
 /* A search result's menu (right-click): at the pointer (or above it at the window's foot),
    over the sidebar and the board, under a viewed card (which View opens as it folds away)
-   and toasts. Its "Add to" row holds a
-   chevron and opens a flyout to its right (or its left near the window's edge, data-side),
-   lined up with the row (the list's 4px inset above it), whose rows have the dropdown
-   lists' 8px ends. */
+   and toasts. */
 .resultMenu {
   position: fixed;
   z-index: 25;
   overflow: visible;
 }
 
+/* A menu row that opens a flyout (the search result menu's "Add to", the card menu's Clear
+   Card Tray): it holds a chevron and opens the flyout to its right (or its left near the
+   window's edge, data-side, stretching and folding from that side), lined up with the row
+   (the list's 4px inset above it), whose rows have the dropdown lists' 8px ends */
 .flyoutAnchor {
   position: relative;
 }
 
-/* On touch screens, rows are touch targets (44px tall), as the Sets popup's are */
+/* The card menu: Clear Card Tray's flyout (a tray card's, or the tray's own menu) reaches
+   past its edge, as the search result menu's does */
+.cardMenu {
+  overflow: visible;
+}
+
+/* On touch screens, rows are touch targets (44px tall), as the Sets popup's are: the
+   search result menu's, and the card menu's (a tray card's is how touch clears the tray) */
 @media (pointer: coarse) {
-  .resultMenu [role='menuitem'] {
+  .resultMenu [role='menuitem'],
+  .cardMenu [role='menuitem'] {
     min-height: var(--tb-touch-target);
   }
 }
@@ -241,6 +250,7 @@
   &[data-side='left'] {
     right: calc(100% + var(--spacing-2));
     left: auto;
+    transform-origin: right center;
   }
 
   & > button {
@@ -517,8 +527,9 @@
   opacity: 1;
 }
 
-/* A featured card pool in Add Cards: its name over a row of card placeholders, on the
-   field color */
+/* A featured card pool in Add Cards: a button, its name over a row of its cards, on the
+   field color, lighting up under the pointer.
+   Clicking it sends its cards flying to the card tray (Editor.tsx, ui/flights.ts). */
 .pool {
   display: flex;
   flex-direction: column;
@@ -526,21 +537,65 @@
   padding: var(--spacing-3);
   border-radius: var(--tb-radius);
   background: var(--tb-field);
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-hover) ease-out;
 }
 
-/* The pool's name with Feather's chevron-right after it, the size of the text */
+/* Only where the pointer can hover, so it doesn't stay lit after a tap */
+@media (hover: hover) {
+  .pool:hover {
+    background: var(--tb-control-hover);
+  }
+
+  /* Its label brightens with it, so it reads as the button's, not a caption */
+  .pool:hover .poolAction {
+    color: var(--tb-text);
+  }
+}
+
+/* Pressed: brighter, so the press shows before the cards fly (or at once, without motion) */
+.pool:active {
+  background: var(--tb-option-hover);
+}
+
+/* The pool's name, then at the row's end what clicking it does, muted: a Feather icon the
+   size of the text (plus, or minus or filter by its data-action) and "Add to Card Tray",
+   "Remove From Card Tray" or "Filter", wrapping under the name in a narrow sidebar */
 .poolName {
   display: flex;
   gap: var(--spacing-2);
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
 }
 
-.poolChevron {
+.poolAction {
+  display: flex;
+  flex: none;
+  gap: var(--spacing-2);
+  align-items: center;
+  color: var(--tb-muted);
+  transition: color var(--duration-hover) ease-out;
+}
+
+.poolIcon {
   flex: none;
   width: 1em;
   height: 1em;
   background: currentcolor;
-  mask: url('/chevron-right.svg') center / contain no-repeat;
+  mask: url('/plus.svg') center / contain no-repeat;
+}
+
+/* The other actions' icons (Editor.tsx's POOL_ACTIONS): taking a pool's cards back out, and
+   a set's pool filtering the search, as the Sets button's icon does */
+.poolIcon[data-action='remove'] {
+  mask-image: url('/minus.svg');
+}
+
+.poolIcon[data-action='filter'] {
+  mask-image: url('/filter.svg');
 }
 
 .poolCards {
