@@ -119,7 +119,7 @@ export function moveCard(list: TierList, id: string, tierIndex: number, index: n
 // Adds a new card at a position, or says the tier is full
 export function insertCard(list: TierList, item: CardItem, tierIndex: number, index: number) {
   if (list.tiers[tierIndex].items.length >= MAX_CARDS_PER_TIER) {
-    return { error: `That tier is full (${MAX_CARDS_PER_TIER} cards).` };
+    return { error: `That Tier Is Full (${MAX_CARDS_PER_TIER} Cards)` };
   }
   const tiers = list.tiers.map((t, i) => {
     if (i !== tierIndex) return t;
@@ -136,15 +136,16 @@ export function insertCard(list: TierList, item: CardItem, tierIndex: number, in
 export function importCards(list: TierList, groups: ResolvedGroup[]) {
   const errors: string[] = [];
   if (groups.length > TIER_COUNT) {
-    errors.push(`Only ${TIER_COUNT} tiers: the extra tiers were left out.`);
+    errors.push(`Only ${TIER_COUNT} Tiers: The Extra Tiers Were Left Out`);
   }
   const tiers = list.tiers.map((tier, i) => {
     const imported = groups[i];
     const items = [...tier.items, ...(imported?.items ?? [])];
     const name = imported?.name ?? tier.name;
-    if (items.length > MAX_CARDS_PER_TIER) {
+    const left = items.length - MAX_CARDS_PER_TIER;
+    if (left > 0) {
       errors.push(
-        `${name}: ${items.length - MAX_CARDS_PER_TIER} cards didn't fit (${MAX_CARDS_PER_TIER} per tier).`
+        `${name}: ${left} ${left === 1 ? 'Card' : 'Cards'} Didn't Fit (${MAX_CARDS_PER_TIER} per Tier)`
       );
     }
     return { ...tier, name, items: items.slice(0, MAX_CARDS_PER_TIER) };

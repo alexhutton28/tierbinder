@@ -3,24 +3,203 @@
   width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
 }
 
-/* The browser's color picker, as a plain swatch */
+/* The color as a swatch, which opens the picker. A line inside it in the fields' border
+   color keeps it visible when it's close to the sidebar's own color, lightening on hover
+   and while its picker is open, as a checkbox's does. */
 .swatch {
+  position: relative;
   flex: none;
   width: var(--tb-swatch);
   height: var(--tb-swatch);
   border-radius: var(--tb-radius);
-  overflow: hidden;
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border);
   cursor: pointer;
+  transition: box-shadow var(--duration-hover) ease-out;
 }
 
-.swatch::-webkit-color-swatch-wrapper {
-  padding: 0;
+.swatch:hover,
+.swatch[aria-expanded='true'] {
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
 }
 
-.swatch::-webkit-color-swatch {
-  border: 0;
+/* On touch screens it takes taps 44px tall, reaching above and below it without moving
+   anything (not sideways, where the hex field is 4px away) */
+@media (pointer: coarse) {
+  .swatch::after {
+    position: absolute;
+    inset: calc((var(--tb-swatch) - var(--tb-touch-target)) / 2) 0;
+    content: '';
+  }
 }
 
-.swatch::-moz-color-swatch {
-  border: 0;
+/* 16px around the picker, its parts 8px apart, as the Sets popup has; placed by
+   .tierbinder-anchored, and scrolling if the window is too short for it */
+.popup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  width: calc(var(--tb-picker-width) + 2 * var(--spacing-4) + 2 * var(--tb-line-width));
+  padding: var(--spacing-4);
+  overflow-y: auto;
 }
+
+.popup:focus-visible {
+  outline: none;
+}
+
+/* "Board Colors" and "Hex": small and muted, naming what's under or beside them */
+.caption {
+  color: var(--tb-muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
+.presetsBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* The board's colors, eight to a row across the picker's width, 4px apart; on touch
+   screens four, so each is a full touch target */
+.presets {
+  --columns: 8;
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 1fr);
+  gap: var(--spacing-2);
+
+  @media (pointer: coarse) {
+    --columns: 4;
+  }
+}
+
+/* As the swatch: a line inside in the fields' border color, so a color close to the
+   popup's shows; the color in use is ringed in the handles' color, with the handles'
+   dark edge inside it so the ring shows on white */
+.preset {
+  aspect-ratio: 1;
+  border-radius: var(--tb-radius);
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border);
+  cursor: pointer;
+  transition: box-shadow var(--duration-hover) ease-out;
+}
+
+.preset:hover {
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
+}
+
+.preset[aria-pressed='true'] {
+  box-shadow:
+    inset 0 0 0 calc(2 * var(--tb-line-width)) var(--tb-picker-handle),
+    inset 0 0 0 calc(3 * var(--tb-line-width)) var(--tb-handle-edge);
+}
+
+.hexRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+/* react-colorful's parts, in the design system's look: the square fills the picker's
+   width, the hue bar under it 8px away, both with the controls' corners. The handles stay
+   inside them: the part that reads the pointer is inset by half a handle, with a band
+   around it (::before) that still takes presses at the very edge. The square's handle is
+   a ring in --tb-picker-handle filled with the color; the hue bar's a hollow pill ring
+   showing the hue through it.
+   Both are ringed in the focus color only for the keyboard. Its own stylesheet, added
+   after ours, sets sizes these replace, so they're one class more specific. */
+/* stylelint-disable selector-pseudo-class-no-unknown, selector-class-pattern -- :global
+   reaches react-colorful's own class names */
+.picker:global(.react-colorful) {
+  /* Feather's icon size */
+  --handle: var(--tb-icon);
+  --hue-handle: var(--tb-hue-handle);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  width: var(--tb-picker-width);
+  height: auto;
+  user-select: none;
+
+  /* The gradients start and end half a handle in, where the handles stop, so the color
+     under a handle is the color it picks. Black and white here are the color model's
+     ends, not the palette's. */
+  & :global(.react-colorful__saturation) {
+    --in: calc(var(--handle) / 2);
+
+    flex: none;
+    aspect-ratio: 1;
+    background-image:
+      linear-gradient(to top, #000 var(--in), transparent calc(100% - var(--in))),
+      linear-gradient(to right, #fff var(--in), transparent calc(100% - var(--in)));
+    border-radius: var(--tb-radius);
+    border-bottom: 0;
+  }
+
+  & :global(.react-colorful__hue) {
+    --in: calc(var(--hue-handle) / 2);
+
+    flex: none;
+    background: linear-gradient(
+      90deg,
+      red var(--in),
+      #ff0,
+      #0f0,
+      #0ff,
+      #00f,
+      #f0f,
+      red calc(100% - var(--in))
+    );
+    height: var(--tb-hue-height);
+    border-radius: var(--tb-radius);
+  }
+
+  & :global(.react-colorful__interactive) {
+    outline: none;
+  }
+
+  & :global(.react-colorful__saturation .react-colorful__interactive) {
+    inset: calc(var(--handle) / 2);
+  }
+
+  & :global(.react-colorful__hue .react-colorful__interactive) {
+    inset: 0 calc(var(--hue-handle) / 2);
+  }
+
+  & :global(.react-colorful__interactive)::before {
+    position: absolute;
+    inset: calc(-1 * var(--handle) / 2);
+    content: '';
+  }
+
+  & :global(.react-colorful__pointer) {
+    width: var(--handle);
+    height: var(--handle);
+    border: calc(2 * var(--tb-line-width)) solid var(--tb-picker-handle);
+    box-shadow: var(--tb-handle-shadow);
+  }
+
+  & :global(.react-colorful__hue .react-colorful__pointer) {
+    width: var(--hue-handle);
+    height: var(--tb-hue-handle-height);
+    border-radius: var(--tb-radius);
+    background: transparent;
+
+    & :global(.react-colorful__pointer-fill) {
+      display: none;
+    }
+  }
+
+  /* No growing on focus; the ring sits right against the handle */
+  & :global(.react-colorful__interactive:focus .react-colorful__pointer) {
+    transform: translate(-50%, -50%);
+  }
+
+  & :global(.react-colorful__interactive:focus-visible .react-colorful__pointer) {
+    outline: var(--tb-focus-width) solid var(--tb-focus);
+  }
+}
+/* stylelint-enable selector-pseudo-class-no-unknown, selector-class-pattern */

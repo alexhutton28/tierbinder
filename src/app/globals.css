@@ -54,6 +54,15 @@ body {
   --tb-control-border: var(--color-petrel-700);
   --tb-field: var(--color-petrel-950);
   --tb-field-border: var(--color-petrel-700);
+
+  /* An unticked checkbox under the pointer */
+  --tb-field-border-hover: var(--color-petrel-600);
+
+  /* The color picker's handles: a light ring, with a faint dark edge (Petrel 950 at
+     35%, enough to show on white without darkening the ring) and the popup's shadow */
+  --tb-picker-handle: var(--color-petrel-50);
+  --tb-handle-edge: color-mix(in srgb, var(--color-petrel-950) 35%, transparent);
+  --tb-handle-shadow: 0 0 0 var(--tb-line-width) var(--tb-handle-edge), var(--tb-popup-shadow);
   --tb-primary: var(--color-storm-300);
   --tb-primary-hover: var(--color-storm-200);
   --tb-primary-text: var(--color-petrel-950);
@@ -91,6 +100,13 @@ body {
   /* The smallest comfortable thing to tap (Apple's guideline) */
   --tb-touch-target: 44px;
   --tb-swatch: 24px;
+
+  /* The color picker: its width (react-colorful's own default size, chosen by eye; see
+     Exceptions), its hue bar's height and the width of that bar's handle */
+  --tb-picker-width: 200px;
+  --tb-hue-height: 12px;
+  --tb-hue-handle: 8px;
+  --tb-hue-handle-height: 16px;
   --tb-number-field: 64px;
 
   /* The default sidebar width until the main nav is measured: Editor.tsx then sets it on
@@ -120,7 +136,6 @@ body {
 .tierbinder-page {
   color: var(--tb-text);
   font-family: var(--font-figtree), system-ui, sans-serif;
-  accent-color: var(--tb-primary);
   color-scheme: dark;
 }
 

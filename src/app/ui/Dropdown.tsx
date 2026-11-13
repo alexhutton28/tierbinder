@@ -1,11 +1,10 @@
 'use client';
 
 import React from 'react';
-import { useAnchored } from './anchored';
+import { useAnchored, usePopup } from './anchored';
 import Button from './Button';
 import styles from './Dropdown.module.css';
 import { CARD_HEIGHT, CARD_WIDTH } from '../canvas/size';
-import { FOLD_CLEARANCE } from './motion';
 
 // A labeled dropdown that opens and closes with the card menu's animation, top to
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
@@ -35,20 +34,10 @@ export default function Dropdown<T extends string | number>({
   current?: { label: string } & Look;
   onChange: (value: T) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
-  // Stays on screen while it folds closed; removed on a timer just after the 180ms fold,
-  // as the card menu is
-  const [shown, setShown] = React.useState(false);
-  if (open && !shown) setShown(true);
-  const closing = shown && !open;
-  React.useEffect(() => {
-    if (!closing) return;
-    const timer = setTimeout(() => setShown(false), FOLD_CLEARANCE);
-    return () => clearTimeout(timer);
-  }, [closing]);
-
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
+  // Stays on screen while it folds closed; a press outside closes it
+  const { open, setOpen, shown, closing } = usePopup(boxRef);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
   const optionRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
@@ -62,16 +51,6 @@ export default function Dropdown<T extends string | number>({
   React.useEffect(() => {
     if (open) optionRefs.current[selected]?.focus();
   }, [open, selected]);
-
-  // Closes on any press outside it
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node && boxRef.current?.contains(e.target))) setOpen(false);
-    };
-    window.addEventListener('pointerdown', onDown);
-    return () => window.removeEventListener('pointerdown', onDown);
-  }, [open]);
 
   const close = () => {
     setOpen(false);

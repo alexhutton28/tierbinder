@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ColorField from '../../ui/ColorField';
+import Checkbox from '../../ui/Checkbox';
 import type { SettingsProps } from '../types';
 import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from './model';
 
@@ -16,14 +17,12 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
         value={canvas.cardWidth}
         onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
       />
-      <label className="flex gap-3 items-center">
-        <input
-          type="checkbox"
-          checked={canvas.topHalf}
-          onChange={(e) => onChange((c) => setCardShape(c, { topHalf: e.target.checked }))}
-        />
+      <Checkbox
+        checked={canvas.topHalf}
+        onChange={(topHalf) => onChange((c) => setCardShape(c, { topHalf }))}
+      >
         Show only top half of cards
-      </label>
+      </Checkbox>
       <h3 className="tierbinder-heading">Board</h3>
       <div className="tierbinder-prop">
         Background
@@ -34,7 +33,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
         />
       </div>
       <div className="tierbinder-prop">
-        Split card border
+        Split Card Border
         <ColorField
           label="Split card border color"
           value={canvas.border}
@@ -58,7 +57,7 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
 
   return (
     <label className="flex gap-3 items-center">
-      Card size
+      Card Size
       <input
         type="number"
         min={MIN_CARD_WIDTH}

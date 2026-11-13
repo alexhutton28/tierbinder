@@ -4,10 +4,10 @@ import React from 'react';
 import { DEFAULT_TIERS } from '../graphics/tier-list/model';
 import { activeFilters, MAX_SETS, type SearchOptions } from '../searchOptions';
 import { CARD_SETS } from '../sets';
-import { useAnchored } from './anchored';
+import { useAnchored, usePopup } from './anchored';
 import Button from './Button';
+import Checkbox from './Checkbox';
 import styles from './SearchFilters.module.css';
-import { FOLD_CLEARANCE } from './motion';
 import { PETREL_950, darkReadsBetter } from '../color';
 
 // The card search's Sets button (a filter) and its popup: which sets to search, from a list of
@@ -41,20 +41,11 @@ export default function SearchFilters({
   colors: string[];
   onChange: (options: SearchOptions) => void;
 }) {
-  const [open, setOpen] = React.useState(false);
-  // Stays on screen while it folds closed, as the dropdowns do
-  const [shown, setShown] = React.useState(false);
-  if (open && !shown) setShown(true);
-  const closing = shown && !open;
-  React.useEffect(() => {
-    if (!closing) return;
-    const timer = setTimeout(() => setShown(false), FOLD_CLEARANCE);
-    return () => clearTimeout(timer);
-  }, [closing]);
-
   const [query, setQuery] = React.useState('');
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
+  // Stays on screen while it folds closed; a press outside closes it
+  const { open, setOpen, shown, closing } = usePopup(boxRef);
   const searchRef = React.useRef<HTMLInputElement>(null);
   const popupRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
@@ -78,16 +69,6 @@ export default function SearchFilters({
     if (!open) return;
     if (matchMedia('(pointer: fine)').matches) searchRef.current?.focus();
     else popupRef.current?.focus({ preventScroll: true });
-  }, [open]);
-
-  // Closes on any press outside it
-  React.useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (!(e.target instanceof Node && boxRef.current?.contains(e.target))) setOpen(false);
-    };
-    window.addEventListener('pointerdown', onDown);
-    return () => window.removeEventListener('pointerdown', onDown);
   }, [open]);
 
   const count = activeFilters(options);
@@ -174,32 +155,30 @@ export default function SearchFilters({
               const ticked = options.sets.indexOf(s.code);
               const tick = ticked >= 0 && colors.length ? colors[ticked % colors.length] : null;
               return (
-                <label key={s.code} className={styles.choice}>
-                  <input
-                    type="checkbox"
-                    checked={ticked >= 0}
-                    // At the limit, only ticked sets can change
-                    disabled={ticked < 0 && full}
-                    className={styles.check}
-                    data-check={tick ? checkOn(tick) : undefined}
-                    style={tick ? ({ '--tick': tick } as React.CSSProperties) : undefined}
-                    onChange={(e) => toggle(s.code, e.target.checked)}
-                  />
+                <Checkbox
+                  key={s.code}
+                  checked={ticked >= 0}
+                  // At the limit, only ticked sets can change
+                  disabled={ticked < 0 && full}
+                  color={tick ?? undefined}
+                  check={tick ? checkOn(tick) : undefined}
+                  onChange={(on) => toggle(s.code, on)}
+                >
                   <span className={styles.setName}>{s.name}</span>
                   <span className={styles.code}>{s.code}</span>
-                </label>
+                </Checkbox>
               );
             })}
-            {!sets.length && <p className={styles.code}>No sets match.</p>}
+            {!sets.length && <p className={styles.code}>No Sets Match</p>}
           </fieldset>
-          {full && <p className={styles.code}>Up to {MAX_SETS} sets at a time.</p>}
+          {full && <p className={styles.code}>Up to {MAX_SETS} Sets at a Time</p>}
           {count > 0 && (
             <Button
               type="button"
               className="self-start"
               onClick={() => onChange({ ...options, sets: [] })}
             >
-              Clear sets
+              Clear Sets
             </Button>
           )}
         </div>

@@ -11,11 +11,41 @@
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
   background: var(--tb-top);
+  transition:
+    translate var(--duration-drop) var(--ease-slide),
+    opacity var(--duration-fade) ease-out;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: opacity var(--duration-fade) ease-out;
+  }
+
+  /* It only tucks under b8; widening the window doesn't slide it back in the sidebar */
+  @variant b8 {
+    transition: none;
+  }
 }
 
 .brand {
   display: flex;
   flex: none;
+  transition: opacity var(--duration-fade) ease-out;
+}
+
+/* Under b8, while the page scrolls down (Editor.tsx): slid up by its own height, leaving
+   the status bar's strip in its color, with the logo faded so none of it shows there;
+   back while it holds keyboard focus. Reduced motion: it fades out in place instead. */
+.topTucked:not(:has(:focus-visible)) {
+  translate: 0 calc(-1 * var(--tb-top-height));
+
+  & .brand {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    translate: none;
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 /* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
@@ -122,19 +152,26 @@
   opacity: 0;
 }
 
-/* A toast: one short message at the top of the window, centered, above everything (a tier
-   or the card tray is full). It drops in on the spring over duration-drop and folds away
+/* A toast: every message (a tier or the card tray is full, bulk import, copying), at the
+   top of the window, centered, above everything; an import's results take a line each. It drops in on the spring over duration-drop and folds away
    (fades up) over duration-fold, like the popups; reduced motion: it fades. */
 .toast {
   position: fixed;
   top: calc(var(--spacing-4) + env(safe-area-inset-top));
   left: 50%;
   z-index: 40;
+
+  /* Its words' width, not the half window left of `left: 50%`, up to the window less 16px
+     each side */
+  width: max-content;
   max-width: calc(100vw - 2 * var(--spacing-4));
   padding: var(--spacing-3) var(--spacing-4);
   translate: -50% 0;
   color: var(--tb-text);
   font-weight: 500;
+
+  /* An import's results are a line each */
+  white-space: pre-line;
   pointer-events: none;
   animation:
     toast-in var(--duration-drop) var(--ease-spring),
@@ -188,11 +225,11 @@
   }
 }
 
+/* Its chevron 4px after the words, as Bulk Import's is */
 .flyoutItem {
   display: flex;
-  gap: var(--spacing-4);
+  gap: var(--spacing-2);
   align-items: center;
-  justify-content: space-between;
   width: 100%;
 }
 

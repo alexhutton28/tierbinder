@@ -13,7 +13,7 @@ import {
 
 const tierList: GraphicType<TierList> = {
   kind: 'tier-list',
-  label: 'Tier list',
+  label: 'Tier List',
   targetNoun: 'tier',
   create: defaultTierList,
   parse: parseTierList,
@@ -32,6 +32,7 @@ const tierList: GraphicType<TierList> = {
     const target = dropTarget(list, '', point.x, point.y);
     return insertCard(list, item, target.tierIndex, target.index);
   },
+  ungroupedImport: 'tray',
   importCards,
 };
 

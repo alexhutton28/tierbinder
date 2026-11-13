@@ -88,6 +88,10 @@ export type GraphicType<G extends { kind: string }> = {
   addCard: (graphic: G, item: CardItem, target: number) => Placed<G>;
   // Adds a card dropped with the pointer at `point`
   dropCard: (graphic: G, item: CardItem, point: Point) => Placed<G>;
+  // Where import's cards before the first `#` go: the card tray (a tier list, where groups
+  // are tiers), or the board as one more group in front (the blank canvas, where groups
+  // mean nothing)
+  ungroupedImport: 'tray' | 'board';
   // Adds bulk-imported cards, given the import's `#` groups
   importCards: (graphic: G, groups: ResolvedGroup[]) => { graphic: G; errors: string[] };
 };

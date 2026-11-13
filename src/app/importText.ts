@@ -1,15 +1,15 @@
-// Bulk import format. A `#` line starts the next group, named by its text (`#` alone
-// gives no name; `\n` is a line break). Each graphic decides what groups are: a tier list
-// fills a tier per group and renames it. Each other line is a card, in deck-list form with
-// an optional count:
+// Bulk import format. Cards before any `#` line go in the card tray, after the cards
+// already there (or on the board, where the graphic says so: its `ungroupedImport`). A
+// `#` line starts the next group, named by its text (`#` alone gives no name; `\n` is a
+// line break). Each graphic decides what groups are: a tier list fills a tier per group
+// and renames it. Each other line is a card, in deck-list form with an optional count:
 //
+//   Pikachu ex SSP 57   <- before any #: the card tray (the canvas on a blank canvas)
 //   # Goated
 //   Mew ex MEW 151
 //   1 Dipplin TWM 18
 //   Alakazam            <- name only: the newest regular print
 //   Dragapult ex TWM 130 / Pidgeot ex   <- a split card: top / bottom
-//
-// Cards before the first `#` go in the first group.
 
 import type { CardItem } from './cards';
 
@@ -26,27 +26,28 @@ function parseCard(text: string): ImportCard {
   return match ? { name: match[1], set: match[2], number: match[3] } : { name: text.trim() };
 }
 
-export function parseImport(text: string): ImportGroup[] {
-  const groups: ImportGroup[] = [{ cards: [] }];
-  let started = false;
+// The cards for the card tray (before the first `#`), and the groups for the board
+export type ParsedImport = { tray: ImportLine[]; groups: ImportGroup[] };
+
+export function parseImport(text: string): ParsedImport {
+  const tray: ImportLine[] = [];
+  const groups: ImportGroup[] = [];
 
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     if (!line) return;
     if (line.startsWith('#')) {
-      if (started || groups[0].cards.length > 0) groups.push({ cards: [] });
-      started = true;
       const name = line.slice(1).trim().replaceAll('\\n', '\n');
-      if (name) groups[groups.length - 1].name = name;
+      groups.push(name ? { name, cards: [] } : { cards: [] });
       return;
     }
     const [top, bottom] = line.replace(/^\d+\s+/, '').split(/\s+\/\s+/);
-    groups[groups.length - 1].cards.push({
+    (groups.at(-1)?.cards ?? tray).push({
       ...parseCard(top),
       ...(bottom ? { split: parseCard(bottom) } : {}),
       line: i + 1,
     });
   });
 
-  return groups;
+  return { tray, groups };
 }

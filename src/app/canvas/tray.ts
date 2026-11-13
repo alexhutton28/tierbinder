@@ -10,7 +10,7 @@ import type { CardPlacement, Point } from '../graphics/types';
 import { BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH } from './size';
 
 export type Tray = {
-  // Shown under the board (from b8 up); cards stay in it while it's off
+  // Shown under the board; cards stay in it while it's off
   enabled: boolean;
   color: string;
   items: CardItem[];
@@ -33,7 +33,7 @@ export const TRAY_GAP = 16;
 export const TRAY_RADIUS = 8;
 // The empty tray's hint, in on-screen pixels: text-body
 export const TRAY_HINT_SIZE = 14;
-export const TRAY_HINT = 'Drag cards here to hold them';
+export const TRAY_HINT = 'Send Cards to Card Tray to Hold Them';
 
 export function defaultTray(color: string): Tray {
   return { enabled: false, color, items: [] };
@@ -122,11 +122,27 @@ export function trayDropIndex(tray: Tray, draggedId: string, point: Point) {
 // Adds a card at a position (the end by default), or says the tray is full
 export function insertTrayCard(tray: Tray, item: CardItem, index = tray.items.length) {
   if (tray.items.length >= MAX_TRAY_CARDS) {
-    return { error: `The card tray is full (${MAX_TRAY_CARDS} cards).` };
+    return { error: `The Card Tray Is Full (${MAX_TRAY_CARDS} Cards)` };
   }
   const items = [...tray.items];
   items.splice(index, 0, item);
   return { ...tray, items };
+}
+
+// Bulk import: every group's cards at the end, in order, as many as fit. Adding any turns the
+// tray on.
+export function importTrayCards(tray: Tray, items: CardItem[]) {
+  const room = Math.max(MAX_TRAY_CARDS - tray.items.length, 0);
+  const left = items.length - room;
+  const errors =
+    left > 0
+      ? [`${left} ${left === 1 ? 'Card' : 'Cards'} Didn't Fit (${MAX_TRAY_CARDS} in the Card Tray)`]
+      : [];
+  const added = items.slice(0, room);
+  return {
+    tray: added.length ? { ...tray, enabled: true, items: [...tray.items, ...added] } : tray,
+    errors,
+  };
 }
 
 export function moveTrayCard(tray: Tray, id: string, index: number): Tray {
