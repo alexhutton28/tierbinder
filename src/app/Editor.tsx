@@ -1329,7 +1329,7 @@ export default function Editor() {
   // New results replace the tile a long press was on
   React.useEffect(() => () => cancelLongPress(), [results]);
 
-  // Opens the "Add to" flyout, focusing its first choice when asked (keyboard)
+  // Opens the "Add to" flyout, focusing its first choice when asked
   function openResultFlyout(focus: boolean) {
     flushSync(() => setResultFlyout(true));
     if (focus) resultMenuRef.current?.querySelector<HTMLElement>('[data-flyout] button')?.focus();
@@ -2242,7 +2242,6 @@ export default function Editor() {
               role="menuitem"
               tabIndex={-1}
               className="tierbinder-option"
-              onPointerEnter={() => setResultFlyout(false)}
               onClick={() => {
                 viewResult(shownResultMenu);
                 setResultMenu(null);
@@ -2250,7 +2249,9 @@ export default function Editor() {
             >
               View
             </button>
-            <div className={styles.flyoutAnchor} onPointerEnter={() => openResultFlyout(false)}>
+            {/* The flyout opens on a click (or Enter, or the right arrow), not on hover, and a
+                second click closes it */}
+            <div className={styles.flyoutAnchor}>
               <button
                 ref={resultAddToRef}
                 role="menuitem"
@@ -2258,7 +2259,7 @@ export default function Editor() {
                 aria-haspopup="menu"
                 aria-expanded={resultFlyout}
                 className={`tierbinder-option ${styles.flyoutItem}`}
-                onClick={() => openResultFlyout(true)}
+                onClick={() => (resultFlyout ? setResultFlyout(false) : openResultFlyout(true))}
               >
                 {titleCase(`Add to ${type.targetNoun}`)}
                 <span aria-hidden className={styles.menuChevron} />
