@@ -2,12 +2,12 @@
 
 import React from 'react';
 import ColorField from '../../ui/ColorField';
-import Checkbox from '../../ui/Checkbox';
+import Toggle from '../../ui/Toggle';
 import type { SettingsProps } from '../types';
 import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from './model';
 
-// The blank canvas's part of the Customize tab: card size and top halves, background, and
-// split cards' border
+// The blank canvas's part of the Customize tab: its background and split cards' border in
+// the Board section, and the Cards section (card size and top halves)
 
 export default function BlankSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
@@ -19,32 +19,33 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
           value={canvas.cardWidth}
           onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
         />
-        <Checkbox
+        <Toggle
           checked={canvas.topHalf}
           onChange={(topHalf) => onChange((c) => setCardShape(c, { topHalf }))}
         >
           Show only top half of cards
-        </Checkbox>
+        </Toggle>
       </div>
-      <div className="flex flex-col gap-3">
-        <h3 className="tierbinder-heading">Board</h3>
-        <div className="tierbinder-prop">
-          Background
-          <ColorField
-            label="Background color"
-            value={canvas.background}
-            onChange={(background) => onChange((c) => ({ ...c, background }))}
-          />
-        </div>
-        <div className="tierbinder-prop">
-          Split Card Border
-          <ColorField
-            label="Split card border color"
-            value={canvas.border}
-            onChange={(border) => onChange((c) => ({ ...c, border }))}
-          />
-        </div>
-      </div>
+    </>
+  );
+}
+
+// Its colors, in the editor's Board section
+export function BlankBoardSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
+  return (
+    <>
+      <ColorField
+        name="Background"
+        label="Background color"
+        value={canvas.background}
+        onChange={(background) => onChange((c) => ({ ...c, background }))}
+      />
+      <ColorField
+        name="Split Card Border"
+        label="Split card border color"
+        value={canvas.border}
+        onChange={(border) => onChange((c) => ({ ...c, border }))}
+      />
     </>
   );
 }

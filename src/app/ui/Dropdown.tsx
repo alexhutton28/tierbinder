@@ -10,23 +10,23 @@ import { CARD_HEIGHT, CARD_WIDTH } from '../canvas/size';
 // bottom (.tierbinder-menu.dropdown in globals.css), which a native <select> can't do. Arrow keys move
 // through the options, Enter or Space picks one, Escape closes. An option with a color
 // shows it as a swatch before its name (the tiers); a hidden label is still the button's
-// tooltip. `labelledBy` names it by an element on the page instead (a heading over it), with
-// no label or tooltip of its own. The list floats over the board, in the top layer (useAnchored), so a narrow
+// tooltip. The list floats over the board, in the top layer (useAnchored), so a narrow
 // sidebar doesn't clip it. `current` shows something else on the button than any option
 // (a mode, as in "Splitting Pikachu"), with no option selected; picking any option ends it.
 
-type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card' };
+// A swatch of `color`, or `icon` (a 16px SVG in public/, drawn in the text color)
+type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card'; icon?: string };
 
 export default function Dropdown<T extends string | number>({
   label,
-  labelledBy,
   hideLabel = false,
   chevron = true,
   value,
   options,
   current,
   onChange,
-}: ({ label: string; labelledBy?: undefined } | { label?: undefined; labelledBy: string }) & {
+}: {
+  label: string;
   hideLabel?: boolean;
   chevron?: boolean;
   value: T;
@@ -36,7 +36,7 @@ export default function Dropdown<T extends string | number>({
   onChange: (value: T) => void;
 }) {
   const id = React.useId();
-  const labelId = labelledBy ?? `${id}-label`;
+  const labelId = `${id}-label`;
   const boxRef = React.useRef<HTMLDivElement>(null);
   // Stays on screen while it folds closed; a press outside closes it
   const { open, setOpen, shown, closing } = usePopup(boxRef);
@@ -78,11 +78,9 @@ export default function Dropdown<T extends string | number>({
   return (
     // Shrinks to fit (its button's words cut short with an ellipsis) rather than overflowing
     <div className="flex gap-3 items-center min-w-0">
-      {label !== undefined && (
-        <span id={labelId} className={hideLabel ? 'sr-only' : undefined}>
-          {label}
-        </span>
-      )}
+      <span id={labelId} className={hideLabel ? 'sr-only' : undefined}>
+        {label}
+      </span>
       <div ref={boxRef} className="relative min-w-0">
         <Button
           ref={buttonRef}
@@ -141,8 +139,16 @@ export default function Dropdown<T extends string | number>({
   );
 }
 
-// An option's color as a swatch (also used by the search results' menu)
-export function Swatch({ color, outlined, shape = 'square' }: Look) {
+// An option's color as a swatch, or its icon (also used by the search results' menu)
+export function Swatch({ color, outlined, shape = 'square', icon }: Look) {
+  if (icon)
+    return (
+      <span
+        aria-hidden
+        className={styles.icon}
+        style={{ maskImage: `url('${icon}')` } as React.CSSProperties}
+      />
+    );
   return color ? (
     <span aria-hidden className={styles.swatchBox}>
       <span

@@ -2,12 +2,13 @@
 
 import React from 'react';
 import ColorField from '../../ui/ColorField';
-import Checkbox from '../../ui/Checkbox';
+import Toggle from '../../ui/Toggle';
 import type { SettingsProps } from '../types';
 import type { Tier, TierList } from './model';
 
-// The tier list's part of the Customize tab: tier colors and names, tier card borders,
-// background and border. Double-clicking a tier label focuses its name (`tier:<index>`).
+// The tier list's part of the Customize tab: its background and border in the Board
+// section, and the Tiers section (tier colors and names, tier card borders).
+// Double-clicking a tier label focuses its name (`tier:<index>`).
 
 export default function TierListSettings({
   graphic: list,
@@ -51,32 +52,33 @@ export default function TierListSettings({
             />
           </div>
         ))}
-        <Checkbox
+        <Toggle
           checked={list.tierCardBorders}
           onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}
         >
-          Add tier colored border to cards
-        </Checkbox>
+          Tier colored card borders
+        </Toggle>
       </div>
-      <div className="flex flex-col gap-3">
-        <h3 className="tierbinder-heading">Board</h3>
-        <div className="tierbinder-prop">
-          Background
-          <ColorField
-            label="Background color"
-            value={list.background}
-            onChange={(background) => onChange((l) => ({ ...l, background }))}
-          />
-        </div>
-        <div className="tierbinder-prop">
-          Border
-          <ColorField
-            label="Border color"
-            value={list.border}
-            onChange={(border) => onChange((l) => ({ ...l, border }))}
-          />
-        </div>
-      </div>
+    </>
+  );
+}
+
+// Its colors, in the editor's Board section
+export function TierListBoardSettings({ graphic: list, onChange }: SettingsProps<TierList>) {
+  return (
+    <>
+      <ColorField
+        name="Background"
+        label="Background color"
+        value={list.background}
+        onChange={(background) => onChange((l) => ({ ...l, background }))}
+      />
+      <ColorField
+        name="Border"
+        label="Border color"
+        value={list.border}
+        onChange={(border) => onChange((l) => ({ ...l, border }))}
+      />
     </>
   );
 }

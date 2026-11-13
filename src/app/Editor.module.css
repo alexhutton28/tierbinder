@@ -749,3 +749,12 @@ img.poolCard:not([data-loaded]) {
     transition: opacity var(--duration-fade) ease-out;
   }
 }
+
+/* Feather's trash, before Clear Board and Clear Card Tray in Customize */
+.clearIcon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/trash.svg') center / contain no-repeat;
+}

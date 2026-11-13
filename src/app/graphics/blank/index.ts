@@ -1,6 +1,6 @@
 import type { GraphicType } from '../types';
 import BlankCanvasView from './BlankCanvasView';
-import BlankSettings from './BlankSettings';
+import BlankSettings, { BlankBoardSettings } from './BlankSettings';
 import BlankToolbar from './BlankToolbar';
 import {
   addCard,
@@ -15,10 +15,12 @@ import {
 const blank: GraphicType<BlankCanvas> = {
   kind: 'blank',
   label: 'Blank Canvas',
+  icon: '/blank-canvas.svg',
   targetNoun: 'canvas',
   create: defaultBlankCanvas,
   parse: parseBlankCanvas,
   Canvas: BlankCanvasView,
+  BoardSettings: BlankBoardSettings,
   Settings: BlankSettings,
   Toolbar: BlankToolbar,
   cardWidth: (canvas) => canvas.cardWidth,

@@ -3,9 +3,33 @@
   width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
 }
 
-/* The color as a swatch, which opens the picker. A line inside it in the fields' border
-   color keeps it visible when it's close to the sidebar's own color, lightening on hover
-   and while its picker is open, as a checkbox's does. */
+/* A named color: the swatch and its name, 8px apart, as one row that opens the picker,
+   lighting up like a list option on hover and while its picker is open. It reaches 4px
+   past the column on each side, so the swatch lines up with what's above and below. */
+.row {
+  display: flex;
+  flex: 1;
+  gap: var(--spacing-3);
+  align-items: center;
+  min-height: var(--tb-control-height);
+  margin-inline: calc(-1 * var(--spacing-2));
+  padding-inline: var(--spacing-2);
+  border-radius: var(--tb-radius);
+  color: var(--tb-text);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.row:hover,
+.row[aria-expanded='true'] {
+  background: var(--tb-control-hover);
+}
+
+/* The color as a swatch, which opens the picker (or shows it, in a named row). A line
+   inside it in the fields' border color keeps it visible when it's close to the
+   sidebar's own color, lightening on hover and while its picker is open, as a
+   checkbox's does. */
 .swatch {
   position: relative;
   flex: none;
@@ -22,10 +46,22 @@
   box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
 }
 
-/* On touch screens it takes taps 44px tall, reaching above and below it without moving
-   anything (not sideways, where the hex field is 4px away) */
+.row:hover .swatch,
+.row[aria-expanded='true'] .swatch {
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
+}
+
+/* On touch screens a lone swatch takes taps 44px tall, reaching above and below it
+   without moving anything (not sideways, where a tier's name field is 8px away); a named
+   row is 44px tall itself, giving the extra back as negative margin, as checkboxes and
+   toggles do, so settings keep their spacing */
 @media (pointer: coarse) {
-  .swatch::after {
+  .row {
+    min-height: var(--tb-touch-target);
+    margin-block: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
+  }
+
+  button.swatch::after {
     position: absolute;
     inset: calc((var(--tb-swatch) - var(--tb-touch-target)) / 2) 0;
     content: '';
