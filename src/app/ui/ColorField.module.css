@@ -3,24 +3,94 @@
   width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
 }
 
-/* The browser's color picker, as a plain swatch */
+/* The color as a swatch, which opens the picker. A line inside it in the fields' border
+   color keeps it visible when it's close to the sidebar's own color, lightening on hover
+   and while its picker is open, as a checkbox's does. */
 .swatch {
+  position: relative;
   flex: none;
   width: var(--tb-swatch);
   height: var(--tb-swatch);
   border-radius: var(--tb-radius);
-  overflow: hidden;
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border);
   cursor: pointer;
+  transition: box-shadow var(--duration-hover) ease-out;
 }
 
-.swatch::-webkit-color-swatch-wrapper {
-  padding: 0;
+.swatch:hover,
+.swatch[aria-expanded='true'] {
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
 }
 
-.swatch::-webkit-color-swatch {
-  border: 0;
+/* On touch screens it takes taps 44px tall, reaching above and below it without moving
+   anything (not sideways, where the hex field is 4px away) */
+@media (pointer: coarse) {
+  .swatch::after {
+    position: absolute;
+    inset: calc((var(--tb-swatch) - var(--tb-touch-target)) / 2) 0;
+    content: '';
+  }
 }
 
-.swatch::-moz-color-swatch {
-  border: 0;
+/* 16px around the picker, as the Sets popup has; placed by .tierbinder-anchored, and
+   scrolling if the window is too short for it */
+.popup {
+  padding: var(--spacing-4);
+  overflow-y: auto;
 }
+
+.popup:focus-visible {
+  outline: none;
+}
+
+/* react-colorful's parts, in the design system's look: the square fills the picker's
+   width at 4:3, the hue bar under it 8px away, both with the controls' corners; the
+   handles are rings in --tb-picker-handle with the popup's shadow, a swatch's size, ringed
+   in the focus color only for the keyboard. Its own stylesheet, added after ours, sets
+   sizes these replace, so they're one class more specific. */
+/* stylelint-disable selector-pseudo-class-no-unknown, selector-class-pattern -- :global
+   reaches react-colorful's own class names */
+.picker:global(.react-colorful) {
+  --handle: var(--tb-swatch);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  width: var(--tb-picker-width);
+  height: auto;
+  user-select: none;
+
+  & :global(.react-colorful__saturation) {
+    flex: none;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--tb-radius);
+    border-bottom: 0;
+  }
+
+  & :global(.react-colorful__hue) {
+    flex: none;
+    height: var(--tb-hue-height);
+    border-radius: var(--tb-radius);
+  }
+
+  & :global(.react-colorful__interactive) {
+    outline: none;
+  }
+
+  & :global(.react-colorful__pointer) {
+    width: var(--handle);
+    height: var(--handle);
+    border: calc(2 * var(--tb-line-width)) solid var(--tb-picker-handle);
+    box-shadow: var(--tb-popup-shadow);
+  }
+
+  /* Right against the handle, so the ring stays inside the popup's padding */
+  & :global(.react-colorful__interactive:focus .react-colorful__pointer) {
+    transform: translate(-50%, -50%);
+  }
+
+  & :global(.react-colorful__interactive:focus-visible .react-colorful__pointer) {
+    outline: var(--tb-focus-width) solid var(--tb-focus);
+  }
+}
+/* stylelint-enable selector-pseudo-class-no-unknown, selector-class-pattern */

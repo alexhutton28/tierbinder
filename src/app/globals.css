@@ -57,6 +57,9 @@ body {
 
   /* An unticked checkbox under the pointer */
   --tb-field-border-hover: var(--color-petrel-600);
+
+  /* The color picker's handles */
+  --tb-picker-handle: var(--color-petrel-50);
   --tb-primary: var(--color-storm-300);
   --tb-primary-hover: var(--color-storm-200);
   --tb-primary-text: var(--color-petrel-950);
@@ -94,6 +97,11 @@ body {
   /* The smallest comfortable thing to tap (Apple's guideline) */
   --tb-touch-target: 44px;
   --tb-swatch: 24px;
+
+  /* The color picker: its width (react-colorful's own default size, chosen by eye; see
+     Exceptions) and its hue bar's height */
+  --tb-picker-width: 200px;
+  --tb-hue-height: 16px;
   --tb-number-field: 64px;
 
   /* The default sidebar width until the main nav is measured: Editor.tsx then sets it on
