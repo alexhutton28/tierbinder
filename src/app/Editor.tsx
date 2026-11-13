@@ -57,7 +57,7 @@ import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
-import { launchFlights, wholeOnScreen, type Flight } from './ui/flights';
+import { launchFlights, onScreen, wholeOnScreen, type Flight } from './ui/flights';
 import { titleCase } from './text';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
@@ -92,6 +92,21 @@ function mapEveryCard(g: Graphic, change: (item: CardItem) => CardItem | null): 
 function withTray(g: Graphic, tray: Tray | { error: string }): Placed<Graphic> {
   return 'error' in tray ? tray : ({ ...g, tray: { ...tray, enabled: true } } as Graphic);
 }
+
+// What clicking a featured pool does, as its label (with its icon, by `data-action` in
+// Editor.module.css) and its accessible name says: list its set, add its cards to the tray, or take them back out
+const POOL_ACTIONS = {
+  filter: { label: 'Filter', aria: 'filter search to this set' },
+  add: { label: 'Add to Card Tray', aria: 'add to card tray' },
+  remove: { label: 'Remove From Card Tray', aria: 'remove from card tray' },
+} as const;
+
+// The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
+const removedMessage = (n: number) =>
+  `Removed ${n} ${n === 1 ? 'Card' : 'Cards'} From the Card Tray`;
+
+// The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
+const TRAY_MENU = 'tray';
 
 // The card menu's narrowest width; it opens left of the pointer when this wouldn't fit
 // inside the board's right edge
@@ -422,14 +437,30 @@ export default function Editor() {
   const [tool, setTool] = React.useState(DEFAULT_TOOL);
   // Board button whose choices are showing: confirming Clear board, or picking a type
   const [confirmingClear, setConfirmingClear] = React.useState(false);
+  // Confirming Clear Card Tray, in Customize
+  const [confirmingTrayClear, setConfirmingTrayClear] = React.useState(false);
+  // Its button, Cancel, and Clear Board's button, for focus to move between as it confirms
+  const clearTrayRef = React.useRef<HTMLButtonElement>(null);
+  const cancelTrayClearRef = React.useRef<HTMLButtonElement>(null);
+  const clearBoardRef = React.useRef<HTMLButtonElement>(null);
+  // Pools whose cards are still flying in: they don't offer to take them back out yet, so a
+  // double click doesn't send them straight back
+  const [flyingPools, setFlyingPools] = React.useState<ReadonlySet<string>>(new Set());
+  // The tray cards each pool added last, by pool name (for this visit; a reload forgets),
+  // so clicking it again takes back exactly those
+  const [poolAdds, setPoolAdds] = React.useState<Record<string, string[]>>({});
   const [tab, setTab] = React.useState<Tab>('add');
   // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
   // result, and the point it was dropped at), positioned in the board's on-screen pixels
+  // The card tray's own menu shares it, with `id` TRAY_MENU (opened on the tray's space);
+  // `confirming`, while it asks whether to clear the tray, is how many cards that clears
+  // (kept, so the label holds while the menu folds closed)
   const [cardMenu, setCardMenu] = React.useState<{
     id: string;
     x: number;
     y: number;
     dropped?: { card: CardResult; point: Point };
+    confirming?: number;
   } | null>(null);
   const cardMenuRef = React.useRef<HTMLDivElement>(null);
   // Menu for a search result, from a right-click (or the menu key): View, and Add to with
@@ -917,6 +948,7 @@ export default function Editor() {
       setTool(DEFAULT_TOOL);
     }
     setConfirmingClear(false);
+    setConfirmingTrayClear(false);
   }
 
   // Applies a placed card, or shows why it couldn't be placed
@@ -1027,6 +1059,22 @@ export default function Editor() {
     if (!selectedId || !selectedShown) return;
     removeCard(selectedId);
   }, [selectedId, selectedShown, removeCard]);
+
+  // Nothing to confirm once the tray is off or empty, however it got there
+  if (confirmingTrayClear && (!graphic.tray.enabled || !graphic.tray.items.length)) {
+    setConfirmingTrayClear(false);
+  }
+
+  // Empties the card tray, keeping it on; a selected tray card goes with it
+  function clearTray() {
+    const count = graphic.tray.items.length;
+    const ids = new Set(graphic.tray.items.map((i) => i.id));
+    setGraphic((g) => ({ ...g, tray: { ...g.tray, items: [] } }));
+    setSelectedId((selected) => (selected && ids.has(selected) ? null : selected));
+    setPicking((p) => (p && ids.has(p.id) ? null : p));
+    setConfirmingTrayClear(false);
+    if (count) showToast(removedMessage(count));
+  }
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
   // board's background does; the card menu is on the board, so using it keeps the card.
@@ -1282,6 +1330,12 @@ export default function Editor() {
   // The card menu's items: for a clicked card, or for a search result dropped on it
   const cardMenuItems = (menu: CardMenu) => {
     const { id, dropped } = menu;
+    // The tray's own menu: Clear Card Tray, then once picked, how many it would clear (or
+    // Cancel) to confirm it, in the menu itself
+    if (id === TRAY_MENU) {
+      const n = menu.confirming;
+      return n ? [`Clear ${n} ${n === 1 ? 'card' : 'cards'}`, 'Cancel'] : ['Clear card tray'];
+    }
     const split = findCard(id)?.split;
     if (dropped) {
       return split
@@ -1293,8 +1347,19 @@ export default function Editor() {
       : ['View', 'Remove card', 'Replace card', 'Make split card'];
   };
 
+  // Runs a menu item; true when the menu stays open (the tray's, asking to confirm)
   function runCardMenuItem(menu: CardMenu, label: string) {
     const { id, dropped } = menu;
+    if (id === TRAY_MENU) {
+      if (label === 'Clear card tray') {
+        // Its items change under the focus: it goes to the first new one
+        flushSync(() => setCardMenu({ ...menu, confirming: graphic.tray.items.length }));
+        cardMenuRef.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
+        return true;
+      }
+      if (label.startsWith('Clear ')) clearTray();
+      return false;
+    }
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
     // dropped
     if (dropped) {
@@ -1327,9 +1392,12 @@ export default function Editor() {
   // once; a pool's cards instead scroll the tray into view first, then fly up to it.
   function flyIn(
     cards: { id: string; thumb: HTMLImageElement | undefined; src: string }[],
-    { pool = false } = {}
+    { pool = false, onDone = () => {} } = {}
   ) {
-    if (!cards.length) return;
+    if (!cards.length) {
+      onDone();
+      return;
+    }
     const ids = cards.map((c) => c.id);
     // Whether the last new card's spot (in the tray's lowest row) is partly off screen, once
     // the cards are laid out (React has drawn them by the next task; not the next frame,
@@ -1345,11 +1413,17 @@ export default function Editor() {
           if (trayHidden()) boardBoxRef.current?.scrollIntoView({ block: 'end' });
         });
       }
+      onDone();
       return;
     }
     setArriving((a) => new Set([...a, ...ids]));
-    const land = (landed: string[]) =>
+    // Calls onDone once every card has landed
+    const flying = new Set(ids);
+    const land = (landed: string[]) => {
       setArriving((a) => new Set([...a].filter((id) => !landed.includes(id))));
+      landed.forEach((id) => flying.delete(id));
+      if (!flying.size) onDone();
+    };
     // Until they leave (a pool waiting for the page to scroll), landing them (before an
     // export, or on leaving the page) shows them and stops the wait
     let cleanUp = () => {};
@@ -1440,7 +1514,7 @@ export default function Editor() {
   function addPool(pool: Pool, button: HTMLElement) {
     // Adding ends a split being made, as the result menu's choices do
     if (splitPicker) setPicking(null);
-    const cards = pool.cards.filter((card) => !failedPoolCards.has(`${card.set} ${card.number}`));
+    const cards = loadablePoolCards(pool);
     if (!cards.length) {
       showToast("Couldn't Load This Pool");
       return;
@@ -1469,15 +1543,93 @@ export default function Editor() {
         ...placed.errors,
       ].join('\n')
     );
+    if (!added.length) return;
+    setPoolAdds((adds) => ({ ...adds, [pool.name]: added.map((item) => item.id) }));
     const thumbs = [...button.querySelectorAll('img')];
+    setFlyingPools((f) => new Set(f).add(pool.name));
     flyIn(
       added.map((item, n) => ({
         id: item.id,
         thumb: thumbs[fresh[n].i] ?? thumbs.at(-1),
         src: fresh[n].card.thumb,
       })),
-      { pool: true }
+      {
+        pool: true,
+        onDone: () => setFlyingPools((f) => new Set([...f].filter((name) => name !== pool.name))),
+      }
     );
+  }
+
+  // A pool's cards that load
+  const loadablePoolCards = (pool: Pool) =>
+    pool.cards.filter((card) => !failedPoolCards.has(`${card.set} ${card.number}`));
+  // The cards a pool added last, while every one of them is still in the showing tray (none
+  // moved to the board or removed) and none is still flying in: clicking the pool again then
+  // takes them back out (removePool)
+  function poolInTray(pool: Pool) {
+    const ids = poolAdds[pool.name];
+    if (pool.filter || !ids?.length || !trayShown || flyingPools.has(pool.name)) return null;
+    const inTray = new Set(graphic.tray.items.map((i) => i.id));
+    return ids.every((id) => inTray.has(id)) ? ids : null;
+  }
+
+  // Takes a pool's cards back out of the card tray, each flying from its spot back to its
+  // thumbnail in the pool (`button`), the way it came, unless motion is reduced
+  function removePool(pool: Pool, ids: string[], button: HTMLElement) {
+    const spot = landing();
+    // Only those on screen fly (on a phone the tray may be scrolled away above the pools)
+    const from = ids.map((id) => {
+      const box = spot(id);
+      return box && onScreen(box) ? box : null;
+    });
+    const gone = new Set(ids);
+    setPoolAdds((adds) =>
+      Object.fromEntries(Object.entries(adds).filter(([name]) => name !== pool.name))
+    );
+    setPicking((p) => (p && gone.has(p.id) ? null : p));
+    setGraphic(() => ({
+      ...graphic,
+      tray: mapTray(graphic.tray, (i) => (gone.has(i.id) ? null : i)),
+    }));
+    setSelectedId((selected) => (selected && gone.has(selected) ? null : selected));
+    showToast(removedMessage(ids.length));
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Each card's thumbnail: its place in the pool's preview (the pool may have added only
+    // some of its cards), or the last one's for cards past it
+    const thumbs = [...button.querySelectorAll('img')];
+    const cards = loadablePoolCards(pool);
+    const thumbOf = (id: string) => {
+      const item = graphic.tray.items.find((i) => i.id === id);
+      const at = cards.findIndex((c) => c.set === item?.set && c.number === item?.number);
+      return thumbs[at] ?? thumbs.at(-1);
+    };
+    const flights: Flight[] = ids.flatMap((id, i) => {
+      const thumb = thumbOf(id);
+      const box = from[i];
+      if (!thumb || !box) return [];
+      return [{ id, src: (thumb.complete && thumb.currentSrc) || thumb.src, from: box }];
+    });
+    if (!flights.length) return;
+    // Where each lands: its thumbnail as it is now (gone, if the pools closed meanwhile)
+    const back = () => (id: string) => {
+      const thumb = thumbOf(id);
+      if (!thumb?.isConnected) return null;
+      const box = thumb.getBoundingClientRect();
+      if (!box.width) return null;
+      return {
+        left: box.left,
+        top: box.top,
+        width: box.width,
+        height: box.height,
+        radius: parseFloat(getComputedStyle(thumb).borderTopLeftRadius) || 0,
+      };
+    };
+    let flying = flights.length;
+    const stop = launchFlights(flights, back, (landed) => {
+      flying -= landed.length;
+      if (flying === 0) stopFlights.current.delete(stop);
+    });
+    stopFlights.current.add(stop);
   }
 
   // A set's pool (Delta Reign) lists that set whole in the search, as ticking it alone in
@@ -2133,72 +2285,78 @@ export default function Editor() {
               {!searchShown && (
                 <div className="flex flex-col gap-3">
                   <h3 className="tierbinder-heading">Featured Card Pools</h3>
-                  {FEATURED_POOLS.map((pool) => (
-                    <button
-                      key={pool.name}
-                      type="button"
-                      className={styles.pool}
-                      aria-label={`${pool.name}: ${pool.filter ? 'filter search to this set' : 'add to card tray'}`}
-                      onClick={(e) =>
-                        pool.filter ? filterToSet(pool.filter) : addPool(pool, e.currentTarget)
-                      }
-                    >
-                      {/* Its name, and what clicking it does */}
-                      <span className={`${styles.poolName} text-caption`}>
-                        <span className="font-semibold">{pool.name}</span>
-                        <span className={styles.poolAction} aria-hidden>
-                          <span
-                            className={`${styles.poolIcon} ${pool.filter ? styles.poolIconFilter : ''}`}
-                          />
-                          {pool.filter ? 'Filter' : 'Add to Card Tray'}
-                        </span>
-                      </span>
-                      {/* A fixed number of columns, so every pool's cards are the same size */}
-                      <span
-                        className={styles.poolCards}
-                        style={
-                          {
-                            '--pool-columns': POOL_PREVIEW_CARDS,
-                            '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
-                          } as React.CSSProperties
-                        }
+                  {FEATURED_POOLS.map((pool) => {
+                    const inTray = poolInTray(pool);
+                    // What clicking it does: list its set, add its cards, or take them back out
+                    const action = pool.filter ? 'filter' : inTray ? 'remove' : 'add';
+                    return (
+                      <button
+                        key={pool.name}
+                        type="button"
+                        className={styles.pool}
+                        aria-label={`${pool.name}: ${POOL_ACTIONS[action].aria}`}
+                        onClick={(e) => {
+                          if (pool.filter) filterToSet(pool.filter);
+                          else if (inTray) removePool(pool, inTray, e.currentTarget);
+                          else addPool(pool, e.currentTarget);
+                        }}
                       >
-                        {poolPreview(pool).map((card) => (
-                          // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
-                          <img
-                            key={`${card.set}-${card.number}`}
-                            src={card.thumb}
-                            alt={`${card.name} (${card.set} ${card.number})`}
-                            title={`${card.name} (${card.set} ${card.number})`}
-                            className={styles.poolCard}
-                            // Shimmers until it's loaded, as search results do
-                            onLoad={(e) => {
-                              e.currentTarget.dataset.loaded = '';
-                            }}
-                            loading="lazy"
-                            draggable={false}
-                            // The CDN occasionally fails a load; retry once through the proxy, and
-                            // if that fails too, a placeholder takes its place
-                            onError={(e) => {
-                              const proxy = proxied(card.thumb);
-                              if (!e.currentTarget.src.endsWith(proxy)) e.currentTarget.src = proxy;
-                              else
-                                setFailedPoolCards((failed) =>
-                                  new Set(failed).add(`${card.set} ${card.number}`)
-                                );
-                            }}
-                          />
-                        ))}
-                        {/* Card-shaped placeholders fill the rest of the row */}
-                        {Array.from(
-                          { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
-                          (_, i) => (
-                            <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
-                          )
-                        )}
-                      </span>
-                    </button>
-                  ))}
+                        {/* Its name, and what clicking it does */}
+                        <span className={`${styles.poolName} text-caption`}>
+                          <span className="font-semibold">{pool.name}</span>
+                          <span className={styles.poolAction} aria-hidden>
+                            <span className={styles.poolIcon} data-action={action} />
+                            {POOL_ACTIONS[action].label}
+                          </span>
+                        </span>
+                        {/* A fixed number of columns, so every pool's cards are the same size */}
+                        <span
+                          className={styles.poolCards}
+                          style={
+                            {
+                              '--pool-columns': POOL_PREVIEW_CARDS,
+                              '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                            } as React.CSSProperties
+                          }
+                        >
+                          {poolPreview(pool).map((card) => (
+                            // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                            <img
+                              key={`${card.set}-${card.number}`}
+                              src={card.thumb}
+                              alt={`${card.name} (${card.set} ${card.number})`}
+                              title={`${card.name} (${card.set} ${card.number})`}
+                              className={styles.poolCard}
+                              // Shimmers until it's loaded, as search results do
+                              onLoad={(e) => {
+                                e.currentTarget.dataset.loaded = '';
+                              }}
+                              loading="lazy"
+                              draggable={false}
+                              // The CDN occasionally fails a load; retry once through the proxy, and
+                              // if that fails too, a placeholder takes its place
+                              onError={(e) => {
+                                const proxy = proxied(card.thumb);
+                                if (!e.currentTarget.src.endsWith(proxy))
+                                  e.currentTarget.src = proxy;
+                                else
+                                  setFailedPoolCards((failed) =>
+                                    new Set(failed).add(`${card.set} ${card.number}`)
+                                  );
+                              }}
+                            />
+                          ))}
+                          {/* Card-shaped placeholders fill the rest of the row */}
+                          {Array.from(
+                            { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
+                            (_, i) => (
+                              <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
+                            )
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
@@ -2290,6 +2448,49 @@ export default function Editor() {
                   />
                 </div>
               )}
+              {/* While it holds cards; confirmed on the page, as Clear Board is */}
+              {graphic.tray.enabled &&
+                graphic.tray.items.length > 0 &&
+                // Focus follows: to Cancel while it asks (the question is read with it), back to
+                // the button on Cancel, and to Clear Board once the tray is cleared and its
+                // button gone
+                (confirmingTrayClear ? (
+                  <div
+                    role="group"
+                    aria-label="Clear the card tray?"
+                    className="flex flex-wrap gap-3 items-center"
+                  >
+                    Clear the Card Tray?
+                    <Button
+                      onClick={() => {
+                        flushSync(clearTray);
+                        clearBoardRef.current?.focus();
+                      }}
+                    >
+                      Yes
+                    </Button>
+                    <Button
+                      ref={cancelTrayClearRef}
+                      onClick={() => {
+                        flushSync(() => setConfirmingTrayClear(false));
+                        clearTrayRef.current?.focus();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    ref={clearTrayRef}
+                    className="self-start"
+                    onClick={() => {
+                      flushSync(() => setConfirmingTrayClear(true));
+                      cancelTrayClearRef.current?.focus();
+                    }}
+                  >
+                    Clear Card Tray
+                  </Button>
+                ))}
               {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
               16px above it, as between sections, so it doesn't read as part of the last one */}
               {confirmingClear ? (
@@ -2301,7 +2502,11 @@ export default function Editor() {
                   <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
                 </div>
               ) : (
-                <Button className="mt-3 self-start" onClick={() => setConfirmingClear(true)}>
+                <Button
+                  ref={clearBoardRef}
+                  className="mt-3 self-start"
+                  onClick={() => setConfirmingClear(true)}
+                >
                   Clear Board
                 </Button>
               )}
@@ -2419,6 +2624,7 @@ export default function Editor() {
                     onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                     onCardDrop={trayCardDrop}
                     onPick={() => setTarget(boardTargets.length)}
+                    onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
                     boardCardWidth={boardCardWidth}
                     hintFont={interfaceFont}
                     showHint={!trayHintSeen}
@@ -2452,39 +2658,41 @@ export default function Editor() {
                     ))}
                 </Layer>
               </Stage>
-              {shownMenu && (menuClosing || findCard(shownMenu.id)) && (
-                <div
-                  // A new element for each menu, so each one plays the opening animation
-                  key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
-                  ref={cardMenuRef}
-                  role="menu"
-                  onContextMenu={(e) => e.preventDefault()}
-                  className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
-                  // Kept inside the board's right edge
-                  style={{
-                    minWidth: MENU_WIDTH,
-                    left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
-                    // In the card tray, at the board's foot, it opens upward from the pointer
-                    ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
-                      ? { bottom: `calc(100% - ${shownMenu.y}px)` }
-                      : { top: shownMenu.y }),
-                  }}
-                >
-                  {cardMenuItems(shownMenu).map((label) => (
-                    <button
-                      key={label}
-                      role="menuitem"
-                      className="tierbinder-option"
-                      onClick={() => {
-                        runCardMenuItem(shownMenu, label);
-                        setCardMenu(null);
-                      }}
-                    >
-                      {titleCase(label)}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {shownMenu &&
+                (menuClosing ||
+                  findCard(shownMenu.id) ||
+                  (shownMenu.id === TRAY_MENU && trayShown && graphic.tray.items.length > 0)) && (
+                  <div
+                    // A new element for each menu, so each one plays the opening animation
+                    key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
+                    ref={cardMenuRef}
+                    role="menu"
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                    // Kept inside the board's right edge
+                    style={{
+                      minWidth: MENU_WIDTH,
+                      left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
+                      // In the card tray, at the board's foot, it opens upward from the pointer
+                      ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
+                        ? { bottom: `calc(100% - ${shownMenu.y}px)` }
+                        : { top: shownMenu.y }),
+                    }}
+                  >
+                    {cardMenuItems(shownMenu).map((label) => (
+                      <button
+                        key={label}
+                        role="menuitem"
+                        className="tierbinder-option"
+                        onClick={() => {
+                          if (!runCardMenuItem(shownMenu, label)) setCardMenu(null);
+                        }}
+                      >
+                        {titleCase(label)}
+                      </button>
+                    ))}
+                  </div>
+                )}
             </div>
 
             {type.Toolbar && (

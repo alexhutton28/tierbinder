@@ -67,7 +67,7 @@ export const wholeOnScreen = (box: Box) =>
   box.left + box.width <= innerWidth;
 
 // Whether any of a box shows in the window
-const onScreen = (box: Box) =>
+export const onScreen = (box: Box) =>
   box.top < innerHeight &&
   box.top + box.height > 0 &&
   box.left < innerWidth &&

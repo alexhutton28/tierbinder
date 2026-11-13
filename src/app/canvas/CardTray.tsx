@@ -85,6 +85,7 @@ export default function CardTray({
   onCardMenu,
   onCardDrop,
   onPick,
+  onTrayMenu,
   listening,
   boardCardWidth,
   hintFont,
@@ -105,6 +106,9 @@ export default function CardTray({
   onCardDrop: (id: string, x: number, y: number) => void;
   // The tray's own space was clicked, making it the Add to target
   onPick: () => void;
+  // The tray's own space was right-clicked, while it holds cards: its menu (Clear Card
+  // Tray), at x, y in the stage's on-screen pixels
+  onTrayMenu: (x: number, y: number) => void;
   // Off while a drawing tool is active
   listening: boolean;
   // The board's card width: a card dragged out of the tray grows to it
@@ -131,6 +135,12 @@ export default function CardTray({
             if (e.evt.button === 0) onPick();
           }}
           onTap={onPick}
+          onContextMenu={(e) => {
+            if (!tray.items.length) return;
+            e.evt.preventDefault();
+            const pointer = e.target.getStage()?.getPointerPosition();
+            if (pointer) onTrayMenu(pointer.x, pointer.y);
+          }}
         />
         {showHint && tray.items.length === 0 && (
           // What it's for, quietly, while it's empty

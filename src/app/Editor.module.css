@@ -550,9 +550,9 @@
   background: var(--tb-option-hover);
 }
 
-/* The pool's name, then at the row's end what clicking it does, muted: Feather's plus, the
-   size of the text, and "Add to Card Tray" (or for a set's pool, Feather's filter and
-   "Filter"), wrapping under the name in a narrow sidebar */
+/* The pool's name, then at the row's end what clicking it does, muted: a Feather icon the
+   size of the text (plus, or minus or filter by its data-action) and "Add to Card Tray", "Remove From Card Tray" or "Filter", wrapping under
+   the name in a narrow sidebar */
 .poolName {
   display: flex;
   gap: var(--spacing-2);
@@ -578,8 +578,13 @@
   mask: url('/plus.svg') center / contain no-repeat;
 }
 
-/* A set's pool filters the search instead: Feather's filter, as the Sets button has */
-.poolIconFilter {
+/* The other actions' icons (Editor.tsx's POOL_ACTIONS): taking a pool's cards back out, and
+   a set's pool filtering the search, as the Sets button's icon does */
+.poolIcon[data-action='remove'] {
+  mask-image: url('/minus.svg');
+}
+
+.poolIcon[data-action='filter'] {
   mask-image: url('/filter.svg');
 }
 
