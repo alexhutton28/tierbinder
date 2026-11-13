@@ -550,8 +550,9 @@
   background: var(--tb-option-hover);
 }
 
-/* The pool's name, then at the row's end where its cards go, muted: Feather's plus, the
-   size of the text, and "Add to Card Tray", wrapping under the name in a narrow sidebar */
+/* The pool's name, then at the row's end what clicking it does, muted: Feather's plus, the
+   size of the text, and "Add to Card Tray" (or for a set's pool, Feather's filter and
+   "Filter"), wrapping under the name in a narrow sidebar */
 .poolName {
   display: flex;
   gap: var(--spacing-2);
@@ -575,6 +576,11 @@
   height: 1em;
   background: currentcolor;
   mask: url('/plus.svg') center / contain no-repeat;
+}
+
+/* A set's pool filters the search instead: Feather's filter, as the Sets button has */
+.poolIconFilter {
+  mask-image: url('/filter.svg');
 }
 
 .poolCards {

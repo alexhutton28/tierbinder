@@ -160,10 +160,11 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
 
-// Card pools shown in Add Cards before a search: each previews up to POOL_PREVIEW_CARDS
-// cards in a row, or card-shaped placeholders while it has none. Clicking one adds its
-// cards to the card tray, flying in from the preview (addPool).
-type Pool = { name: string; cards: CardResult[] };
+// Card pools shown in Add Cards before a search: each previews its first POOL_PREVIEW_CARDS
+// cards in a row, or card-shaped placeholders while it has none. Clicking one adds all its
+// cards to the card tray, flying in from the preview (addPool); a pool with a `filter` (a
+// set code) instead lists that set in the search, its cards being the preview alone.
+type Pool = { name: string; cards: CardResult[]; filter?: string };
 // How long the search options must stay unchanged before they rerun the search
 const SEARCH_DELAY = 300;
 
@@ -188,16 +189,8 @@ const poolCard = (set: string, number: string, name: string, path: string): Card
   thumb: `https://assets.tcgdex.net/en/${path}/low.webp`,
 });
 
-// One TCGdex has no image for, from pokemon-tcg-data's image hosts (as extra-images.json
-// has it): Scrydex's by card id (me6-84), or pokemontcg.io's by path (sm35/53). Switch it
-// to poolCard once TCGdex has the image.
-const scrydexCard = (set: string, number: string, name: string, id: string): CardResult => ({
-  set,
-  number,
-  name,
-  image: `https://images.scrydex.com/pokemon/${id}/large`,
-  thumb: `https://images.scrydex.com/pokemon/${id}/small`,
-});
+// One TCGdex has no image for, from pokemontcg.io (as extra-images.json has it), by path
+// (sm35/53). Switch it to poolCard once TCGdex has the image.
 const pokemontcgCard = (set: string, number: string, name: string, path: string): CardResult => ({
   set,
   number,
@@ -208,6 +201,7 @@ const pokemontcgCard = (set: string, number: string, name: string, path: string)
 
 const FEATURED_POOLS: Pool[] = [
   {
+    // The first six as previewed, then the rest in the order Alex listed them
     name: 'Best Decks of All Time',
     cards: [
       pokemontcgCard('SLG', '53', 'Zoroark-GX', 'sm35/53'),
@@ -216,20 +210,33 @@ const FEATURED_POOLS: Pool[] = [
       poolCard('FST', '114', 'Mew VMAX', 'swsh/swsh8/114'),
       poolCard('SIT', '139', 'Lugia VSTAR', 'swsh/swsh12/139'),
       poolCard('TWM', '130', 'Dragapult ex', 'sv/sv06/130'),
+      poolCard('BRS', '123', 'Arceus VSTAR', 'swsh/swsh9/123'),
+      poolCard('GRI', '51', 'Garbodor', 'sm/sm2/51'),
+      poolCard('OBF', '125', 'Charizard ex', 'sv/sv03/125'),
+      poolCard('LOR', '79', 'Comfey', 'swsh/swsh11/079'),
+      poolCard('TEU', '33', 'Pikachu & Zekrom GX', 'sm/sm9/33'),
+      poolCard('BUS', '93', 'Gardevoir GX', 'sm/sm3/93'),
+      poolCard('STS', '26', 'Volcanion EX', 'xy/xy11/26'),
+      poolCard('BST', '88', 'Rapid Strike Urshifu VMAX', 'swsh/swsh5/88'),
     ],
   },
   {
+    // Lists the whole set in the search instead of adding cards
     name: 'Delta Reign',
+    filter: 'DLR',
     cards: [
-      scrydexCard('DLR', '84', 'Mega Rayquaza ex', 'me6-84'),
-      scrydexCard('DLR', '88', 'Talonflame ex', 'me6-88'),
-      scrydexCard('DLR', '11', 'Mega Golisopod ex', 'me6-11'),
-      scrydexCard('DLR', '69', 'Mega Malamar ex', 'me6-69'),
-      scrydexCard('DLR', '47', 'Mega Golurk ex', 'me6-47'),
-      scrydexCard('DLR', '33', 'Raikou ex', 'me6-33'),
+      poolCard('DLR', '84', 'Mega Rayquaza ex', 'me/me06/084'),
+      poolCard('DLR', '88', 'Talonflame ex', 'me/me06/088'),
+      poolCard('DLR', '11', 'Mega Golisopod ex', 'me/me06/011'),
+      poolCard('DLR', '69', 'Mega Malamar ex', 'me/me06/069'),
+      poolCard('DLR', '47', 'Mega Golurk ex', 'me/me06/047'),
+      poolCard('DLR', '33', 'Raikou ex', 'me/me06/033'),
     ],
   },
   {
+    // Every Mega Pokémon ex of the Mega Evolution era's sets (not promos), each in its
+    // first print, its lowest number in the first set it came out in: the six previewed,
+    // then the rest by release
     name: 'Mega Evolution Cards',
     cards: [
       poolCard('MEG', '104', 'Mega Kangaskhan ex', 'me/me01/104'),
@@ -238,6 +245,45 @@ const FEATURED_POOLS: Pool[] = [
       poolCard('MEG', '86', 'Mega Absol ex', 'me/me01/086'),
       poolCard('PBL', '65', 'Mega Excadrill ex', 'me/me05/065'),
       poolCard('CRI', '22', 'Mega Greninja ex', 'me/me04/022'),
+      poolCard('MEG', '3', 'Mega Venusaur ex', 'me/me01/003'),
+      poolCard('MEG', '22', 'Mega Camerupt ex', 'me/me01/022'),
+      poolCard('MEG', '36', 'Mega Abomasnow ex', 'me/me01/036'),
+      poolCard('MEG', '50', 'Mega Manectric ex', 'me/me01/050'),
+      poolCard('MEG', '60', 'Mega Gardevoir ex', 'me/me01/060'),
+      poolCard('MEG', '94', 'Mega Mawile ex', 'me/me01/094'),
+      poolCard('MEG', '100', 'Mega Latias ex', 'me/me01/100'),
+      poolCard('PFL', '4', 'Mega Heracross ex', 'me/me02/004'),
+      poolCard('PFL', '41', 'Mega Diancie ex', 'me/me02/041'),
+      poolCard('PFL', '56', 'Mega Gengar ex', 'me/me02/056'),
+      poolCard('PFL', '61', 'Mega Sharpedo ex', 'me/me02/061'),
+      poolCard('PFL', '84', 'Mega Lopunny ex', 'me/me02/084'),
+      poolCard('ASC', '10', 'Mega Meganium ex', 'me/me02.5/010'),
+      poolCard('ASC', '22', 'Mega Charizard Y ex', 'me/me02.5/022'),
+      poolCard('ASC', '31', 'Mega Emboar ex', 'me/me02.5/031'),
+      poolCard('ASC', '43', 'Mega Feraligatr ex', 'me/me02.5/043'),
+      poolCard('ASC', '47', 'Mega Froslass ex', 'me/me02.5/047'),
+      poolCard('ASC', '61', 'Mega Eelektross ex', 'me/me02.5/061'),
+      poolCard('ASC', '116', 'Mega Hawlucha ex', 'me/me02.5/116'),
+      poolCard('ASC', '135', 'Mega Scrafty ex', 'me/me02.5/135'),
+      poolCard('ASC', '152', 'Mega Dragonite ex', 'me/me02.5/152'),
+      poolCard('ASC', '172', 'Mega Audino ex', 'me/me02.5/172'),
+      poolCard('POR', '21', 'Mega Starmie ex', 'me/me03/021'),
+      poolCard('POR', '31', 'Mega Clefable ex', 'me/me03/031'),
+      poolCard('POR', '47', 'Mega Zygarde ex', 'me/me03/047'),
+      poolCard('POR', '55', 'Mega Skarmory ex', 'me/me03/055'),
+      poolCard('CRI', '15', 'Mega Pyroar ex', 'me/me04/015'),
+      poolCard('CRI', '35', 'Mega Floette ex', 'me/me04/035'),
+      poolCard('CRI', '48', 'Mega Gallade ex', 'me/me04/048'),
+      poolCard('CRI', '65', 'Mega Dragalge ex', 'me/me04/065'),
+      poolCard('PBL', '8', 'Mega Delphox ex', 'me/me05/008'),
+      poolCard('PBL', '27', 'Mega Zeraora ex', 'me/me05/027'),
+      poolCard('PBL', '31', 'Mega Slowbro ex', 'me/me05/031'),
+      poolCard('PBL', '38', 'Mega Chandelure ex', 'me/me05/038'),
+      poolCard('PBL', '48', 'Mega Darkrai ex', 'me/me05/048'),
+      poolCard('DLR', '11', 'Mega Golisopod ex', 'me/me06/011'),
+      poolCard('DLR', '47', 'Mega Golurk ex', 'me/me06/047'),
+      poolCard('DLR', '69', 'Mega Malamar ex', 'me/me06/069'),
+      poolCard('DLR', '84', 'Mega Rayquaza ex', 'me/me06/084'),
     ],
   },
 ];
@@ -298,7 +344,8 @@ export default function Editor() {
     return () => clearTimeout(timer);
   }, [toast?.closing]);
   // Featured pool cards whose thumbnail failed both ways, by set and number, and the cards
-  // each pool shows without them
+  // each pool shows without them. Only the preview is loaded in the sidebar, so a card past
+  // it is never known to have failed: it goes in the tray, as a placeholder if it can't load.
   const [failedPoolCards, setFailedPoolCards] = React.useState<Set<string>>(new Set());
   const poolPreview = (pool: Pool) =>
     pool.cards
@@ -1433,6 +1480,20 @@ export default function Editor() {
     );
   }
 
+  // A set's pool (Delta Reign) lists that set whole in the search, as ticking it alone in
+  // Sets with the field empty does. The pools close with it, so focus goes to the search
+  // field rather than being lost (not on touch screens, where it would bring up the
+  // keyboard). A split being made keeps going: listing a set is a way to find its bottom card.
+  function filterToSet(set: string) {
+    const options = { ...searchOptions, sets: [set] };
+    setQuery('');
+    setSearchOptions(options);
+    search('', options);
+    if (!matchMedia('(pointer: coarse)').matches) {
+      searchInputRef.current?.focus({ preventScroll: true });
+    }
+  }
+
   function pickResult(card: CardResult, tile?: HTMLElement) {
     if (picking && pickingCard) {
       const face = toFace(card);
@@ -2068,7 +2129,7 @@ export default function Editor() {
 
               {/* Card pools and Advanced, until a search shows results or finds none; they come
               back when the search is emptied or the board is cleared. Each pool is a button
-              that adds its cards to the card tray. */}
+              that adds its cards to the card tray, or for a set's pool, lists the set. */}
               {!searchShown && (
                 <div className="flex flex-col gap-3">
                   <h3 className="tierbinder-heading">Featured Card Pools</h3>
@@ -2077,15 +2138,19 @@ export default function Editor() {
                       key={pool.name}
                       type="button"
                       className={styles.pool}
-                      aria-label={`${pool.name}: add to card tray`}
-                      onClick={(e) => addPool(pool, e.currentTarget)}
+                      aria-label={`${pool.name}: ${pool.filter ? 'filter search to this set' : 'add to card tray'}`}
+                      onClick={(e) =>
+                        pool.filter ? filterToSet(pool.filter) : addPool(pool, e.currentTarget)
+                      }
                     >
-                      {/* Its name, and where its cards go */}
+                      {/* Its name, and what clicking it does */}
                       <span className={`${styles.poolName} text-caption`}>
                         <span className="font-semibold">{pool.name}</span>
                         <span className={styles.poolAction} aria-hidden>
-                          <span className={styles.poolIcon} />
-                          Add to Card Tray
+                          <span
+                            className={`${styles.poolIcon} ${pool.filter ? styles.poolIconFilter : ''}`}
+                          />
+                          {pool.filter ? 'Filter' : 'Add to Card Tray'}
                         </span>
                       </span>
                       {/* A fixed number of columns, so every pool's cards are the same size */}
