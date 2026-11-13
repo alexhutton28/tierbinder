@@ -36,7 +36,7 @@ Follow `design/hutton-design-system.md` using the `hutton-design` skill. Use the
 
 All paths are in `src/app/`.
 
-- `Editor.tsx`: the shell, shared by every graphic: the stage and its scaling, selection and its outline, the card menu, the Add Cards tab (search, picking, dragging results, bulk import), the Customize tab (the board type, the graphic's own settings, the card tray, Clear board; laid out in sections like Add Cards: each a `flex flex-col gap-3` div, heading first, in a `gap-4` panel, with the Board Type heading naming its dropdown: `Dropdown`'s `labelledBy`), the Save & Share tab (export), autosave. It only talks to graphics through `GraphicType`.
+- `Editor.tsx`: the shell, shared by every graphic: the stage and its scaling, selection and its outline, the card menu, the Add Cards tab (search, picking, dragging results, bulk import), the Customize tab (the board type, the graphic's own settings, the card tray, Clear board; laid out in sections like Add Cards: each a `flex flex-col gap-3` div, heading first, in a `gap-4` panel, with the Board Type heading naming its dropdown: `Dropdown`'s `labelledBy`; Save & Share is laid out the same way), the Save & Share tab (export), autosave. It only talks to graphics through `GraphicType`.
 - `document.ts`: the saved document (`{ version: 3, kind, graphics }`), `currentGraphic`, and `parseSaved`, which converts older saves.
 - `graphics/types.ts`: the `GraphicType` interface; `graphics/index.ts`: the list of types (`GRAPHIC_TYPES`), the `Graphic` union, and `typeOf(kind)`.
 - `graphics/tier-list/`: `model.ts` (document, layout, edits, import, parse), `TierListCanvas.tsx`, `TierListSettings.tsx`, and `index.ts` (its `GraphicType`).

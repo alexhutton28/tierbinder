@@ -2682,31 +2682,35 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
-              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
             >
-              <h3 className="tierbinder-heading">Image</h3>
-              <div className="tierbinder-prop">
-                Size
-                <span className="text-(--tb-text)">
-                  {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
-                </span>
-              </div>
-              <div className="tierbinder-prop">
-                Format
-                <span className="text-(--tb-text)">PNG</span>
-              </div>
-              {trayShown && (
-                <Checkbox checked={includeTray} onChange={setIncludeTray}>
-                  Include card tray in export
-                </Checkbox>
-              )}
-              <div className="flex flex-wrap gap-3">
-                <Button variant="primary" onClick={exportPng} disabled={busy}>
-                  Export PNG
-                </Button>
-                <Button onClick={copyPng} disabled={busy}>
-                  Copy PNG
-                </Button>
+              {/* Sections as in Add Cards and Customize; its buttons act on the image, so they
+              sit in its section, as Import does in Advanced */}
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Image</h3>
+                <div className="tierbinder-prop">
+                  Size
+                  <span className="text-(--tb-text)">
+                    {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
+                  </span>
+                </div>
+                <div className="tierbinder-prop">
+                  Format
+                  <span className="text-(--tb-text)">PNG</span>
+                </div>
+                {trayShown && (
+                  <Checkbox checked={includeTray} onChange={setIncludeTray}>
+                    Include card tray in export
+                  </Checkbox>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="primary" onClick={exportPng} disabled={busy}>
+                    Export PNG
+                  </Button>
+                  <Button onClick={copyPng} disabled={busy}>
+                    Copy PNG
+                  </Button>
+                </div>
               </div>
             </section>
 
