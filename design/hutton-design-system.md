@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.16 · November 13, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.17 · November 13, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -270,11 +270,12 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 ### Top bar
 
-- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding, and slides up out of the way (its own height, over `duration-drop` on `ease-slide`, the logo fading over `duration-fade`; under reduced motion it fades out in place instead) while the page scrolls down, coming back when it scrolls up 8px or more, reaches the top, or the logo has keyboard focus; the status bar's strip stays in its color, empty. It has no line under it. It holds the logo (a link home). The board type dropdown is above the board, and Export PNG and Copy PNG are in the Save & Share tab.
+- The sidebar's header, not the page's: from `b8` up it heads the sidebar column, as wide as the sidebar including its edge line (the line runs down the sidebar only), and the workspace runs to the top of the window beside it. Below `b8` it stays at the top of the page, sticky with the status bar padding, and slides up out of the way (its own height, over `duration-drop` on `ease-slide`, the logo fading over `duration-fade`; under reduced motion it fades out in place instead) while the page scrolls down, coming back when it scrolls up 8px or more, reaches the top, or the logo has keyboard focus; the status bar's strip stays in its color, empty. It has no line under it. It holds the logo (a link home). The board type dropdown is in the Customize tab, and Export PNG and Copy PNG are in the Save & Share tab.
 
 ### Settings
 
 - Section headings are 14px semibold in Petrel 50 (`--tb-heading`), a step brighter than the text under them. Rows put the label on the left and the value on the right.
+- The Customize tab is laid out like Add Cards: sections of a heading over its controls, 8px apart, with 16px between sections (Board Type, the board's own, such as Tiers and Board, then Card Tray), and Clear Board on its own 16px under the last. The Board Type heading names its dropdown, as Add a Card names the search, so the dropdown has no label of its own.
 - Colors are a 24px swatch before their hex field, with a 1px Petrel 700 line inside it (Petrel 600 on hover and while its picker is open), so a color close to the sidebar's still shows; on touch screens it takes taps 44px tall. The swatch opens our own picker (never the browser's), in a popup that opens and closes like a dropdown, with 16px padding and its parts 8px apart: a 200px saturation and brightness square, and under it a 12px hue bar, both with the controls' 4px corners. Their handles stay inside them (the hue bar's sideways), with the gradients starting and ending where the handles stop: a 16px Petrel 50 ring (Feather's icon size) filled with the color on the square, a hollow 16px-tall, 8px-wide Petrel 50 pill ring on the hue bar, the hue showing through it, each with a faint dark edge and the popup's shadow, ringed in the focus color for the keyboard. Under them, Board Colors (12px semibold, muted): the board's tier colors, background, border, card tray color and white, eight to a row (four on touch screens, so each is a 44px target), 4px apart, the one in use ringed in Petrel 50 with a faint dark edge inside, so it shows on white. A tier with no name is "Tier 2" and so on. The board colors are those of the moment it opened, so the field's starting color stays there to go back to. Last, Hex and the hex field again. Arrow keys move a focused handle. Escape, a press outside, or Tab past the last field closes it.
 
 ### Sidebar resize handle
@@ -310,6 +311,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 13, 2026 · v1.17:** The Customize tab's sections are spaced like Add Cards' (16px apart, 8px inside), Board Type is a heading over its dropdown, and Card Size is a row like the color settings.
 - **November 13, 2026 · v1.16:** Icons are 16px with 1px lines: Feather's are set to that (16px, a 1.5 stroke on their 24 grid) in place of being copied unchanged at 2. The main nav's Add Cards icon is TierBinder's own (`add-card`) in place of Feather's `plus`; Customize and Save & Share keep Feather's `sliders` and `share` for now.
 - **November 12, 2026 · v1.15:** Cards fly in: clicking a search result or a featured pool sends a copy of each card from its thumbnail to its spot on the board or in the card tray, along a slight arc toward where it lands (picked from a demo of six flights); added `ease-flight` and `duration-flight`. Featured card pools are buttons that add their cards to the card tray, labeled "Add to Card Tray" at the right with Feather's `plus`, in place of the chevron after the name; Delta Reign's filters the search to its set instead. Clear Card Tray empties the tray, from Customize, a tray card's menu, or the tray's own right-click menu (which can also hide the tray), and clicking a pool whose cards are all in the tray flies them back out. Clear Card Tray in a menu opens a flyout to confirm, as Add to does. While sets are ticked a Clear sets half (Feather's `x`) slides out of the Sets button and unticks them all. The Sets button names the ticked set ("Delta Reign +2") instead of its code.
 - **November 12, 2026 · v1.14:** The color picker's handles stay inside its square and a slimmer hue bar, and it adds the board's colors and the hex field (chosen from four looks); added `--tb-hue-handle`, `--tb-hue-handle-height`, `--tb-handle-edge` and `--tb-handle-shadow`.

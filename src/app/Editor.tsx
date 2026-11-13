@@ -2572,84 +2572,96 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
-              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              <Dropdown
-                label="Board Type"
-                value={doc.kind}
-                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-                onChange={(kind) => {
-                  if (kind !== doc.kind) showBoard(kind);
-                }}
-              />
+              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, and
+              16px between sections. The heading names the board type dropdown, as Add a
+              Card names the search. */}
+              <div className="flex flex-col gap-3">
+                <h3 id="board-type-heading" className="tierbinder-heading">
+                  Board Type
+                </h3>
+                <Dropdown
+                  labelledBy="board-type-heading"
+                  value={doc.kind}
+                  options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
+                  onChange={(kind) => {
+                    if (kind !== doc.kind) showBoard(kind);
+                  }}
+                />
+              </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-              <h3 className="tierbinder-heading">Card Tray</h3>
-              <Checkbox checked={graphic.tray.enabled} onChange={showTray}>
-                Show card tray under the board
-              </Checkbox>
-              {graphic.tray.enabled && (
-                <div className="tierbinder-prop">
-                  Tray Color
-                  <ColorField
-                    label="Card tray color"
-                    value={graphic.tray.color}
-                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
-                  />
-                </div>
-              )}
-              {/* While it holds cards; confirmed on the page, as Clear Board is */}
-              {graphic.tray.enabled &&
-                graphic.tray.items.length > 0 &&
-                // Focus follows: to Cancel while it asks (the question is read with it), back to
-                // the button on Cancel, and to Clear Board once the tray is cleared and its
-                // button gone
-                (confirmingTrayClear ? (
-                  <div
-                    role="group"
-                    // Named by its question, read once
-                    aria-labelledby="clear-tray-question"
-                    className="flex flex-wrap gap-3 items-center"
-                  >
-                    <span id="clear-tray-question">Clear the Card Tray?</span>
-                    <Button
-                      onClick={() => {
-                        flushSync(clearTray);
-                        clearBoardRef.current?.focus();
-                      }}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      ref={cancelTrayClearRef}
-                      onClick={() => {
-                        flushSync(() => setConfirmingTrayClear(false));
-                        clearTrayRef.current?.focus();
-                      }}
-                    >
-                      Cancel
-                    </Button>
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Card Tray</h3>
+                <Checkbox checked={graphic.tray.enabled} onChange={showTray}>
+                  Show card tray under the board
+                </Checkbox>
+                {graphic.tray.enabled && (
+                  <div className="tierbinder-prop">
+                    Tray Color
+                    <ColorField
+                      label="Card tray color"
+                      value={graphic.tray.color}
+                      onChange={(color) =>
+                        setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))
+                      }
+                    />
                   </div>
-                ) : (
-                  <Button
-                    ref={clearTrayRef}
-                    className="self-start"
-                    onClick={() => {
-                      // One confirmation at a time, so Yes always has Clear Board to hand
-                      // focus to
-                      flushSync(() => {
-                        setConfirmingClear(false);
-                        setConfirmingTrayClear(true);
-                      });
-                      cancelTrayClearRef.current?.focus();
-                    }}
-                  >
-                    Clear Card Tray
-                  </Button>
-                ))}
+                )}
+                {/* While it holds cards; confirmed on the page, as Clear Board is */}
+                {graphic.tray.enabled &&
+                  graphic.tray.items.length > 0 &&
+                  // Focus follows: to Cancel while it asks (the question is read with it), back to
+                  // the button on Cancel, and to Clear Board once the tray is cleared and its
+                  // button gone
+                  (confirmingTrayClear ? (
+                    <div
+                      role="group"
+                      // Named by its question, read once
+                      aria-labelledby="clear-tray-question"
+                      className="flex flex-wrap gap-3 items-center"
+                    >
+                      <span id="clear-tray-question">Clear the Card Tray?</span>
+                      <Button
+                        onClick={() => {
+                          flushSync(clearTray);
+                          clearBoardRef.current?.focus();
+                        }}
+                      >
+                        Yes
+                      </Button>
+                      <Button
+                        ref={cancelTrayClearRef}
+                        onClick={() => {
+                          flushSync(() => setConfirmingTrayClear(false));
+                          clearTrayRef.current?.focus();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      ref={clearTrayRef}
+                      className="self-start"
+                      onClick={() => {
+                        // One confirmation at a time, so Yes always has Clear Board to hand
+                        // focus to
+                        flushSync(() => {
+                          setConfirmingClear(false);
+                          setConfirmingTrayClear(true);
+                        });
+                        cancelTrayClearRef.current?.focus();
+                      }}
+                    >
+                      Clear Card Tray
+                    </Button>
+                  ))}
+              </div>
               {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
-              16px above it, as between sections, so it doesn't read as part of the last one */}
+              On its own, 16px under the last section, so it doesn't read as part of it */}
               {confirmingClear ? (
-                <div className="mt-3 flex flex-wrap gap-3 items-center">
+                <div className="flex flex-wrap gap-3 items-center">
                   {trayShown && graphic.tray.items.length
                     ? 'Clear the Board and Card Tray?'
                     : 'Clear the Board?'}
@@ -2659,7 +2671,7 @@ export default function Editor() {
               ) : (
                 <Button
                   ref={clearBoardRef}
-                  className="mt-3 self-start"
+                  className="self-start"
                   onClick={() => setConfirmingClear(true)}
                 >
                   Clear Board

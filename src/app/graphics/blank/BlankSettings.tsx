@@ -11,34 +11,39 @@ import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from '
 
 export default function BlankSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
+    // Sections as the editor lays them out: a heading over its controls
     <>
-      <h3 className="tierbinder-heading">Cards</h3>
-      <CardSizeField
-        value={canvas.cardWidth}
-        onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
-      />
-      <Checkbox
-        checked={canvas.topHalf}
-        onChange={(topHalf) => onChange((c) => setCardShape(c, { topHalf }))}
-      >
-        Show only top half of cards
-      </Checkbox>
-      <h3 className="tierbinder-heading">Board</h3>
-      <div className="tierbinder-prop">
-        Background
-        <ColorField
-          label="Background color"
-          value={canvas.background}
-          onChange={(background) => onChange((c) => ({ ...c, background }))}
+      <div className="flex flex-col gap-3">
+        <h3 className="tierbinder-heading">Cards</h3>
+        <CardSizeField
+          value={canvas.cardWidth}
+          onChange={(cardWidth) => onChange((c) => setCardShape(c, { cardWidth }))}
         />
+        <Checkbox
+          checked={canvas.topHalf}
+          onChange={(topHalf) => onChange((c) => setCardShape(c, { topHalf }))}
+        >
+          Show only top half of cards
+        </Checkbox>
       </div>
-      <div className="tierbinder-prop">
-        Split Card Border
-        <ColorField
-          label="Split card border color"
-          value={canvas.border}
-          onChange={(border) => onChange((c) => ({ ...c, border }))}
-        />
+      <div className="flex flex-col gap-3">
+        <h3 className="tierbinder-heading">Board</h3>
+        <div className="tierbinder-prop">
+          Background
+          <ColorField
+            label="Background color"
+            value={canvas.background}
+            onChange={(background) => onChange((c) => ({ ...c, background }))}
+          />
+        </div>
+        <div className="tierbinder-prop">
+          Split Card Border
+          <ColorField
+            label="Split card border color"
+            value={canvas.border}
+            onChange={(border) => onChange((c) => ({ ...c, border }))}
+          />
+        </div>
       </div>
     </>
   );
@@ -56,25 +61,28 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
   }
 
   return (
-    <label className="flex gap-3 items-center">
+    // Its name at the left and the field at the right, as the color settings are
+    <label className="tierbinder-prop">
       Card Size
-      <input
-        type="number"
-        min={MIN_CARD_WIDTH}
-        max={MAX_CARD_WIDTH}
-        className="tierbinder-field tierbinder-number-field tabular-nums"
-        value={draft}
-        onChange={(e) => {
-          setDraft(e.target.value);
-          const width = Number(e.target.value);
-          if (Number.isInteger(width) && width >= MIN_CARD_WIDTH && width <= MAX_CARD_WIDTH) {
-            setShown(width);
-            onChange(width);
-          }
-        }}
-        onBlur={() => setDraft(String(value))}
-      />
-      px wide
+      <span className="flex gap-3 items-center">
+        <input
+          type="number"
+          min={MIN_CARD_WIDTH}
+          max={MAX_CARD_WIDTH}
+          className="tierbinder-field tierbinder-number-field tabular-nums"
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            const width = Number(e.target.value);
+            if (Number.isInteger(width) && width >= MIN_CARD_WIDTH && width <= MAX_CARD_WIDTH) {
+              setShown(width);
+              onChange(width);
+            }
+          }}
+          onBlur={() => setDraft(String(value))}
+        />
+        px wide
+      </span>
     </label>
   );
 }
