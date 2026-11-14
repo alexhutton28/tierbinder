@@ -2650,7 +2650,17 @@ export default function Editor() {
               </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
               <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Card Tray</h3>
+                {/* Its switch turns the whole section on or off, so it sits in the header, at
+                    the column's end; its other rows show only while the tray is on */}
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="tierbinder-heading">Card Tray</h3>
+                  <Toggle
+                    ref={trayToggleRef}
+                    checked={graphic.tray.enabled}
+                    onChange={showTray}
+                    label="Show card tray under the board"
+                  />
+                </div>
                 {graphic.tray.enabled && (
                   <ColorField
                     name="Tray Color"
@@ -2708,9 +2718,6 @@ export default function Editor() {
                       Clear Card Tray
                     </Button>
                   ))}
-                <Toggle ref={trayToggleRef} checked={graphic.tray.enabled} onChange={showTray}>
-                  Show card tray under the board
-                </Toggle>
               </div>
             </section>
 

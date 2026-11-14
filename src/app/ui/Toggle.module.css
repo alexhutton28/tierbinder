@@ -33,6 +33,24 @@
   }
 }
 
+/* The switch alone (a section header's): no row around it, so it's only as tall as the
+   switch and the header keeps its height; on touch screens it takes taps 44px square,
+   reaching past it without moving anything */
+.bare {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .bare::after {
+    position: absolute;
+    inset: calc((var(--tb-toggle-height) - var(--tb-touch-target)) / 2)
+      calc((var(--tb-toggle-width) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
 /* A pill in the fields' colors, centered on the first line; on, the primary color with
    no line */
 .track {
@@ -47,6 +65,11 @@
   transition:
     background-color var(--duration-hover) ease-out,
     box-shadow var(--duration-hover) ease-out;
+}
+
+/* Alone, there's no line of words to center on */
+.bare .track {
+  margin-block-start: 0;
 }
 
 /* The knob, 2px inside the track: muted when off, sliding to the far end and turning
@@ -65,31 +88,37 @@
 }
 
 /* The focus ring goes around the switch, not the words */
-.row:focus-visible {
+.row:focus-visible,
+.bare:focus-visible {
   outline: none;
 }
 
-.row:focus-visible .track {
+.row:focus-visible .track,
+.bare:focus-visible .track {
   outline: var(--tb-focus-width) solid var(--tb-focus);
   outline-offset: var(--tb-focus-width);
 }
 
-.row[aria-checked='true'] .track {
+.row[aria-checked='true'] .track,
+.bare[aria-checked='true'] .track {
   background: var(--tb-primary);
   box-shadow: none;
 }
 
-.row[aria-checked='true'] .knob {
+.row[aria-checked='true'] .knob,
+.bare[aria-checked='true'] .knob {
   translate: calc(var(--tb-toggle-width) - var(--tb-toggle-height));
   background: var(--tb-primary-text);
 }
 
 /* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
-.row:hover .track {
+.row:hover .track,
+.bare:hover .track {
   box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
 }
 
-.row[aria-checked='true']:hover .track {
+.row[aria-checked='true']:hover .track,
+.bare[aria-checked='true']:hover .track {
   background: var(--tb-primary-hover);
   box-shadow: none;
 }
