@@ -54,9 +54,12 @@ export default function ColorField({
   const id = React.useId();
   const boxRef = React.useRef<HTMLSpanElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const swatchRef = React.useRef<HTMLSpanElement>(null);
   const popupRef = React.useRef<HTMLDivElement>(null);
   const popup = usePopup(boxRef);
-  useAnchored(popup.shown, buttonRef, popupRef);
+  // Placed from the swatch, not a named row (as wide as the sidebar, which would stretch
+  // the popup), so every picker opens the same size from its swatch
+  useAnchored(popup.shown, name ? swatchRef : buttonRef, popupRef);
   // The board's colors as they were when the picker opened, so they hold still while a
   // drag changes this field's own (which stays one click away)
   const boardNow = React.useContext(BoardColors);
@@ -127,7 +130,12 @@ export default function ColorField({
       >
         {name && (
           <>
-            <span aria-hidden className={styles.swatch} style={{ background: value }} />
+            <span
+              ref={swatchRef}
+              aria-hidden
+              className={styles.swatch}
+              style={{ background: value }}
+            />
             {name}
             {/* The value, which the swatch shows only to the eye */}
             <span className="sr-only">{value}</span>
