@@ -101,6 +101,11 @@ body {
   --tb-touch-target: 44px;
   --tb-swatch: 24px;
 
+  /* A settings toggle's track (ui/Toggle.tsx): as tall as an icon, wide enough for its
+     knob to travel a knob and a bit */
+  --tb-toggle-width: 28px;
+  --tb-toggle-height: var(--tb-icon);
+
   /* The color picker: its width (react-colorful's own default size, chosen by eye; see
      Exceptions), its hue bar's height and the width of that bar's handle */
   --tb-picker-width: 200px;

@@ -49,6 +49,7 @@ import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import Checkbox from './ui/Checkbox';
+import Toggle from './ui/Toggle';
 import ColorField, { BoardColors, boardColors } from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
@@ -443,6 +444,9 @@ export default function Editor() {
   const clearTrayRef = React.useRef<HTMLButtonElement>(null);
   const cancelTrayClearRef = React.useRef<HTMLButtonElement>(null);
   const clearBoardRef = React.useRef<HTMLButtonElement>(null);
+  const cancelClearRef = React.useRef<HTMLButtonElement>(null);
+  // Where focus goes once Clear Card Tray's button is gone
+  const trayToggleRef = React.useRef<HTMLButtonElement>(null);
   // Pools whose cards are still flying in: they don't offer to take them back out yet, so a
   // double click doesn't send them straight back
   const [flyingPools, setFlyingPools] = React.useState<ReadonlySet<string>>(new Set());
@@ -2572,58 +2576,55 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
-              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              <Dropdown
-                label="Board Type"
-                value={doc.kind}
-                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-                onChange={(kind) => {
-                  if (kind !== doc.kind) showBoard(kind);
-                }}
-              />
-              <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-              <h3 className="tierbinder-heading">Card Tray</h3>
-              <Checkbox checked={graphic.tray.enabled} onChange={showTray}>
-                Show card tray under the board
-              </Checkbox>
-              {graphic.tray.enabled && (
-                <div className="tierbinder-prop">
-                  Tray Color
-                  <ColorField
-                    label="Card tray color"
-                    value={graphic.tray.color}
-                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
-                  />
-                </div>
-              )}
-              {/* While it holds cards; confirmed on the page, as Clear Board is */}
-              {graphic.tray.enabled &&
-                graphic.tray.items.length > 0 &&
-                // Focus follows: to Cancel while it asks (the question is read with it), back to
-                // the button on Cancel, and to Clear Board once the tray is cleared and its
-                // button gone
-                (confirmingTrayClear ? (
+              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, and
+              16px between sections, its toggles last. Board holds what's the editor's (the
+              board type, Clear Board) around the graphic's own colors. */}
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Board</h3>
+                <Dropdown
+                  label="Board type"
+                  hideLabel
+                  value={doc.kind}
+                  options={GRAPHIC_TYPES.map((t) => ({
+                    value: t.kind,
+                    label: t.label,
+                    icon: t.icon,
+                  }))}
+                  onChange={(kind) => {
+                    if (kind !== doc.kind) showBoard(kind);
+                  }}
+                />
+                <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+                {/* Confirmed on the page: some browsers (the in-app one) never show
+                confirm() */}
+                {/* Focus follows, as Clear Card Tray's does: to Cancel while it asks, and
+                back to the button on Cancel or once cleared */}
+                {confirmingClear ? (
                   <div
                     role="group"
-                    // Named by its question, read once
-                    aria-labelledby="clear-tray-question"
+                    aria-labelledby="clear-board-question"
                     className="flex flex-wrap gap-3 items-center"
                   >
-                    <span id="clear-tray-question">Clear the Card Tray?</span>
+                    <span id="clear-board-question">
+                      {trayShown && graphic.tray.items.length
+                        ? 'Clear the Board and Card Tray?'
+                        : 'Clear the Board?'}
+                    </span>
                     <Button
                       onClick={() => {
-                        flushSync(clearTray);
+                        flushSync(() => showBoard(doc.kind, true));
                         clearBoardRef.current?.focus();
                       }}
                     >
                       Yes
                     </Button>
                     <Button
-                      ref={cancelTrayClearRef}
+                      ref={cancelClearRef}
                       onClick={() => {
-                        flushSync(() => setConfirmingTrayClear(false));
-                        clearTrayRef.current?.focus();
+                        flushSync(() => setConfirmingClear(false));
+                        clearBoardRef.current?.focus();
                       }}
                     >
                       Cancel
@@ -2631,70 +2632,127 @@ export default function Editor() {
                   </div>
                 ) : (
                   <Button
-                    ref={clearTrayRef}
-                    className="self-start"
+                    ref={clearBoardRef}
+                    className="self-start flex gap-2 items-center"
                     onClick={() => {
-                      // One confirmation at a time, so Yes always has Clear Board to hand
-                      // focus to
+                      // One confirmation at a time
                       flushSync(() => {
-                        setConfirmingClear(false);
-                        setConfirmingTrayClear(true);
+                        setConfirmingTrayClear(false);
+                        setConfirmingClear(true);
                       });
-                      cancelTrayClearRef.current?.focus();
+                      cancelClearRef.current?.focus();
                     }}
                   >
-                    Clear Card Tray
+                    <span aria-hidden className={styles.clearIcon} />
+                    Clear Board
                   </Button>
-                ))}
-              {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
-              16px above it, as between sections, so it doesn't read as part of the last one */}
-              {confirmingClear ? (
-                <div className="mt-3 flex flex-wrap gap-3 items-center">
-                  {trayShown && graphic.tray.items.length
-                    ? 'Clear the Board and Card Tray?'
-                    : 'Clear the Board?'}
-                  <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
-                  <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
+                )}
+              </div>
+              <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+              <div className="flex flex-col gap-3">
+                {/* Its switch turns the whole section on or off, so it sits in the header, at
+                    the column's end; its other rows show only while the tray is on */}
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="tierbinder-heading">Card Tray</h3>
+                  <Toggle
+                    ref={trayToggleRef}
+                    checked={graphic.tray.enabled}
+                    onChange={showTray}
+                    label="Show card tray under the board"
+                  />
                 </div>
-              ) : (
-                <Button
-                  ref={clearBoardRef}
-                  className="mt-3 self-start"
-                  onClick={() => setConfirmingClear(true)}
-                >
-                  Clear Board
-                </Button>
-              )}
+                {graphic.tray.enabled && (
+                  <ColorField
+                    name="Tray Color"
+                    label="Card tray color"
+                    value={graphic.tray.color}
+                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
+                  />
+                )}
+                {/* While it holds cards; confirmed on the page, as Clear Board is */}
+                {graphic.tray.enabled &&
+                  graphic.tray.items.length > 0 &&
+                  // Focus follows: to Cancel while it asks (the question is read with it), back to
+                  // the button on Cancel, and to the tray's toggle once the tray is cleared and
+                  // its button gone
+                  (confirmingTrayClear ? (
+                    <div
+                      role="group"
+                      // Named by its question, read once
+                      aria-labelledby="clear-tray-question"
+                      className="flex flex-wrap gap-3 items-center"
+                    >
+                      <span id="clear-tray-question">Clear the Card Tray?</span>
+                      <Button
+                        onClick={() => {
+                          flushSync(clearTray);
+                          trayToggleRef.current?.focus();
+                        }}
+                      >
+                        Yes
+                      </Button>
+                      <Button
+                        ref={cancelTrayClearRef}
+                        onClick={() => {
+                          flushSync(() => setConfirmingTrayClear(false));
+                          clearTrayRef.current?.focus();
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      ref={clearTrayRef}
+                      className="self-start flex gap-2 items-center"
+                      onClick={() => {
+                        // One confirmation at a time
+                        flushSync(() => {
+                          setConfirmingClear(false);
+                          setConfirmingTrayClear(true);
+                        });
+                        cancelTrayClearRef.current?.focus();
+                      }}
+                    >
+                      <span aria-hidden className={styles.clearIcon} />
+                      Clear Card Tray
+                    </Button>
+                  ))}
+              </div>
             </section>
 
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
-              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
             >
-              <h3 className="tierbinder-heading">Image</h3>
-              <div className="tierbinder-prop">
-                Size
-                <span className="text-(--tb-text)">
-                  {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
-                </span>
-              </div>
-              <div className="tierbinder-prop">
-                Format
-                <span className="text-(--tb-text)">PNG</span>
-              </div>
-              {trayShown && (
-                <Checkbox checked={includeTray} onChange={setIncludeTray}>
-                  Include card tray in export
-                </Checkbox>
-              )}
-              <div className="flex flex-wrap gap-3">
-                <Button variant="primary" onClick={exportPng} disabled={busy}>
-                  Export PNG
-                </Button>
-                <Button onClick={copyPng} disabled={busy}>
-                  Copy PNG
-                </Button>
+              {/* Sections as in Add Cards and Customize; its buttons act on the image, so they
+              sit in its section, as Import does in Advanced */}
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Image</h3>
+                <div className="tierbinder-prop">
+                  Size
+                  <span className="text-(--tb-text)">
+                    {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
+                  </span>
+                </div>
+                <div className="tierbinder-prop">
+                  Format
+                  <span className="text-(--tb-text)">PNG</span>
+                </div>
+                {trayShown && (
+                  <Checkbox checked={includeTray} onChange={setIncludeTray}>
+                    Include card tray in export
+                  </Checkbox>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="primary" onClick={exportPng} disabled={busy}>
+                    Export PNG
+                  </Button>
+                  <Button onClick={copyPng} disabled={busy}>
+                    Copy PNG
+                  </Button>
+                </div>
               </div>
             </section>
 

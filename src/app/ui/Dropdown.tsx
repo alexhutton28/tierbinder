@@ -14,7 +14,8 @@ import { CARD_HEIGHT, CARD_WIDTH } from '../canvas/size';
 // sidebar doesn't clip it. `current` shows something else on the button than any option
 // (a mode, as in "Splitting Pikachu"), with no option selected; picking any option ends it.
 
-type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card' };
+// A swatch of `color`, or `icon` (a 16px SVG in public/, drawn in the text color)
+type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card'; icon?: string };
 
 export default function Dropdown<T extends string | number>({
   label,
@@ -35,6 +36,7 @@ export default function Dropdown<T extends string | number>({
   onChange: (value: T) => void;
 }) {
   const id = React.useId();
+  const labelId = `${id}-label`;
   const boxRef = React.useRef<HTMLDivElement>(null);
   // Stays on screen while it folds closed; a press outside closes it
   const { open, setOpen, shown, closing } = usePopup(boxRef);
@@ -76,7 +78,7 @@ export default function Dropdown<T extends string | number>({
   return (
     // Shrinks to fit (its button's words cut short with an ellipsis) rather than overflowing
     <div className="flex gap-3 items-center min-w-0">
-      <span id={`${id}-label`} className={hideLabel ? 'sr-only' : undefined}>
+      <span id={labelId} className={hideLabel ? 'sr-only' : undefined}>
         {label}
       </span>
       <div ref={boxRef} className="relative min-w-0">
@@ -86,7 +88,7 @@ export default function Dropdown<T extends string | number>({
           type="button"
           aria-haspopup="listbox"
           aria-expanded={open}
-          aria-labelledby={`${id}-label ${id}-button`}
+          aria-labelledby={`${labelId} ${id}-button`}
           title={hideLabel ? label : undefined}
           className="flex gap-2 items-center max-w-full"
           onClick={() => setOpen((o) => !o)}
@@ -106,7 +108,7 @@ export default function Dropdown<T extends string | number>({
             ref={listRef}
             popover="manual"
             role="listbox"
-            aria-labelledby={`${id}-label`}
+            aria-labelledby={labelId}
             onKeyDown={onListKey}
             className={`tierbinder-menu dropdown tierbinder-popup tierbinder-list tierbinder-anchored flex flex-col ${closing ? 'closing pointer-events-none' : ''}`}
           >
@@ -137,8 +139,16 @@ export default function Dropdown<T extends string | number>({
   );
 }
 
-// An option's color as a swatch (also used by the search results' menu)
-export function Swatch({ color, outlined, shape = 'square' }: Look) {
+// An option's color as a swatch, or its icon (also used by the search results' menu)
+export function Swatch({ color, outlined, shape = 'square', icon }: Look) {
+  if (icon)
+    return (
+      <span
+        aria-hidden
+        className={styles.icon}
+        style={{ maskImage: `url('${icon}')` } as React.CSSProperties}
+      />
+    );
   return color ? (
     <span aria-hidden className={styles.swatchBox}>
       <span

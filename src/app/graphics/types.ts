@@ -62,8 +62,10 @@ export type SettingsProps<G> = {
 
 export type GraphicType<G extends { kind: string }> = {
   kind: G['kind'];
-  // In Change board type
+  // In the board type dropdown, with its icon (a 16px SVG in public/, drawn in the text
+  // color)
   label: string;
+  icon: string;
   // What cards are added to, as in "Add to tier"
   targetNoun: string;
   create: () => G;
@@ -72,7 +74,11 @@ export type GraphicType<G extends { kind: string }> = {
   parse: (value: unknown) => G | null;
   // Konva layers, drawn inside the editor's stage. Cards should use canvas/CardNode.
   Canvas: React.ComponentType<CanvasProps<G>>;
-  // The graphic's part of the Customize tab
+  // The graphic's rows in the Customize tab's Board section, between the board type and
+  // Clear Board (its colors)
+  BoardSettings: React.ComponentType<SettingsProps<G>>;
+  // The graphic's own sections of the Customize tab, after Board: each a
+  // `flex flex-col gap-3` div with its heading first, controls before toggles
   Settings: React.ComponentType<SettingsProps<G>>;
   // Tools beyond moving cards (e.g. a pen), shown under the board; the Canvas gets the
   // active one as `tool`

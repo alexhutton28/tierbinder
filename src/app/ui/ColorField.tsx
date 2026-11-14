@@ -5,11 +5,12 @@ import { HexColorPicker } from 'react-colorful';
 import { useAnchored, usePopup } from './anchored';
 import styles from './ColorField.module.css';
 
-// A color as a hex text field, with a swatch before it that opens our own picker in a
-// popup like a dropdown's, floating over the board: react-colorful's saturation and
-// brightness square over a hue bar (restyled in ColorField.module.css, its handles kept
-// inside them), then the board's own colors to pick in one click (BoardColors, given by
-// the editor), then the hex again.
+// A color as a swatch that opens our own picker in a popup like a dropdown's, floating over
+// the board: react-colorful's saturation and brightness square over a hue bar (restyled in
+// ColorField.module.css, its handles kept inside them), then the board's own colors to pick
+// in one click (BoardColors, given by the editor), then its hex field. With a `name`, the
+// swatch and the name after it are one row that opens it (the Customize tab's colors);
+// without, the swatch alone (a tier's, beside its name field; the pen's).
 // Typing applies as soon as the text is a full hex color (#rgb or #rrggbb, # optional);
 // dragging in the picker applies as it goes, once per frame. Escape, a press outside or
 // focus leaving it (Tab past the last field) closes it.
@@ -43,17 +44,22 @@ export default function ColorField({
   value,
   onChange,
   label,
+  name,
 }: {
   value: string;
   onChange: (color: string) => void;
   label: string;
+  name?: string;
 }) {
   const id = React.useId();
   const boxRef = React.useRef<HTMLSpanElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const swatchRef = React.useRef<HTMLSpanElement>(null);
   const popupRef = React.useRef<HTMLDivElement>(null);
   const popup = usePopup(boxRef);
-  useAnchored(popup.shown, buttonRef, popupRef);
+  // Placed from the swatch, not a named row (as wide as the sidebar, which would stretch
+  // the popup), so every picker opens the same size from its swatch
+  useAnchored(popup.shown, name ? swatchRef : buttonRef, popupRef);
   // The board's colors as they were when the picker opened, so they hold still while a
   // drag changes this field's own (which stays one click away)
   const boardNow = React.useContext(BoardColors);
@@ -99,7 +105,7 @@ export default function ColorField({
   return (
     <span
       ref={boxRef}
-      className="inline-flex items-center gap-2"
+      className={name ? 'flex' : 'inline-flex'}
       // Closes once focus moves on past it, as a dropdown does
       onBlur={(e) => {
         if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
@@ -109,10 +115,11 @@ export default function ColorField({
       <button
         ref={buttonRef}
         type="button"
-        className={styles.swatch}
-        style={{ background: value }}
-        aria-label={`${label} picker`}
-        title={`${label} picker`}
+        className={name ? styles.row : styles.swatch}
+        style={name ? undefined : { background: value }}
+        // A named row is read by its name; a lone swatch needs one
+        aria-label={name ? undefined : label}
+        title={name ? undefined : label}
         aria-haspopup="dialog"
         aria-expanded={popup.open}
         aria-controls={popup.shown ? `${id}-picker` : undefined}
@@ -120,7 +127,21 @@ export default function ColorField({
           if (!popup.open) setPresets(boardNow);
           popup.setOpen(!popup.open);
         }}
-      />
+      >
+        {name && (
+          <>
+            <span
+              ref={swatchRef}
+              aria-hidden
+              className={styles.swatch}
+              style={{ background: value }}
+            />
+            {name}
+            {/* The value, which the swatch shows only to the eye */}
+            <span className="sr-only">{value}</span>
+          </>
+        )}
+      </button>
       {popup.shown && (
         <div
           ref={popupRef}
@@ -128,7 +149,7 @@ export default function ColorField({
           popover="manual"
           role="dialog"
           tabIndex={-1}
-          aria-label={`${label} picker`}
+          aria-label={label}
           onKeyDown={(e) => {
             // The page's Delete and Backspace (removing the selected card) don't reach the
             // board from here: the picker's handles aren't text fields
@@ -181,32 +202,22 @@ export default function ColorField({
           </label>
         </div>
       )}
-      <HexInput value={value} onChange={apply} label={label} />
     </span>
   );
 }
 
-// The hex text field: typing applies once it's a full hex color; leaving it shows the
-// color in use
-function HexInput({
-  value,
-  onChange,
-  label,
-}: {
-  value: string;
-  onChange: (color: string) => void;
-  label?: string;
-}) {
+// The picker's hex text field: typing applies once it's a full hex color; leaving it shows
+// the color in use
+function HexInput({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const [draft, setDraft] = React.useState(value);
   const [shown, setShown] = React.useState(value);
-  // Follow changes from outside (the picker, the other field) without losing typing
+  // Follow changes from outside (the picker, a board color) without losing typing
   if (value !== shown) {
     setShown(value);
     setDraft(value);
   }
   return (
     <input
-      aria-label={label}
       className={`tierbinder-field ${styles.hex} font-mono`}
       spellCheck={false}
       autoComplete="off"

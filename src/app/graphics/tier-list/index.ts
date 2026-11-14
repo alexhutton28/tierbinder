@@ -1,6 +1,6 @@
 import type { GraphicType } from '../types';
 import TierListCanvas from './TierListCanvas';
-import TierListSettings from './TierListSettings';
+import TierListSettings, { TierListBoardSettings } from './TierListSettings';
 import {
   defaultTierList,
   dropTarget,
@@ -14,10 +14,12 @@ import {
 const tierList: GraphicType<TierList> = {
   kind: 'tier-list',
   label: 'Tier List',
+  icon: '/tier-list.svg',
   targetNoun: 'tier',
   create: defaultTierList,
   parse: parseTierList,
   Canvas: TierListCanvas,
+  BoardSettings: TierListBoardSettings,
   Settings: TierListSettings,
   layout: layoutCards,
   mapCards: (list, change) => ({

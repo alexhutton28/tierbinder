@@ -1,0 +1,131 @@
+@reference "../globals.css";
+
+/* The switch and its words, 8px apart, as tall as a control so a section of colors and
+   toggles keeps one rhythm. Like a color row, it lights up on hover and reaches 4px past
+   the column on each side, so the switch lines up with the swatches. The switch stays on
+   the first line when the words wrap. */
+.row {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: flex-start;
+  min-height: var(--tb-control-height);
+  margin-inline: calc(-1 * var(--spacing-2));
+  padding-block: calc((var(--tb-control-height) - 1lh) / 2);
+  padding-inline: var(--spacing-2);
+  border-radius: var(--tb-radius);
+  color: var(--tb-text);
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.row:hover {
+  background: var(--tb-control-hover);
+}
+
+/* On touch screens a full touch target that gives the extra height back as negative
+   margin, so settings keep their 8px spacing (as a color row does) */
+@media (pointer: coarse) {
+  .row {
+    min-height: var(--tb-touch-target);
+    margin-block: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
+    padding-block: calc((var(--tb-touch-target) - 1lh) / 2);
+  }
+}
+
+/* The switch alone (a section header's): no row around it, so it's only as tall as the
+   switch and the header keeps its height; on touch screens it takes taps 44px square,
+   reaching past it without moving anything */
+.bare {
+  position: relative;
+  display: flex;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .bare::after {
+    position: absolute;
+    inset: calc((var(--tb-toggle-height) - var(--tb-touch-target)) / 2)
+      calc((var(--tb-toggle-width) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
+/* A pill in the fields' colors, centered on the first line; on, the primary color with
+   no line */
+.track {
+  position: relative;
+  flex: none;
+  width: var(--tb-toggle-width);
+  height: var(--tb-toggle-height);
+  margin-block-start: calc((1lh - var(--tb-toggle-height)) / 2);
+  border-radius: var(--radius-full);
+  background: var(--tb-field);
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border);
+  transition:
+    background-color var(--duration-hover) ease-out,
+    box-shadow var(--duration-hover) ease-out;
+}
+
+/* Alone, there's no line of words to center on */
+.bare .track {
+  margin-block-start: 0;
+}
+
+/* The knob, 2px inside the track: muted when off, sliding to the far end and turning
+   the dark of a ticked checkbox's check when on */
+.knob {
+  position: absolute;
+  inset-block-start: var(--spacing-1);
+  inset-inline-start: var(--spacing-1);
+  width: calc(var(--tb-toggle-height) - 2 * var(--spacing-1));
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  background: var(--tb-muted);
+  transition:
+    translate var(--duration-drop) var(--ease-slide),
+    background-color var(--duration-hover) ease-out;
+}
+
+/* The focus ring goes around the switch, not the words */
+.row:focus-visible,
+.bare:focus-visible {
+  outline: none;
+}
+
+.row:focus-visible .track,
+.bare:focus-visible .track {
+  outline: var(--tb-focus-width) solid var(--tb-focus);
+  outline-offset: var(--tb-focus-width);
+}
+
+.row[aria-checked='true'] .track,
+.bare[aria-checked='true'] .track {
+  background: var(--tb-primary);
+  box-shadow: none;
+}
+
+.row[aria-checked='true'] .knob,
+.bare[aria-checked='true'] .knob {
+  translate: calc(var(--tb-toggle-width) - var(--tb-toggle-height));
+  background: var(--tb-primary-text);
+}
+
+/* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
+.row:hover .track,
+.bare:hover .track {
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
+}
+
+.row[aria-checked='true']:hover .track,
+.bare[aria-checked='true']:hover .track {
+  background: var(--tb-primary-hover);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track,
+  .knob {
+    transition: none;
+  }
+}
