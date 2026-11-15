@@ -1,3 +1,4 @@
+import { cardCount } from '../../text';
 import type { GraphicType } from '../types';
 import TierListCanvas from './TierListCanvas';
 import TierListSettings, { TierListBoardSettings } from './TierListSettings';
@@ -26,6 +27,11 @@ const tierList: GraphicType<TierList> = {
     ...list,
     tiers: list.tiers.map((t) => ({ ...t, items: t.items.flatMap((i) => change(i) ?? []) })),
   }),
+  contents: (list) => {
+    const n = list.tiers.reduce((sum, t) => sum + t.items.length, 0);
+    return n ? [cardCount(n)] : [];
+  },
+  clear: (list) => ({ ...list, tiers: list.tiers.map((t) => ({ ...t, items: [] })) }),
   targets: (list) => list.tiers.map((t) => ({ name: t.name, color: t.color })),
   // At the end of the tier
   addCard: (list, item, tier) => insertCard(list, item, tier, list.tiers[tier].items.length),

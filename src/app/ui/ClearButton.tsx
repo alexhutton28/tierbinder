@@ -6,31 +6,32 @@ import Button from './Button';
 import styles from './ClearButton.module.css';
 
 // A clear button that asks first, as the card menu's Clear Card Tray does: Feather's trash
-// before its words, opening a one-item menu under it that says what goes ("Clear 12
-// Cards"), which does it. A second click on the button, Escape, Tab or a press outside
-// closes it. Opening focuses the item; once it's done, focus goes back to the button,
-// unless `onConfirm` moved it elsewhere (the button may be gone). It floats like a
-// dropdown's list (useAnchored), so it's never squeezed by a narrow sidebar.
+// before its words, opening a menu under it whose choices each say what goes ("Clear 12
+// Cards", "Start Over") and do it. A second click on the button, Escape, Tab or a press
+// outside closes it. Opening focuses the first choice, and the arrows, Home and End move
+// through them; once one's done, focus goes back to the button, unless it moved focus
+// elsewhere (the button may be gone). It floats like a dropdown's list (useAnchored), so
+// it's never squeezed by a narrow sidebar.
+
+export type ClearChoice = { label: string; onSelect: () => void };
 
 export default function ClearButton({
-  confirm,
-  onConfirm,
+  choices,
   children,
 }: {
-  confirm: string;
-  onConfirm: () => void;
+  choices: ClearChoice[];
   children: string;
 }) {
   const id = React.useId();
   const boxRef = React.useRef<HTMLDivElement>(null);
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
-  const itemRef = React.useRef<HTMLButtonElement>(null);
+
   const { open, setOpen, shown, closing } = usePopup(boxRef);
   useAnchored(shown, buttonRef, menuRef);
 
   React.useEffect(() => {
-    if (open) itemRef.current?.focus();
+    if (open) menuRef.current?.querySelector<HTMLElement>('[role=menuitem]')?.focus();
   }, [open]);
 
   return (
@@ -71,24 +72,44 @@ export default function ClearButton({
             if (e.key === 'Tab') setOpen(false);
             // The page's Delete and Backspace (removing the selected card) don't reach it
             if (e.key === 'Delete' || e.key === 'Backspace') e.stopPropagation();
+            const items = [
+              ...(menuRef.current?.querySelectorAll<HTMLElement>('[role=menuitem]') ?? []),
+            ];
+            const at = items.indexOf(document.activeElement as HTMLElement);
+            const next =
+              e.key === 'ArrowDown'
+                ? (at + 1) % items.length
+                : e.key === 'ArrowUp'
+                  ? (at - 1 + items.length) % items.length
+                  : e.key === 'Home'
+                    ? 0
+                    : e.key === 'End'
+                      ? items.length - 1
+                      : null;
+            if (next !== null) {
+              e.preventDefault();
+              items[next]?.focus();
+            }
           }}
           className={`${styles.menu} tierbinder-menu dropdown tierbinder-popup tierbinder-list tierbinder-anchored flex flex-col ${closing ? 'closing pointer-events-none' : ''}`}
         >
-          <button
-            ref={itemRef}
-            type="button"
-            role="menuitem"
-            tabIndex={-1}
-            className="tierbinder-option whitespace-nowrap"
-            onClick={() => {
-              setOpen(false);
-              onConfirm();
-              // Back to the button, unless onConfirm sent focus somewhere else
-              if (menuRef.current?.contains(document.activeElement)) buttonRef.current?.focus();
-            }}
-          >
-            {confirm}
-          </button>
+          {choices.map((choice) => (
+            <button
+              key={choice.label}
+              type="button"
+              role="menuitem"
+              tabIndex={-1}
+              className="tierbinder-option whitespace-nowrap"
+              onClick={() => {
+                setOpen(false);
+                choice.onSelect();
+                // Back to the button, unless the choice sent focus somewhere else
+                if (menuRef.current?.contains(document.activeElement)) buttonRef.current?.focus();
+              }}
+            >
+              {choice.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

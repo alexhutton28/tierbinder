@@ -48,7 +48,7 @@ import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
-import ClearButton from './ui/ClearButton';
+import ClearButton, { type ClearChoice } from './ui/ClearButton';
 import { followOpen, revealBelow } from './ui/reveal';
 import Toggle from './ui/Toggle';
 import ColorField, { BoardColors, boardColors } from './ui/ColorField';
@@ -60,7 +60,7 @@ import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
 import { launchFlights, onScreen, wholeOnScreen, type Flight } from './ui/flights';
-import { titleCase } from './text';
+import { titleCase, cardCount, listWords } from './text';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -102,9 +102,6 @@ const POOL_ACTIONS = {
   add: { label: 'Add to Card Tray', aria: 'add to card tray' },
   remove: { label: 'Remove From Card Tray', aria: 'remove from card tray' },
 } as const;
-
-// "1 Card", "12 Cards"
-const cardCount = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
 
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
 const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
@@ -1115,6 +1112,20 @@ export default function Editor() {
     if (!enabled && targetIndex === boardTargets.length) setTarget(0);
   }
 
+  // Empties the board showing (its cards, and the blank canvas's ink), keeping its names
+  // and colors; `withTray` empties the card tray too. Its cards' menu, selection and a
+  // replacement being picked go with them.
+  function clearBoard(withTray: boolean) {
+    setGraphic((g) => {
+      const cleared = typeOf(g.kind).clear(g);
+      return withTray ? { ...cleared, tray: { ...cleared.tray, items: [] } } : cleared;
+    });
+    setSelectedId(null);
+    setCardMenu(null);
+    setPicking(null);
+    showToast(withTray ? 'Board and Card Tray Cleared' : 'Board Cleared');
+  }
+
   // Empties the card tray, keeping it on; a selected tray card goes with it
   function clearTray() {
     const count = graphic.tray.items.length;
@@ -1124,6 +1135,32 @@ export default function Editor() {
     setPicking((p) => (p && ids.has(p.id) ? null : p));
     if (count) showToast(removedMessage(count));
   }
+
+  // Clear Board's choices, each saying what goes: the board's contents ("Clear 12 Cards and
+  // Ink"), those and a showing card tray's cards, or a new board (Start Over: default
+  // names and colors, and a showing tray emptied; a hidden tray keeps its cards)
+  const contents = type.contents(graphic);
+  const trayFull = trayShown && graphic.tray.items.length > 0;
+  const boardClears: ClearChoice[] = [
+    ...(contents.length
+      ? [{ label: `Clear ${listWords(contents)}`, onSelect: () => clearBoard(false) }]
+      : []),
+    ...(contents.length && trayFull
+      ? [
+          {
+            label: `Clear ${listWords([...contents, 'Card Tray'])}`,
+            onSelect: () => clearBoard(true),
+          },
+        ]
+      : []),
+    {
+      label: 'Start Over',
+      onSelect: () => {
+        showBoard(doc.kind, true);
+        showToast('Started a New Board');
+      },
+    },
+  ];
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
   // board's background does; the card menu is on the board, so using it keeps the card.
@@ -2592,21 +2629,7 @@ export default function Editor() {
                 <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
                 {/* Asks first, saying what goes: the board (a new one, colors and names too),
                     and a showing card tray's cards; a hidden tray keeps them */}
-                <ClearButton
-                  confirm={
-                    trayShown && graphic.tray.items.length
-                      ? `Clear Board and ${cardCount(graphic.tray.items.length)}`
-                      : 'Clear Board'
-                  }
-                  onConfirm={() => {
-                    // A showing tray is emptied with it
-                    const withTray = trayShown && graphic.tray.items.length > 0;
-                    showBoard(doc.kind, true);
-                    showToast(withTray ? 'Board and Card Tray Cleared' : 'Board Cleared');
-                  }}
-                >
-                  Clear Board
-                </ClearButton>
+                <ClearButton choices={boardClears}>Clear Board</ClearButton>
               </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
               <div ref={traySectionRef} className="flex flex-col gap-3">
@@ -2645,11 +2668,15 @@ export default function Editor() {
                     does; once it's gone, focus goes to the tray's switch */}
                 {graphic.tray.enabled && graphic.tray.items.length > 0 && (
                   <ClearButton
-                    confirm={`Clear ${cardCount(graphic.tray.items.length)}`}
-                    onConfirm={() => {
-                      flushSync(clearTray);
-                      trayToggleRef.current?.focus();
-                    }}
+                    choices={[
+                      {
+                        label: `Clear ${cardCount(graphic.tray.items.length)}`,
+                        onSelect: () => {
+                          flushSync(clearTray);
+                          trayToggleRef.current?.focus();
+                        },
+                      },
+                    ]}
                   >
                     Clear Card Tray
                   </ClearButton>

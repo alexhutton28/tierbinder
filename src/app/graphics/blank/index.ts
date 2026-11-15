@@ -1,3 +1,4 @@
+import { cardCount } from '../../text';
 import type { GraphicType } from '../types';
 import BlankCanvasView from './BlankCanvasView';
 import BlankSettings, { BlankBoardSettings } from './BlankSettings';
@@ -26,6 +27,11 @@ const blank: GraphicType<BlankCanvas> = {
   cardWidth: (canvas) => canvas.cardWidth,
   layout: layoutCards,
   mapCards,
+  contents: (canvas) => [
+    ...(canvas.items.length ? [cardCount(canvas.items.length)] : []),
+    ...(canvas.strokes.length ? ['Ink'] : []),
+  ],
+  clear: (canvas) => ({ ...canvas, items: [], strokes: [] }),
   // One place to add cards: the canvas
   targets: () => [{ name: 'Canvas' }],
   addCard: (canvas, item) => addCard(canvas, item),
