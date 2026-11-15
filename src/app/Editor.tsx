@@ -1096,17 +1096,13 @@ export default function Editor() {
   }
 
   // Empties the board showing (its cards, and the blank canvas's ink), keeping its names
-  // and colors; `withTray` empties the card tray too. Its cards' menu, selection and a
-  // replacement being picked go with them.
-  function clearBoard(withTray: boolean) {
-    setGraphic((g) => {
-      const cleared = typeOf(g.kind).clear(g);
-      return withTray ? { ...cleared, tray: { ...cleared.tray, items: [] } } : cleared;
-    });
+  // and colors. Its cards' menu, selection and a replacement being picked go with them.
+  function clearBoard() {
+    setGraphic((g) => typeOf(g.kind).clear(g));
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
-    showToast(withTray ? 'Board and Card Tray Cleared' : 'Board Cleared');
+    showToast('Board Cleared');
   }
 
   // Empties the card tray, keeping it on; a selected tray card goes with it
@@ -1144,18 +1140,18 @@ export default function Editor() {
 
   // Clear Board's choices: only those that would change something, and none that would do
   // the same as another. The board's cards and ink, keeping its styles; a showing card
-  // tray's cards; both; its styles reset; and Clear All, when that's more than one of them.
+  // tray's cards; its styles reset; and Clear All, when that's more than one of them (it
+  // stands in for clearing the board and the tray together, keeping the menu short).
   const hasContents = type.hasContents(graphic);
   const trayCards = trayShown ? graphic.tray.items.length : 0;
   const styled = JSON.stringify(type.restyle(graphic)) !== JSON.stringify(graphic);
   const boardClears: ClearChoice[] = [
-    ...(hasContents ? [{ label: 'Clear Board', onSelect: () => clearBoard(false) }] : []),
+    ...(hasContents ? [{ label: 'Clear Board', onSelect: clearBoard }] : []),
     ...(trayCards ? [{ label: 'Clear Card Tray', onSelect: clearTray }] : []),
-    ...(hasContents && trayCards
-      ? [{ label: 'Clear Board and Card Tray', onSelect: () => clearBoard(true) }]
-      : []),
     ...(styled ? [{ label: 'Reset Board Styles', onSelect: restyleBoard }] : []),
-    ...(styled && (hasContents || trayCards) ? [{ label: 'Clear All', onSelect: clearAll }] : []),
+    ...([hasContents, trayCards, styled].filter(Boolean).length > 1
+      ? [{ label: 'Clear All', onSelect: clearAll }]
+      : []),
   ];
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
