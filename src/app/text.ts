@@ -19,7 +19,3 @@ export const titleCase = (text: string) =>
 
 // "1 Card", "12 Cards"
 export const cardCount = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
-
-// "Cards", "Cards and Ink", "Cards, Ink and Card Tray"
-export const listWords = (words: string[]) =>
-  words.length > 1 ? `${words.slice(0, -1).join(', ')} and ${words.at(-1)}` : (words[0] ?? '');

@@ -90,10 +90,13 @@ export type GraphicType<G extends { kind: string }> = {
   layout: (graphic: G) => CardPlacement[];
   // Changes cards, or removes them (null)
   mapCards: (graphic: G, change: (item: CardItem) => CardItem | null) => G;
-  // What's on the board, as Clear Board's choices name it ("12 Cards", "Ink"; none when
-  // it's empty), and the board with all of it gone, its settings (names, colors) kept
-  contents: (graphic: G) => string[];
+  // Whether anything's on the board (cards, ink), and the board with all of it gone, its
+  // styles (names, colors, card size) kept: Clear Board
+  hasContents: (graphic: G) => boolean;
   clear: (graphic: G) => G;
+  // The board with a new one's styles (names, colors, card size, the card tray's color),
+  // everything on it, its tools and the card tray's cards kept: Reset Board Styles
+  restyle: (graphic: G) => G;
   // Where a search result can be added (the Add to choices), e.g. the tiers, each with
   // a color for its swatch in the picker if it has one
   targets: (graphic: G) => { name: string; color?: string }[];

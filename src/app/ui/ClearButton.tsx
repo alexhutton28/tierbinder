@@ -7,8 +7,8 @@ import Button from './Button';
 import styles from './ClearButton.module.css';
 
 // A clear button that asks first, as the card menu's Clear Card Tray does: Feather's trash
-// before its words, opening a menu under it whose choices each say what goes ("Clear Card
-// Tray (14 Cards)", "Start Over") and do it; with no choices it's disabled. A second click
+// before its words, opening a menu under it whose choices each name a clear ("Clear Card
+// Tray", "Reset Board Styles") and do it; with no choices it's disabled. A second click
 // on the button, Escape, Tab or a press outside closes it. Opening focuses the first
 // choice, and the arrows, Home and End move through them. Once one's done, focus goes
 // back to the button, or to `onEmptied` when nothing's left to clear, unless the choice

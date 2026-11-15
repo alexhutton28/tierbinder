@@ -60,7 +60,7 @@ import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
 import { launchFlights, onScreen, wholeOnScreen, type Flight } from './ui/flights';
-import { titleCase, cardCount, listWords } from './text';
+import { titleCase, cardCount } from './text';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -104,16 +104,6 @@ const POOL_ACTIONS = {
 } as const;
 
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
-// Whether two boards have the same settings (names, colors, tools), whatever their cards,
-// ink, card tray or ids
-function sameSettings(a: Graphic, b: Graphic) {
-  const settings = (g: Graphic) =>
-    JSON.stringify(typeOf(g.kind).clear({ ...g, tray: b.tray }), (key, value) =>
-      key === 'id' ? undefined : value
-    );
-  return settings(a) === settings(b);
-}
-
 const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
 
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
@@ -975,33 +965,18 @@ export default function Editor() {
     []
   );
 
-  // Shows another board type's board (kept from when it was last used, or new), or
-  // replaces the board showing with a new one
-  function showBoard(kind: GraphicKind, clear = false) {
-    setDoc((d) => {
-      const old = d.graphics[kind];
-      if (old && !clear) return { ...d, kind };
-      // Clearing empties the card tray if it shows, keeping it on in its color; a hidden
-      // tray (turned off) keeps its cards, as it promises
-      const fresh = typeOf(kind).create();
-      const keepTray = kind !== d.kind || !trayShown;
-      const next = old
-        ? { ...fresh, tray: { ...old.tray, items: keepTray ? old.tray.items : [] } }
-        : fresh;
-      return { ...d, kind, graphics: { ...d.graphics, [kind]: next } };
-    });
+  // Shows another board type's board (kept from when it was last used, or new)
+  function showBoard(kind: GraphicKind) {
+    setDoc((d) =>
+      d.graphics[kind]
+        ? { ...d, kind }
+        : { ...d, kind, graphics: { ...d.graphics, [kind]: typeOf(kind).create() } }
+    );
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
-    // A cleared board starts Add Cards over too
-    if (clear) {
-      setQuery('');
-      clearSearch();
-    }
-    if (kind !== doc.kind) {
-      setTarget(0);
-      setTool(DEFAULT_TOOL);
-    }
+    setTarget(0);
+    setTool(DEFAULT_TOOL);
   }
 
   // Applies a placed card, or shows why it couldn't be placed
@@ -1144,35 +1119,43 @@ export default function Editor() {
     if (count) showToast(removedMessage(count));
   }
 
-  // Clear Board's choices: only those that would change something, each saying what goes.
-  // The board's contents ("12 Cards and Ink"), keeping its names and colors; a showing
-  // card tray's cards; both; and Start Over, a new board (default names and colors, a
-  // showing tray emptied; a hidden tray keeps its cards), offered unless the board is
-  // already as new.
-  const contents = type.contents(graphic);
+  // Resets the board's styles (names, colors, card size, the card tray's color) to a new
+  // board's, keeping everything on it
+  function restyleBoard() {
+    setGraphic((g) => typeOf(g.kind).restyle(g));
+    showToast('Board Styles Reset');
+  }
+
+  // Clear All: the board as new, but for its tools; a showing card tray is emptied, kept
+  // on, and a hidden one keeps its cards, as it promises. Add Cards starts over too.
+  function clearAll() {
+    setGraphic((g) => {
+      const type = typeOf(g.kind);
+      const next = type.restyle(type.clear(g));
+      return trayShown ? { ...next, tray: { ...next.tray, items: [] } } : next;
+    });
+    setSelectedId(null);
+    setCardMenu(null);
+    setPicking(null);
+    setQuery('');
+    clearSearch();
+    showToast('All Cleared');
+  }
+
+  // Clear Board's choices: only those that would change something, and none that would do
+  // the same as another. The board's cards and ink, keeping its styles; a showing card
+  // tray's cards; both; its styles reset; and Clear All, when that's more than one of them.
+  const hasContents = type.hasContents(graphic);
   const trayCards = trayShown ? graphic.tray.items.length : 0;
-  const asNew = sameSettings(graphic, type.create());
+  const styled = JSON.stringify(type.restyle(graphic)) !== JSON.stringify(graphic);
   const boardClears: ClearChoice[] = [
-    ...(contents.length
-      ? [{ label: `Clear Board (${listWords(contents)})`, onSelect: () => clearBoard(false) }]
-      : []),
-    ...(trayCards
-      ? [{ label: `Clear Card Tray (${cardCount(trayCards)})`, onSelect: clearTray }]
-      : []),
-    ...(contents.length && trayCards
+    ...(hasContents ? [{ label: 'Clear Board', onSelect: () => clearBoard(false) }] : []),
+    ...(trayCards ? [{ label: 'Clear Card Tray', onSelect: clearTray }] : []),
+    ...(hasContents && trayCards
       ? [{ label: 'Clear Board and Card Tray', onSelect: () => clearBoard(true) }]
       : []),
-    ...(contents.length || trayCards || !asNew
-      ? [
-          {
-            label: 'Start Over',
-            onSelect: () => {
-              showBoard(doc.kind, true);
-              showToast('Started a New Board');
-            },
-          },
-        ]
-      : []),
+    ...(styled ? [{ label: 'Reset Board Styles', onSelect: restyleBoard }] : []),
+    ...(styled && (hasContents || trayCards) ? [{ label: 'Clear All', onSelect: clearAll }] : []),
   ];
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
