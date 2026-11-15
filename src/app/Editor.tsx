@@ -104,6 +104,16 @@ const POOL_ACTIONS = {
 } as const;
 
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
+// Whether two boards have the same settings (names, colors, tools), whatever their cards,
+// ink, card tray or ids
+function sameSettings(a: Graphic, b: Graphic) {
+  const settings = (g: Graphic) =>
+    JSON.stringify(typeOf(g.kind).clear({ ...g, tray: b.tray }), (key, value) =>
+      key === 'id' ? undefined : value
+    );
+  return settings(a) === settings(b);
+}
+
 const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
 
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
@@ -436,8 +446,6 @@ export default function Editor() {
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
   const [tool, setTool] = React.useState(DEFAULT_TOOL);
-  // Where focus goes once Clear Card Tray's button is gone
-  const trayToggleRef = React.useRef<HTMLButtonElement>(null);
   // Card Tray's section and Bulk Import's, scrolled into view as they open (revealBelow)
   const traySectionRef = React.useRef<HTMLDivElement>(null);
   const importRef = React.useRef<HTMLDivElement>(null);
@@ -1136,30 +1144,35 @@ export default function Editor() {
     if (count) showToast(removedMessage(count));
   }
 
-  // Clear Board's choices, each saying what goes: the board's contents ("Clear 12 Cards and
-  // Ink"), those and a showing card tray's cards, or a new board (Start Over: default
-  // names and colors, and a showing tray emptied; a hidden tray keeps its cards)
+  // Clear Board's choices: only those that would change something, each saying what goes.
+  // The board's contents ("12 Cards and Ink"), keeping its names and colors; a showing
+  // card tray's cards; both; and Start Over, a new board (default names and colors, a
+  // showing tray emptied; a hidden tray keeps its cards), offered unless the board is
+  // already as new.
   const contents = type.contents(graphic);
-  const trayFull = trayShown && graphic.tray.items.length > 0;
+  const trayCards = trayShown ? graphic.tray.items.length : 0;
+  const asNew = sameSettings(graphic, type.create());
   const boardClears: ClearChoice[] = [
     ...(contents.length
-      ? [{ label: `Clear ${listWords(contents)}`, onSelect: () => clearBoard(false) }]
+      ? [{ label: `Clear Board (${listWords(contents)})`, onSelect: () => clearBoard(false) }]
       : []),
-    ...(contents.length && trayFull
+    ...(trayCards
+      ? [{ label: `Clear Card Tray (${cardCount(trayCards)})`, onSelect: clearTray }]
+      : []),
+    ...(contents.length && trayCards
+      ? [{ label: 'Clear Board and Card Tray', onSelect: () => clearBoard(true) }]
+      : []),
+    ...(contents.length || trayCards || !asNew
       ? [
           {
-            label: `Clear ${listWords([...contents, 'Card Tray'])}`,
-            onSelect: () => clearBoard(true),
+            label: 'Start Over',
+            onSelect: () => {
+              showBoard(doc.kind, true);
+              showToast('Started a New Board');
+            },
           },
         ]
       : []),
-    {
-      label: 'Start Over',
-      onSelect: () => {
-        showBoard(doc.kind, true);
-        showToast('Started a New Board');
-      },
-    },
   ];
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
@@ -2629,7 +2642,13 @@ export default function Editor() {
                 <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
                 {/* Asks first, saying what goes: the board (a new one, colors and names too),
                     and a showing card tray's cards; a hidden tray keeps them */}
-                <ClearButton choices={boardClears}>Clear Board</ClearButton>
+                <ClearButton
+                  choices={boardClears}
+                  // Nothing left to clear: the button's disabled, so focus goes to the board
+                  onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
+                >
+                  Clear Board
+                </ClearButton>
               </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
               <div ref={traySectionRef} className="flex flex-col gap-3">
@@ -2638,7 +2657,6 @@ export default function Editor() {
                     only while the tray is on */}
                 <h3 className="tierbinder-heading flex">
                   <Toggle
-                    ref={trayToggleRef}
                     checked={graphic.tray.enabled}
                     onChange={(on) => {
                       showTray(on);
@@ -2663,23 +2681,6 @@ export default function Editor() {
                     value={graphic.tray.color}
                     onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
                   />
-                )}
-                {/* While it holds cards, asking first as the card menu's Clear Card Tray
-                    does; once it's gone, focus goes to the tray's switch */}
-                {graphic.tray.enabled && graphic.tray.items.length > 0 && (
-                  <ClearButton
-                    choices={[
-                      {
-                        label: `Clear ${cardCount(graphic.tray.items.length)}`,
-                        onSelect: () => {
-                          flushSync(clearTray);
-                          trayToggleRef.current?.focus();
-                        },
-                      },
-                    ]}
-                  >
-                    Clear Card Tray
-                  </ClearButton>
                 )}
               </div>
             </section>

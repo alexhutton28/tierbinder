@@ -1,25 +1,30 @@
 'use client';
 
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { useAnchored, usePopup } from './anchored';
 import Button from './Button';
 import styles from './ClearButton.module.css';
 
 // A clear button that asks first, as the card menu's Clear Card Tray does: Feather's trash
-// before its words, opening a menu under it whose choices each say what goes ("Clear 12
-// Cards", "Start Over") and do it. A second click on the button, Escape, Tab or a press
-// outside closes it. Opening focuses the first choice, and the arrows, Home and End move
-// through them; once one's done, focus goes back to the button, unless it moved focus
-// elsewhere (the button may be gone). It floats like a dropdown's list (useAnchored), so
-// it's never squeezed by a narrow sidebar.
+// before its words, opening a menu under it whose choices each say what goes ("Clear Card
+// Tray (14 Cards)", "Start Over") and do it; with no choices it's disabled. A second click
+// on the button, Escape, Tab or a press outside closes it. Opening focuses the first
+// choice, and the arrows, Home and End move through them. Once one's done, focus goes
+// back to the button, or to `onEmptied` when nothing's left to clear, unless the choice
+// moved it. It floats like a dropdown's list (useAnchored), so it's never squeezed by a
+// narrow sidebar.
 
 export type ClearChoice = { label: string; onSelect: () => void };
 
 export default function ClearButton({
   choices,
+  onEmptied,
   children,
 }: {
   choices: ClearChoice[];
+  // Where focus goes when a choice leaves nothing to clear (the button is disabled)
+  onEmptied?: () => void;
   children: string;
 }) {
   const id = React.useId();
@@ -38,6 +43,7 @@ export default function ClearButton({
     <div ref={boxRef} className="relative self-start">
       <Button
         ref={buttonRef}
+        disabled={!choices.length}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={shown ? `${id}-menu` : undefined}
@@ -101,10 +107,17 @@ export default function ClearButton({
               tabIndex={-1}
               className="tierbinder-option whitespace-nowrap"
               onClick={() => {
-                setOpen(false);
-                choice.onSelect();
-                // Back to the button, unless the choice sent focus somewhere else
-                if (menuRef.current?.contains(document.activeElement)) buttonRef.current?.focus();
+                flushSync(() => {
+                  setOpen(false);
+                  choice.onSelect();
+                });
+                // Back to the button (or onEmptied, if it's now disabled), unless the choice
+                // sent focus somewhere else
+                // (the choice itself may be gone, its label changed, leaving focus nowhere)
+                const at = document.activeElement;
+                if (at && at !== document.body && !menuRef.current?.contains(at)) return;
+                if (buttonRef.current?.disabled) onEmptied?.();
+                else buttonRef.current?.focus();
               }}
             >
               {choice.label}
