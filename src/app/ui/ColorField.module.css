@@ -131,11 +131,12 @@
     inset 0 0 0 calc(3 * var(--tb-line-width)) var(--tb-handle-edge);
 }
 
-.hexRow {
+/* Its caption over the field, as Board Colors' is over theirs */
+.hexBox {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-3);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-2);
 }
 
 /* react-colorful's parts, in the design system's look: the square fills the picker's

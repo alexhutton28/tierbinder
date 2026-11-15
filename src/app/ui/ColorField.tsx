@@ -196,7 +196,7 @@ export default function ColorField({
               </div>
             </div>
           )}
-          <label className={styles.hexRow}>
+          <label className={styles.hexBox}>
             <span className={styles.caption}>Hex</span>
             <HexInput value={value} onChange={apply} />
           </label>
