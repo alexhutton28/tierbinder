@@ -49,6 +49,7 @@ import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import ClearButton from './ui/ClearButton';
+import { followOpen, revealBelow } from './ui/reveal';
 import Toggle from './ui/Toggle';
 import ColorField, { BoardColors, boardColors } from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
@@ -440,6 +441,9 @@ export default function Editor() {
   const [tool, setTool] = React.useState(DEFAULT_TOOL);
   // Where focus goes once Clear Card Tray's button is gone
   const trayToggleRef = React.useRef<HTMLButtonElement>(null);
+  // Card Tray's section and Bulk Import's, scrolled into view as they open (revealBelow)
+  const traySectionRef = React.useRef<HTMLDivElement>(null);
+  const importRef = React.useRef<HTMLDivElement>(null);
   // Pools whose cards are still flying in: they don't offer to take them back out yet, so a
   // double click doesn't send them straight back
   const [flyingPools, setFlyingPools] = React.useState<ReadonlySet<string>>(new Set());
@@ -2515,12 +2519,18 @@ export default function Editor() {
                       className="self-start"
                       aria-expanded={importing}
                       aria-controls="bulk-import"
-                      onClick={() => setImporting((on) => !on)}
+                      onClick={() => {
+                        setImporting(!importing);
+                        // The page follows it down as it slides open, so it isn't left
+                        // opening off screen under a phone's board
+                        if (!importing && importRef.current) followOpen(importRef.current);
+                      }}
                     >
                       Bulk Import
                       <span aria-hidden className={styles.disclosureChevron} />
                     </Button>
                     <div
+                      ref={importRef}
                       id="bulk-import"
                       className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
                       inert={!importing}
@@ -2599,7 +2609,7 @@ export default function Editor() {
                 </ClearButton>
               </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-              <div className="flex flex-col gap-3">
+              <div ref={traySectionRef} className="flex flex-col gap-3">
                 {/* Its switch turns the whole section on or off, so the heading is the
                     switch: its name, then the switch right after it; its other rows show
                     only while the tray is on */}
@@ -2607,7 +2617,17 @@ export default function Editor() {
                   <Toggle
                     ref={trayToggleRef}
                     checked={graphic.tray.enabled}
-                    onChange={showTray}
+                    onChange={(on) => {
+                      showTray(on);
+                      // Its rows come into view once they and the tray are laid out (on
+                      // phones the tray under the board moves the sidebar down too)
+                      if (on)
+                        requestAnimationFrame(() =>
+                          requestAnimationFrame(() => {
+                            if (traySectionRef.current) revealBelow(traySectionRef.current);
+                          })
+                        );
+                    }}
                     heading
                   >
                     Card Tray
