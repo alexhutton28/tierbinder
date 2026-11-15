@@ -48,7 +48,7 @@ import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
-import Checkbox from './ui/Checkbox';
+import ClearButton from './ui/ClearButton';
 import Toggle from './ui/Toggle';
 import ColorField, { BoardColors, boardColors } from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
@@ -102,9 +102,11 @@ const POOL_ACTIONS = {
   remove: { label: 'Remove From Card Tray', aria: 'remove from card tray' },
 } as const;
 
+// "1 Card", "12 Cards"
+const cardCount = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
+
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
-const removedMessage = (n: number) =>
-  `Removed ${n} ${n === 1 ? 'Card' : 'Cards'} From the Card Tray`;
+const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
 
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
 const TRAY_MENU = 'tray';
@@ -436,15 +438,6 @@ export default function Editor() {
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
   const [tool, setTool] = React.useState(DEFAULT_TOOL);
-  // Board button whose choices are showing: confirming Clear board, or picking a type
-  const [confirmingClear, setConfirmingClear] = React.useState(false);
-  // Confirming Clear Card Tray, in Customize
-  const [confirmingTrayClear, setConfirmingTrayClear] = React.useState(false);
-  // Its button, Cancel, and Clear Board's button, for focus to move between as it confirms
-  const clearTrayRef = React.useRef<HTMLButtonElement>(null);
-  const cancelTrayClearRef = React.useRef<HTMLButtonElement>(null);
-  const clearBoardRef = React.useRef<HTMLButtonElement>(null);
-  const cancelClearRef = React.useRef<HTMLButtonElement>(null);
   // Where focus goes once Clear Card Tray's button is gone
   const trayToggleRef = React.useRef<HTMLButtonElement>(null);
   // Pools whose cards are still flying in: they don't offer to take them back out yet, so a
@@ -1000,8 +993,6 @@ export default function Editor() {
       setTarget(0);
       setTool(DEFAULT_TOOL);
     }
-    setConfirmingClear(false);
-    setConfirmingTrayClear(false);
   }
 
   // Applies a placed card, or shows why it couldn't be placed
@@ -1113,11 +1104,6 @@ export default function Editor() {
     removeCard(selectedId);
   }, [selectedId, selectedShown, removeCard]);
 
-  // Nothing to confirm once the tray is off or empty, however it got there
-  if (confirmingTrayClear && (!graphic.tray.enabled || !graphic.tray.items.length)) {
-    setConfirmingTrayClear(false);
-  }
-
   // Turns the card tray on or off (its cards stay saved). Turned off while it's the Add to
   // choice: back to the first tier, so the next card doesn't quietly turn it on again
   function showTray(enabled: boolean) {
@@ -1132,7 +1118,6 @@ export default function Editor() {
     setGraphic((g) => ({ ...g, tray: { ...g.tray, items: [] } }));
     setSelectedId((selected) => (selected && ids.has(selected) ? null : selected));
     setPicking((p) => (p && ids.has(p.id) ? null : p));
-    setConfirmingTrayClear(false);
     if (count) showToast(removedMessage(count));
   }
 
@@ -1222,18 +1207,17 @@ export default function Editor() {
     ];
     let next = current;
     const added: string[] = [];
-    const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
     if (trayItems.length) {
       const placed = importTrayCards(next.tray, trayItems);
       const n = placed.tray.items.length - next.tray.items.length;
-      if (n) added.push(`Added ${count(n)} to the Card Tray`);
+      if (n) added.push(`Added ${cardCount(n)} to the Card Tray`);
       next = { ...next, tray: placed.tray };
       errors.push(...placed.errors);
     }
     if (resolvedGroups.length) {
       const placed = currentType.importCards(next, resolvedGroups);
       const n = currentType.layout(placed.graphic).length - currentType.layout(next).length;
-      if (n) added.push(`Added ${count(n)} to the Board`);
+      if (n) added.push(`Added ${cardCount(n)} to the Board`);
       next = placed.graphic;
       errors.push(...placed.errors);
     }
@@ -1661,14 +1645,13 @@ export default function Editor() {
     ) {
       showTray(true);
     }
-    const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
     const already = cards.length - fresh.length;
     const failed = pool.cards.length - cards.length;
     showToast(
       [
-        ...(added.length ? [`Added ${count(added.length)} to the Card Tray`] : []),
-        ...(already ? [`${count(already)} Already on the Board or in the Card Tray`] : []),
-        ...(failed ? [`${count(failed)} Couldn't Load`] : []),
+        ...(added.length ? [`Added ${cardCount(added.length)} to the Card Tray`] : []),
+        ...(already ? [`${cardCount(already)} Already on the Board or in the Card Tray`] : []),
+        ...(failed ? [`${cardCount(failed)} Couldn't Load`] : []),
         ...placed.errors,
       ].join('\n')
     );
@@ -2597,70 +2580,39 @@ export default function Editor() {
                   }}
                 />
                 <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-                {/* Confirmed on the page: some browsers (the in-app one) never show
-                confirm() */}
-                {/* Focus follows, as Clear Card Tray's does: to Cancel while it asks, and
-                back to the button on Cancel or once cleared */}
-                {confirmingClear ? (
-                  <div
-                    role="group"
-                    aria-labelledby="clear-board-question"
-                    className="flex flex-wrap gap-3 items-center"
-                  >
-                    <span id="clear-board-question">
-                      {trayShown && graphic.tray.items.length
-                        ? 'Clear the Board and Card Tray?'
-                        : 'Clear the Board?'}
-                    </span>
-                    <Button
-                      onClick={() => {
-                        flushSync(() => showBoard(doc.kind, true));
-                        clearBoardRef.current?.focus();
-                      }}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      ref={cancelClearRef}
-                      onClick={() => {
-                        flushSync(() => setConfirmingClear(false));
-                        clearBoardRef.current?.focus();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    ref={clearBoardRef}
-                    className="self-start flex gap-2 items-center"
-                    onClick={() => {
-                      // One confirmation at a time
-                      flushSync(() => {
-                        setConfirmingTrayClear(false);
-                        setConfirmingClear(true);
-                      });
-                      cancelClearRef.current?.focus();
-                    }}
-                  >
-                    <span aria-hidden className={styles.clearIcon} />
-                    Clear Board
-                  </Button>
-                )}
+                {/* Asks first, saying what goes: the board (a new one, colors and names too),
+                    and a showing card tray's cards; a hidden tray keeps them */}
+                <ClearButton
+                  confirm={
+                    trayShown && graphic.tray.items.length
+                      ? `Clear Board and ${cardCount(graphic.tray.items.length)}`
+                      : 'Clear Board'
+                  }
+                  onConfirm={() => {
+                    // A showing tray is emptied with it
+                    const withTray = trayShown && graphic.tray.items.length > 0;
+                    showBoard(doc.kind, true);
+                    showToast(withTray ? 'Board and Card Tray Cleared' : 'Board Cleared');
+                  }}
+                >
+                  Clear Board
+                </ClearButton>
               </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
               <div className="flex flex-col gap-3">
-                {/* Its switch turns the whole section on or off, so it sits in the header, at
-                    the column's end; its other rows show only while the tray is on */}
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="tierbinder-heading">Card Tray</h3>
+                {/* Its switch turns the whole section on or off, so the heading is the
+                    switch: its name, then the switch right after it; its other rows show
+                    only while the tray is on */}
+                <h3 className="tierbinder-heading flex">
                   <Toggle
                     ref={trayToggleRef}
                     checked={graphic.tray.enabled}
                     onChange={showTray}
-                    label="Show card tray under the board"
-                  />
-                </div>
+                    heading
+                  >
+                    Card Tray
+                  </Toggle>
+                </h3>
                 {graphic.tray.enabled && (
                   <ColorField
                     name="Tray Color"
@@ -2669,55 +2621,19 @@ export default function Editor() {
                     onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
                   />
                 )}
-                {/* While it holds cards; confirmed on the page, as Clear Board is */}
-                {graphic.tray.enabled &&
-                  graphic.tray.items.length > 0 &&
-                  // Focus follows: to Cancel while it asks (the question is read with it), back to
-                  // the button on Cancel, and to the tray's toggle once the tray is cleared and
-                  // its button gone
-                  (confirmingTrayClear ? (
-                    <div
-                      role="group"
-                      // Named by its question, read once
-                      aria-labelledby="clear-tray-question"
-                      className="flex flex-wrap gap-3 items-center"
-                    >
-                      <span id="clear-tray-question">Clear the Card Tray?</span>
-                      <Button
-                        onClick={() => {
-                          flushSync(clearTray);
-                          trayToggleRef.current?.focus();
-                        }}
-                      >
-                        Yes
-                      </Button>
-                      <Button
-                        ref={cancelTrayClearRef}
-                        onClick={() => {
-                          flushSync(() => setConfirmingTrayClear(false));
-                          clearTrayRef.current?.focus();
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      ref={clearTrayRef}
-                      className="self-start flex gap-2 items-center"
-                      onClick={() => {
-                        // One confirmation at a time
-                        flushSync(() => {
-                          setConfirmingClear(false);
-                          setConfirmingTrayClear(true);
-                        });
-                        cancelTrayClearRef.current?.focus();
-                      }}
-                    >
-                      <span aria-hidden className={styles.clearIcon} />
-                      Clear Card Tray
-                    </Button>
-                  ))}
+                {/* While it holds cards, asking first as the card menu's Clear Card Tray
+                    does; once it's gone, focus goes to the tray's switch */}
+                {graphic.tray.enabled && graphic.tray.items.length > 0 && (
+                  <ClearButton
+                    confirm={`Clear ${cardCount(graphic.tray.items.length)}`}
+                    onConfirm={() => {
+                      flushSync(clearTray);
+                      trayToggleRef.current?.focus();
+                    }}
+                  >
+                    Clear Card Tray
+                  </ClearButton>
+                )}
               </div>
             </section>
 
@@ -2741,9 +2657,9 @@ export default function Editor() {
                   <span className="text-(--tb-text)">PNG</span>
                 </div>
                 {trayShown && (
-                  <Checkbox checked={includeTray} onChange={setIncludeTray}>
-                    Include card tray in export
-                  </Checkbox>
+                  <Toggle checked={includeTray} onChange={setIncludeTray}>
+                    Include Card Tray
+                  </Toggle>
                 )}
                 <div className="flex flex-wrap gap-3">
                   <Button variant="primary" onClick={exportPng} disabled={busy}>
@@ -2936,9 +2852,7 @@ export default function Editor() {
                                   boardBoxRef.current?.focus({ preventScroll: true });
                                 }}
                               >
-                                {titleCase(
-                                  `Clear ${shownTrayFlyout} ${shownTrayFlyout === 1 ? 'card' : 'cards'}`
-                                )}
+                                {`Clear ${cardCount(shownTrayFlyout)}`}
                               </button>
                             </div>
                           )}

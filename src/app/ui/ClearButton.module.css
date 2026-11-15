@@ -1,0 +1,15 @@
+/* Feather's trash, before the button's words */
+.icon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/trash.svg') center / contain no-repeat;
+}
+
+/* On touch screens its item is a touch target (44px tall), as the card menu's rows are */
+@media (pointer: coarse) {
+  .menu [role='menuitem'] {
+    min-height: var(--tb-touch-target);
+  }
+}

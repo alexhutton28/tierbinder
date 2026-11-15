@@ -23,7 +23,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
           checked={canvas.topHalf}
           onChange={(topHalf) => onChange((c) => setCardShape(c, { topHalf }))}
         >
-          Show only top half of cards
+          Top Halves Only
         </Toggle>
       </div>
     </>

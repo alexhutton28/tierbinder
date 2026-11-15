@@ -105,7 +105,7 @@ export default function ColorField({
   return (
     <span
       ref={boxRef}
-      className={name ? 'flex' : 'inline-flex'}
+      className={name ? 'flex self-start' : 'inline-flex'}
       // Closes once focus moves on past it, as a dropdown does
       onBlur={(e) => {
         if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))

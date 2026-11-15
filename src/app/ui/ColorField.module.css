@@ -3,12 +3,12 @@
   width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
 }
 
-/* A named color: the swatch and its name, 8px apart, as one row that opens the picker,
-   lighting up like a list option on hover and while its picker is open. It reaches 4px
-   past the column on each side, so the swatch lines up with what's above and below. */
+/* A named color: the swatch and its name, 8px apart, as one button hugging them that
+   opens the picker, lighting up like a list option on hover and while its picker is open.
+   It reaches 4px past them on each side, so the swatch lines up with what's above and
+   below. */
 .row {
   display: flex;
-  flex: 1;
   gap: var(--spacing-3);
   align-items: center;
   min-height: var(--tb-control-height);

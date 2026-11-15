@@ -56,7 +56,7 @@ export default function TierListSettings({
           checked={list.tierCardBorders}
           onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}
         >
-          Tier colored card borders
+          Tier Card Borders
         </Toggle>
       </div>
     </>
