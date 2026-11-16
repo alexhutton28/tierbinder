@@ -75,6 +75,8 @@ export default function ClearButton({
           popover="manual"
           role="menu"
           aria-label={label ?? children}
+          // A quiet Clear ends its row: its menu lines up with its right edge
+          data-align={quiet ? 'end' : undefined}
           onKeyDown={(e) => {
             // Kept from the page's own Escape handling, which would also deselect the card
             if (e.key === 'Escape') {

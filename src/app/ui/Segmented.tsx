@@ -7,8 +7,8 @@ import styles from './Segmented.module.css';
 // S, M and L): a setting's row (.tierbinder-prop), its label muted at the left and the
 // segments at the right, joined in one box in the fields' colors, the chosen one lit.
 // Native radio buttons underneath, so Tab reaches the group once, the arrows move the
-// choice, and screen readers hear each choice's full `label` ("Large") rather than its
-// `short` one.
+// choice, and screen readers hear each choice's full `label` ("Large: 170 pixels wide")
+// rather than its `short` one.
 
 export default function Segmented<T extends string | number>({
   label,

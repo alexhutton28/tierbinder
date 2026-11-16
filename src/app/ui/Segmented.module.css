@@ -28,12 +28,13 @@
 
 /* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
 .option:hover {
+  background: var(--tb-control-hover);
   color: var(--tb-text);
 }
 
 .option:has(:checked) {
   background: var(--tb-segment-on);
-  color: var(--tb-heading);
+  color: var(--tb-text);
 }
 
 .option:has(:focus-visible) {
@@ -41,9 +42,13 @@
   outline-offset: var(--tb-line-width);
 }
 
-/* On touch screens each takes presses 44px tall, reaching above and below without moving
-   anything */
+/* On touch screens each is 44px wide and takes presses 44px tall, reaching above and
+   below without moving anything */
 @media (pointer: coarse) {
+  .option {
+    min-width: var(--tb-touch-target);
+  }
+
   .option::after {
     position: absolute;
     inset-block: calc(50% - var(--tb-touch-target) / 2);

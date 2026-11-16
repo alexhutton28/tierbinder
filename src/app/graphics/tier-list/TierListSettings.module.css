@@ -28,8 +28,7 @@ textarea.name {
   mask-image: url('/plus.svg');
 }
 
-/* On touch screens the remove buttons and Add Tier take presses as a 44px target around
-   them, the rows keeping their size and spacing */
+/* On touch screens the remove buttons take presses as a 44px target around them, the rows keeping their size and spacing */
 @media (pointer: coarse) {
   .touch {
     position: relative;
