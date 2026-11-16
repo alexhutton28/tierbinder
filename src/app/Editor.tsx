@@ -198,6 +198,9 @@ function toolsOnly(before: Graphic, now: Graphic) {
   );
 }
 
+// Undo's shortcut, as screen readers hear it with a toast that offers Undo
+const UNDO_KEY = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? 'Command+Z' : 'Ctrl+Z');
+
 // The key a keydown is for, by its letter, or by its place on a layout without Latin
 // letters (a Russian layout's ⌘Z gives "я")
 function shortcutKey(e: KeyboardEvent) {
@@ -391,8 +394,18 @@ export default function Editor() {
     stay: boolean;
     undo?: 'waiting' | 'armed';
   } | null>(null);
-  const [toastHeld, setToastHeld] = React.useState(false);
-  const showToast = (message: string, { stay = false, undo = false } = {}) =>
+  // When the board's history last took a settings change (undo's merging, below); a toast
+  // that offers Undo starts a new step
+  const lastChange = React.useRef(0);
+  // The toast the pointer or focus is on, by id: it holds up only that toast, and only
+  // while it offers Undo, so a toast that goes away under the pointer can't hold the next
+  const [heldToast, setHeldToast] = React.useState<number | null>(null);
+  const toastHeld =
+    toast !== null && heldToast === toast.id && toast.undo === 'armed' && !toast.closing;
+  // `undo` must come with a change to the board showing, in the same update: that change
+  // arms its Undo, and starts a step of its own, so Undo takes back only what it reports
+  const showToast = (message: string, { stay = false, undo = false } = {}) => {
+    if (undo) lastChange.current = 0;
     setToast((t) => ({
       message,
       id: t && t.message === message && !t.closing ? t.id : (t?.id ?? 0) + 1,
@@ -401,6 +414,7 @@ export default function Editor() {
       stay,
       undo: undo ? 'waiting' : undefined,
     }));
+  };
   React.useEffect(() => {
     if (!toast || toast.closing || toast.stay || toastHeld) return;
     const lines = toast.message.split('\n').length;
@@ -1034,7 +1048,6 @@ export default function Editor() {
   // would take room under the board.
   const historyRef = React.useRef<Partial<Record<GraphicKind, History>>>({});
   const lastDoc = React.useRef(doc);
-  const lastChange = React.useRef(0);
   // The change undo or redo itself makes, which isn't recorded
   const restoring = React.useRef<Graphic | null>(null);
   React.useEffect(() => {
@@ -1043,8 +1056,10 @@ export default function Editor() {
     const sameKind = lastDoc.current.kind === doc.kind;
     lastDoc.current = doc;
     if (!sameKind) {
-      // A change on the board switched to is a step of its own
+      // A change on the board switched to is a step of its own, and a toast's Undo was
+      // for the other board
       lastChange.current = 0;
+      setToast((t) => (t?.undo ? { ...t, undo: undefined } : t));
       return;
     }
     // The pen's and eraser's settings aren't steps
@@ -2235,28 +2250,36 @@ export default function Editor() {
         that appears with its text in it is often not read out) */}
         <div role="status" className="sr-only">
           {/* A new element for each showing, so the same message again is read again */}
-          {toast && !toast.closing && <p key={toast.n}>{toast.message}</p>}
+          {toast && !toast.closing && (
+            <p key={toast.n}>
+              {toast.message}
+              {toast.undo && ` (${UNDO_KEY()} to undo)`}
+            </p>
+          )}
         </div>
         {toast && (
           <div
             // A new element for each new message, so it plays its entrance
             key={toast.id}
             className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
-            data-undo={toast.undo === 'armed' || undefined}
-            onPointerEnter={() => setToastHeld(true)}
-            onPointerLeave={() => setToastHeld(false)}
-            onFocus={() => setToastHeld(true)}
-            onBlur={() => setToastHeld(false)}
+            data-undo={(toast.undo === 'armed' && !toast.closing) || undefined}
+            onPointerEnter={() => setHeldToast(toast.id)}
+            onPointerLeave={() => setHeldToast(null)}
+            onFocus={() => setHeldToast(toast.id)}
+            onBlur={() => setHeldToast(null)}
           >
             {/* Read from the live region above */}
             <span aria-hidden>{toast.message}</span>
-            {toast.undo === 'armed' && (
+            {toast.undo === 'armed' && !toast.closing && (
               <Button
                 variant="text"
                 className={styles.toastUndo}
+                aria-label={`Undo: ${toast.message.split('\n')[0]}`}
                 onClick={() => {
+                  // Focus goes to the board, not lost with the button
+                  boardBoxRef.current?.focus({ preventScroll: true });
                   stepHistory(true);
-                  setToastHeld(false);
+                  setHeldToast(null);
                   setToast((t) => (t ? { ...t, closing: true, undo: undefined } : t));
                 }}
               >
