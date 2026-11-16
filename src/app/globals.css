@@ -70,6 +70,7 @@ body {
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
   --tb-option-hover: var(--color-petrel-700);
+  --tb-segment-on: var(--color-petrel-700);
   --tb-popup-shadow: 0 8px 24px color-mix(in srgb, var(--color-petrel-950) 45%, transparent);
   --tb-focus: var(--color-storm-200);
   --tb-icon-rest: var(--color-petrel-600);
@@ -198,6 +199,14 @@ body * {
   text-box: trim-start cap alphabetic;
 }
 
+/* A tab of settings sections (Customize, Save & Share): a hairline between them, 16px
+   above and below it, so a section's end reads apart from the gaps inside it */
+.tierbinder-sections > * + * {
+  padding-block-start: var(--spacing-4);
+  border-block-start: var(--tb-line-width) solid var(--tb-line);
+}
+
+/* A setting's row: its label muted at the left, its control or value at the right */
 .tierbinder-prop {
   display: flex;
   align-items: center;

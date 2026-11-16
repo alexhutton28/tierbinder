@@ -29,7 +29,7 @@ export type TierList = {
   background: string;
   // Lines between tiers
   border: string;
-  // How wide the tiers' labels are (Tier Size), one of LABEL_WIDTHS: narrower leaves more
+  // How wide the tiers' labels are (Label Width), one of LABEL_WIDTHS: narrower leaves more
   // of a narrow board to its cards
   labelWidth: number;
   // Each card gets an inside stroke in its tier's color

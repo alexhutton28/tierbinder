@@ -45,7 +45,13 @@
   padding-inline: 0;
 }
 
-/* Just the words and an icon after them: no box, so no padding or height of its own */
+/* An icon button with no box: muted, lighting up on hover (in the hover rules below) */
+.quiet {
+  border-color: transparent;
+  color: var(--tb-muted);
+}
+
+/* Just the words and any icon beside them: no box, so no padding or height of its own */
 .text {
   display: inline-flex;
   gap: var(--spacing-2);
@@ -81,6 +87,10 @@
 
   .tool[aria-pressed='true']:hover {
     background: var(--tb-selected);
+  }
+
+  .quiet:hover:not(:disabled) {
+    color: var(--tb-text);
   }
 
   .text:hover:not(:disabled) {

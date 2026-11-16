@@ -162,7 +162,7 @@ function TierLabel({
   name: string;
   color: string;
   y: number;
-  // The label's width (the list's Tier Size) and its tier's height
+  // The label's width (the list's Label Width) and its tier's height
   width: number;
   height: number;
   fontFamily: string;

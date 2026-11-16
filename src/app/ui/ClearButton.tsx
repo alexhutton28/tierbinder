@@ -13,18 +13,24 @@ import styles from './ClearButton.module.css';
 // choice, and the arrows, Home and End move through them. Once one's done, focus goes
 // back to the button, or to `onEmptied` when nothing's left to clear, unless the choice
 // moved it. It floats like a dropdown's list (useAnchored), so it's never squeezed by a
-// narrow sidebar.
+// narrow sidebar. As `quiet`, it's a muted text button (Customize's Clear, at the end of the
+// Board heading), and `label` names it for screen readers ("Clear board").
 
 export type ClearChoice = { label: string; onSelect: () => void };
 
 export default function ClearButton({
   choices,
   onEmptied,
+  quiet = false,
+  label,
   children,
 }: {
   choices: ClearChoice[];
   // Where focus goes when a choice leaves nothing to clear (the button is disabled)
   onEmptied?: () => void;
+  quiet?: boolean;
+  // Its name, when its words alone don't say what it clears
+  label?: string;
   children: string;
 }) {
   const id = React.useId();
@@ -40,14 +46,16 @@ export default function ClearButton({
   }, [open]);
 
   return (
-    <div ref={boxRef} className="relative self-start">
+    <div ref={boxRef} className="relative">
       <Button
         ref={buttonRef}
+        variant={quiet ? 'text' : 'default'}
+        aria-label={label}
         disabled={!choices.length}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={shown ? `${id}-menu` : undefined}
-        className="flex gap-2 items-center"
+        className={`flex gap-2 items-center ${quiet ? styles.quiet : ''}`}
         onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => {
           // As a menu button: the arrows open it, focusing its item
@@ -66,7 +74,7 @@ export default function ClearButton({
           id={`${id}-menu`}
           popover="manual"
           role="menu"
-          aria-label={children}
+          aria-label={label ?? children}
           onKeyDown={(e) => {
             // Kept from the page's own Escape handling, which would also deselect the card
             if (e.key === 'Escape') {

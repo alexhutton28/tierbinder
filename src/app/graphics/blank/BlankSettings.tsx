@@ -6,8 +6,8 @@ import Toggle from '../../ui/Toggle';
 import type { SettingsProps } from '../types';
 import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from './model';
 
-// The blank canvas's part of the Customize tab: its background and split cards' border in
-// the Appearance section, and the Cards section (card size and top halves)
+// The blank canvas's part of the Customize tab: the Cards section (card size and top
+// halves), and its background and split cards' border in the Style section
 
 export default function BlankSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
@@ -30,7 +30,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
   );
 }
 
-// Its colors, in the editor's Appearance section
+// Its colors, in the editor's Style section
 export function BlankBoardSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
     <>
@@ -63,10 +63,10 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
   }
 
   return (
-    // Its name, then the field, hugging them, as the color rows do
-    <label className="flex gap-3 items-center self-start">
+    // A setting's row: its name at the left, then the field and its unit at the right
+    <label className="tierbinder-prop">
       Card Size
-      <span className="flex gap-3 items-center">
+      <span className="flex gap-3 items-center text-(--tb-text)">
         <input
           type="number"
           min={MIN_CARD_WIDTH}

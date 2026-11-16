@@ -2860,54 +2860,52 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
-              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, and 16px
-              between sections, its toggles last. Board first, what the board is and
-              starting it over: its type, in the primary color (it changes everything under
-              it), its shape (where it's posted: it sets the board's width and the image's
-              size), each under its name, and Clear Board; stacked beside the board (from
-              b8), and under it, on narrow screens, in one row that wraps, Clear Board level
-              with the dropdowns. Then the graphic's own sections, then Appearance (its
-              colors), then the card tray. */}
+              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
+              hairline between sections (.tierbinder-sections), and every setting a row
+              with its label muted at the left and its control at the right
+              (.tierbinder-prop). Board first, what the board is: its type and shape (where
+              it's posted: it sets the board's width and the image's size), with Clear at
+              the end of its heading. Then the graphic's own sections (what's on it), then
+              Style (how it looks), then the card tray. */}
               <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Board</h3>
-                <div className="flex flex-wrap gap-3 items-end min-w-0 b8:flex-col b8:flex-nowrap b8:items-start">
-                  <Dropdown
-                    label="Type"
-                    caption
-                    primary
-                    value={doc.kind}
-                    options={GRAPHIC_TYPES.map((t) => ({
-                      value: t.kind,
-                      label: t.label,
-                      icon: t.icon,
-                    }))}
-                    onChange={(kind) => {
-                      if (kind !== doc.kind) showBoard(kind);
-                    }}
-                  />
-                  <Dropdown
-                    label="Shape"
-                    caption
-                    value={graphic.shape}
-                    options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
-                    onChange={(shape) => {
-                      if (shape !== graphic.shape)
-                        setGraphic((g) => typeOf(g.kind).reshape(g, shape));
-                    }}
-                  />
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="tierbinder-heading">Board</h3>
                   {/* Asks first with a menu of only the clears that would change something */}
-                  <div className="flex">
-                    <ClearButton
-                      choices={boardClears}
-                      // Nothing left to clear: the button's disabled, so focus goes to the board
-                      onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
-                    >
-                      Clear Board
-                    </ClearButton>
-                  </div>
+                  <ClearButton
+                    quiet
+                    label="Clear board"
+                    choices={boardClears}
+                    // Nothing left to clear: the button's disabled, so focus goes to the board
+                    onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
+                  >
+                    Clear
+                  </ClearButton>
                 </div>
+                <Dropdown
+                  label="Type"
+                  prop
+                  value={doc.kind}
+                  options={GRAPHIC_TYPES.map((t) => ({
+                    value: t.kind,
+                    label: t.label,
+                    icon: t.icon,
+                  }))}
+                  onChange={(kind) => {
+                    if (kind !== doc.kind) showBoard(kind);
+                  }}
+                />
+                <Dropdown
+                  label="Shape"
+                  prop
+                  value={graphic.shape}
+                  options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
+                  onChange={(shape) => {
+                    if (shape !== graphic.shape)
+                      setGraphic((g) => typeOf(g.kind).reshape(g, shape));
+                  }}
+                />
               </div>
               <type.Settings
                 graphic={graphic}
@@ -2915,10 +2913,10 @@ export default function Editor() {
                 focus={settingsFocus}
                 onNotify={showToast}
               />
-              {/* How the board itself looks: its colors (a tier's are with its name, the tray's
-                  with the tray) */}
+              {/* How the board itself looks: its sizes, colors and borders (a tier's color is
+                  with its name, the tray's with the tray) */}
               <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Appearance</h3>
+                <h3 className="tierbinder-heading">Style</h3>
                 <type.BoardSettings
                   graphic={graphic}
                   onChange={setGraphic}
@@ -2928,9 +2926,9 @@ export default function Editor() {
               </div>
               <div ref={traySectionRef} className="flex flex-col gap-3">
                 {/* Its switch turns the whole section on or off, so the heading is the
-                    switch: its name, then the switch right after it; its other rows show
-                    only while the tray is on */}
-                <h3 className="tierbinder-heading flex">
+                    switch: its name, then the switch at the row's end, as every toggle has
+                    it; its other rows show only while the tray is on */}
+                <h3 className="tierbinder-heading flex flex-col">
                   <Toggle
                     checked={graphic.tray.enabled}
                     onChange={(on) => {
@@ -2963,7 +2961,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
-              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
+              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
             >
               {/* Sections as in Add Cards and Customize; its buttons act on the image, so they
               sit in its section, as Import does in Advanced */}
