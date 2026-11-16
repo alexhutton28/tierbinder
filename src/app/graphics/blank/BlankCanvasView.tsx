@@ -5,7 +5,7 @@ import React from 'react';
 import { Circle, Layer, Line, Rect } from 'react-konva';
 import { newId } from '../../cards';
 import CardNode from '../../canvas/CardNode';
-import { BOARD_HEIGHT, BOARD_WIDTH } from '../../canvas/size';
+import { BOARD_HEIGHT, boardWidth } from '../../canvas/size';
 import type { CanvasProps } from '../types';
 import { moveCard, type BlankCanvas, type Stroke } from './model';
 
@@ -25,6 +25,7 @@ export default function BlankCanvasView({
   fontFamily,
 }: CanvasProps<BlankCanvas>) {
   const drawing = tool === 'pen' || tool === 'eraser';
+  const width = boardWidth(canvas.shape);
   // The stroke being drawn, kept out of the document until the pointer is released
   const [stroke, setStroke] = React.useState<Stroke | null>(null);
   const inkRef = React.useRef<Konva.Layer>(null);
@@ -70,12 +71,7 @@ export default function BlankCanvasView({
   return (
     <>
       <Layer>
-        <Rect
-          name="background"
-          width={BOARD_WIDTH}
-          height={BOARD_HEIGHT}
-          fill={canvas.background}
-        />
+        <Rect name="background" width={width} height={BOARD_HEIGHT} fill={canvas.background} />
         {canvas.items.map((item) => (
           <CardNode
             key={item.id}
@@ -104,7 +100,7 @@ export default function BlankCanvasView({
         // The stage also holds the card tray under the board: ink stays on the board
         clipX={0}
         clipY={0}
-        clipWidth={BOARD_WIDTH}
+        clipWidth={width}
         clipHeight={BOARD_HEIGHT}
       >
         {[...canvas.strokes, ...(stroke ? [stroke] : [])].map((s) => (
@@ -122,7 +118,7 @@ export default function BlankCanvasView({
         {drawing && (
           // Takes every press on the board while drawing, so cards don't move
           <Rect
-            width={BOARD_WIDTH}
+            width={width}
             height={BOARD_HEIGHT}
             fill="rgba(0,0,0,0)"
             onPointerDown={(e) => {

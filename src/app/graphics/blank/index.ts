@@ -43,6 +43,8 @@ const blank: GraphicType<BlankCanvas> = {
       { cardWidth: fresh.cardWidth, topHalf: fresh.topHalf }
     );
   },
+  // Cards a narrower board leaves hanging off it move back onto it
+  reshape: (canvas, shape) => setCardShape(canvas, { shape }),
   // One place to add cards: the canvas
   targets: () => [{ name: 'Canvas' }],
   addCard: (canvas, item) => addCard(canvas, item),

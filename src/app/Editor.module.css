@@ -152,7 +152,7 @@
   opacity: 0;
 }
 
-/* A toast: every message (a tier or the card tray is full, bulk import, copying), at the
+/* A toast: every message (the card tray is full, bulk import, copying), at the
    top of the window, centered, above everything; an import's results take a line each. It drops in on the spring over duration-drop and folds away
    (fades up) over duration-fold, like the popups; reduced motion: it fades. */
 .toast {

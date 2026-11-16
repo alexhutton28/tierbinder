@@ -174,7 +174,7 @@ export default function ColorField({
           />
           {presets.length > 0 && (
             <div className={styles.presetsBox}>
-              <span id={`${id}-presets`} className={styles.caption}>
+              <span id={`${id}-presets`} className="tierbinder-caption">
                 Board Colors
               </span>
               <div role="group" aria-labelledby={`${id}-presets`} className={styles.presets}>
@@ -197,7 +197,7 @@ export default function ColorField({
             </div>
           )}
           <label className={styles.hexBox}>
-            <span className={styles.caption}>Hex</span>
+            <span className="tierbinder-caption">Hex</span>
             <HexInput value={value} onChange={apply} />
           </label>
         </div>

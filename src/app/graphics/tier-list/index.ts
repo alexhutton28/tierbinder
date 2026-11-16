@@ -42,6 +42,8 @@ const tierList: GraphicType<TierList> = {
       tray: { ...list.tray, color: fresh.tray.color },
     };
   },
+  // Its cards stay in their tiers, closer together on a narrower board
+  reshape: (list, shape) => ({ ...list, shape }),
   cardWidth: (list) => tierCardWidth(list.tiers.length),
   targets: (list) => list.tiers.map((t) => ({ id: t.id, name: t.name, color: t.color })),
   // At the end of the tier

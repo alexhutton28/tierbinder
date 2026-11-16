@@ -3,7 +3,15 @@
 
 import { newId, type CardItem } from '../../cards';
 import type { ResolvedGroup } from '../../importText';
-import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH } from '../../canvas/size';
+import {
+  BOARD_HEIGHT,
+  CARD_HEIGHT,
+  CARD_WIDTH,
+  DEFAULT_SHAPE,
+  boardWidth,
+  parseShape,
+  type ShapeId,
+} from '../../canvas/size';
 import { defaultTray, importTrayCards, parseTray, type Tray } from '../../canvas/tray';
 import type { CardPlacement } from '../types';
 
@@ -16,6 +24,8 @@ export type Tier = {
 
 export type TierList = {
   kind: 'tier-list';
+  // The board's shape (canvas/size.ts), which sets its width
+  shape: ShapeId;
   background: string;
   // Lines between tiers
   border: string;
@@ -40,10 +50,8 @@ export const LABEL_WIDTH = 170;
 // board's edge
 const CARDS_PADDING = 20;
 const CARDS_LEFT = LABEL_WIDTH + CARDS_PADDING;
-const CARDS_AREA_WIDTH = BOARD_WIDTH - CARDS_LEFT - CARDS_PADDING;
-// How much of its width a card under the next still shows, at least: what sets how many
-// cards a tier holds
-const MIN_CARD_SHOWING = 0.8;
+// The width a tier's cards have to themselves, on a board of the list's shape
+const cardsAreaWidth = (list: TierList) => boardWidth(list.shape) - CARDS_LEFT - CARDS_PADDING;
 export const SEPARATOR_WIDTH = 3;
 
 // A new tier list's tiers, top to bottom: name and color
@@ -93,6 +101,7 @@ const DEFAULT_BORDER = '#1b2125';
 export function defaultTierList(): TierList {
   return {
     kind: 'tier-list',
+    shape: DEFAULT_SHAPE,
     background: DEFAULT_BACKGROUND,
     border: DEFAULT_BORDER,
     tierCardBorders: false,
@@ -101,22 +110,12 @@ export function defaultTierList(): TierList {
   };
 }
 
-// How many cards a tier holds with `count` tiers: as many as fit its row overlapping, each
-// still showing MIN_CARD_SHOWING of its width under the next. 12 at full size, more as the
-// cards shrink (15 at 5 tiers, 24 at 8).
-export function tierCapacity(count: number) {
-  const width = tierCardWidth(count);
-  return Math.floor((CARDS_AREA_WIDTH - width) / (width * MIN_CARD_SHOWING)) + 1;
-}
-
-const fullMessage = (capacity: number) => `That Tier Is Full (${capacity} Cards)`;
-
-// Gap between `count` cards of a width in a tier: the default (in step with the cards'
-// size), shrinking (negative overlaps) once the cards no longer fit
-export function tierGap(count: number, width = CARD_WIDTH) {
+// Gap between `count` cards of a width in a row `area` wide: the default (in step with
+// the cards' size), shrinking (negative overlaps) once the cards no longer fit
+function tierGap(count: number, width: number, area: number) {
   const gap = (DEFAULT_GAP * width) / CARD_WIDTH;
   if (count < 2) return gap;
-  return Math.min(gap, (CARDS_AREA_WIDTH - width * count) / (count - 1));
+  return Math.min(gap, (area - width * count) / (count - 1));
 }
 
 export type TierPlacement = CardPlacement & { tierIndex: number };
@@ -125,8 +124,9 @@ export function layoutCards(list: TierList): TierPlacement[] {
   const rowHeight = tierHeight(list);
   const width = tierCardWidth(list.tiers.length);
   const height = (width * CARD_HEIGHT) / CARD_WIDTH;
+  const area = cardsAreaWidth(list);
   return list.tiers.flatMap((tier, tierIndex) => {
-    const gap = tierGap(tier.items.length, width);
+    const gap = tierGap(tier.items.length, width, area);
     const y = tierIndex * rowHeight + (rowHeight - height) / 2;
     return tier.items.map((item, i) => ({
       item,
@@ -155,29 +155,18 @@ export function dropTarget(list: TierList, draggedId: string, x: number, y: numb
   return { tierIndex, index };
 }
 
-// Moves a card to a place in a tier, or says that tier is full
-export function moveCard(
-  list: TierList,
-  id: string,
-  tierIndex: number,
-  index: number
-): TierList | { error: string } {
+// Moves a card to a place in a tier. A tier takes any number of cards: they overlap
+// further the more there are (tierGap).
+export function moveCard(list: TierList, id: string, tierIndex: number, index: number) {
   const item = list.tiers.flatMap((t) => t.items).find((i) => i.id === id);
   if (!item) return list;
-  const target = list.tiers[tierIndex];
-  const capacity = tierCapacity(list.tiers.length);
-  if (!target.items.some((i) => i.id === id) && target.items.length >= capacity) {
-    return { error: fullMessage(capacity) };
-  }
   const tiers = list.tiers.map((t) => ({ ...t, items: t.items.filter((i) => i.id !== id) }));
   tiers[tierIndex].items.splice(index, 0, item);
   return { ...list, tiers };
 }
 
-// Adds a new card at a position, or says the tier is full
+// Adds a new card at a position
 export function insertCard(list: TierList, item: CardItem, tierIndex: number, index: number) {
-  const capacity = tierCapacity(list.tiers.length);
-  if (list.tiers[tierIndex].items.length >= capacity) return { error: fullMessage(capacity) };
   const tiers = list.tiers.map((t, i) => {
     if (i !== tierIndex) return t;
     const items = [...t.items];
@@ -238,8 +227,8 @@ export function removeTier(list: TierList, index: number) {
 }
 
 // Each import group fills the next tier, after the cards already in it, and renames it
-// if the group has a name; groups past the last tier add tiers, up to MAX_TIERS. Cards
-// past a tier's limit, and groups past the last tier there's room for, are left out.
+// if the group has a name; groups past the last tier add tiers, up to MAX_TIERS, and
+// groups past the last tier there's room for are left out.
 export function importCards(list: TierList, groups: ResolvedGroup[]) {
   const errors: string[] = [];
   if (groups.length > MAX_TIERS) {
@@ -248,20 +237,13 @@ export function importCards(list: TierList, groups: ResolvedGroup[]) {
   for (const group of groups.slice(list.tiers.length)) {
     list = addTier(list, group.name) ?? list;
   }
-  const capacity = tierCapacity(list.tiers.length);
   const tiers = list.tiers.map((tier, i) => {
     const imported = groups[i];
-    const items = [...tier.items, ...(imported?.items ?? [])];
-    const name = imported?.name ?? tier.name;
-    // A tier already over (tiers were removed, so its cards grew) keeps what it has
-    const room = Math.max(capacity, tier.items.length);
-    const left = items.length - room;
-    if (left > 0) {
-      errors.push(
-        `${name}: ${left} ${left === 1 ? 'Card' : 'Cards'} Didn't Fit (${capacity} per Tier)`
-      );
-    }
-    return { ...tier, name, items: items.slice(0, room) };
+    return {
+      ...tier,
+      name: imported?.name ?? tier.name,
+      items: [...tier.items, ...(imported?.items ?? [])],
+    };
   });
   return { graphic: { ...list, tiers }, errors };
 }
@@ -281,6 +263,7 @@ export function parseTierList(value: unknown): TierList | null {
   // Settings added after tier lists first shipped take their defaults
   return {
     kind: 'tier-list',
+    shape: parseShape(list.shape),
     background: list.background,
     border: typeof list.border === 'string' ? list.border : DEFAULT_BORDER,
     tierCardBorders: list.tierCardBorders === true,

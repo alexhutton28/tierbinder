@@ -2,12 +2,21 @@
 
 import type { CardItem } from '../../cards';
 import { cardBox } from '../../canvas/CardNode';
-import { BOARD_HEIGHT, BOARD_WIDTH, CARD_WIDTH } from '../../canvas/size';
+import {
+  BOARD_HEIGHT,
+  CARD_WIDTH,
+  DEFAULT_SHAPE,
+  boardWidth,
+  parseShape,
+  type ShapeId,
+} from '../../canvas/size';
 import { defaultTray, parseTray, type Tray } from '../../canvas/tray';
 import type { CardPlacement, Point } from '../types';
 
 export type BlankCanvas = {
   kind: 'blank';
+  // The board's shape (canvas/size.ts), which sets its width
+  shape: ShapeId;
   background: string;
   // Split cards' divider and border
   border: string;
@@ -56,6 +65,7 @@ const DEFAULT_TRAY_COLOR = '#e3e8eb';
 export function defaultBlankCanvas(): BlankCanvas {
   return {
     kind: 'blank',
+    shape: DEFAULT_SHAPE,
     background: '#ffffff',
     border: '#16303c',
     cardWidth: CARD_WIDTH,
@@ -73,7 +83,7 @@ const boxOf = (canvas: BlankCanvas, item: CardItem) =>
 function clamp(canvas: BlankCanvas, item: CardItem, x: number, y: number): Point {
   const box = boxOf(canvas, item);
   return {
-    x: Math.round(Math.max(0, Math.min(BOARD_WIDTH - box.width, x))),
+    x: Math.round(Math.max(0, Math.min(boardWidth(canvas.shape) - box.width, x))),
     y: Math.round(Math.max(0, Math.min(BOARD_HEIGHT - box.height, y))),
   };
 }
@@ -89,7 +99,7 @@ function nextSpot(canvas: BlankCanvas, item: CardItem): Point {
   const box = boxOf(canvas, item);
   const columns = Math.max(
     1,
-    Math.floor((BOARD_WIDTH - GRID_LEFT - 20 + GAP_X) / (box.width + GAP_X))
+    Math.floor((boardWidth(canvas.shape) - GRID_LEFT - 20 + GAP_X) / (box.width + GAP_X))
   );
   const rows = Math.max(
     1,
@@ -141,13 +151,18 @@ export function moveCard(canvas: BlankCanvas, id: string, x: number, y: number):
   };
 }
 
-// Changes the card size or top-half setting, moving cards that would now hang off the
-// board back onto it
+// Changes the card size, the top-half setting or the board's shape, moving cards that
+// would now hang off the board back onto it, and keeping them no wider than it
 export function setCardShape(
   canvas: BlankCanvas,
-  change: Partial<Pick<BlankCanvas, 'cardWidth' | 'topHalf'>>
+  change: Partial<Pick<BlankCanvas, 'cardWidth' | 'topHalf' | 'shape'>>
 ): BlankCanvas {
-  const next = { ...canvas, ...change };
+  const merged = { ...canvas, ...change };
+  // No wider than the board: a narrow shape's is less than the largest card size
+  const next = {
+    ...merged,
+    cardWidth: Math.min(merged.cardWidth, Math.floor(boardWidth(merged.shape))),
+  };
   return { ...next, items: next.items.map((i) => ({ ...i, ...clamp(next, i, i.x, i.y) })) };
 }
 
@@ -165,6 +180,7 @@ export function parseBlankCanvas(value: unknown): BlankCanvas | null {
   // Settings added after blank canvases first shipped take their defaults
   return {
     ...canvas,
+    shape: parseShape(canvas.shape),
     cardWidth:
       typeof canvas.cardWidth === 'number'
         ? Math.max(MIN_CARD_WIDTH, Math.min(MAX_CARD_WIDTH, canvas.cardWidth))

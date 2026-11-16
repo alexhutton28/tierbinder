@@ -145,8 +145,9 @@ export default function CardNode({
   // Where the card was dropped: its top-left corner, in design pixels, at the size it's
   // laid out at, with its center where the dragged card's was
   onDragEnd: (x: number, y: number) => void;
-  // The width to show at while dragged with its center at `center` (the stage's design
-  // pixels): the card grows or shrinks to it, keeping its center under the same spot
+  // The width to show at while dragged with its center at `center` (design pixels from
+  // the stage's corner, which is left of the board's when the board is centered over a
+  // wider card tray: only its `y` is the board's): the card grows or shrinks to it, keeping its center under the same spot
   // of the pointer. Without it, it keeps its size.
   dragWidth?: (center: Point) => number;
   // Not drawn yet, while a copy of it flies in from the sidebar (Editor's flyIn)

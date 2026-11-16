@@ -4,7 +4,7 @@ import React from 'react';
 import { Circle, Group, Layer, Line, Rect, Text } from 'react-konva';
 import { PETREL_950, darkReadsBetter } from '../color';
 import CardNode from './CardNode';
-import { BOARD_HEIGHT, BOARD_WIDTH } from './size';
+import { BOARD_HEIGHT } from './size';
 import { TRAY_HINT, TRAY_HINT_SIZE, TRAY_RADIUS, layoutTray, trayHeight, type Tray } from './tray';
 
 // The hint's text on a light tray or a dark one, faint: dark text needs more strength to
@@ -79,6 +79,8 @@ function TrayHint({
 
 export default function CardTray({
   tray,
+  width,
+  left,
   top,
   scale,
   border,
@@ -95,6 +97,10 @@ export default function CardTray({
   arriving,
 }: {
   tray: Tray;
+  // Its width in design pixels (TRAY_WIDTH), and its
+  // left edge from the board's: the board is centered over it, so it starts left of it
+  width: number;
+  left: number;
   // Its top edge, in design pixels
   top: number;
   // The board's on-screen scale, for corners that stay the same size on screen
@@ -122,14 +128,14 @@ export default function CardTray({
   // Cards not drawn yet: copies of them are flying in from the sidebar
   arriving: ReadonlySet<string>;
 }) {
-  const height = trayHeight(tray.items.length);
+  const height = trayHeight(tray.items.length, width);
   return (
     <Layer listening={listening}>
-      <Group name="tray" y={top}>
+      <Group name="tray" x={left} y={top}>
         <Rect
           // `background`, so pressing it deselects, as the board's does
           name="background trayBox"
-          width={BOARD_WIDTH}
+          width={width}
           height={height}
           fill={tray.color}
           cornerRadius={TRAY_RADIUS / (scale || 1)}
@@ -146,28 +152,28 @@ export default function CardTray({
         {showHint && tray.items.length === 0 && (
           // What it's for, quietly, while it's empty
           <TrayHint
-            width={BOARD_WIDTH}
+            width={width}
             height={height}
             scale={scale}
             fontFamily={hintFont}
             dark={darkReadsBetter(tray.color, HINT_DARK)}
           />
         )}
-        {layoutTray(tray).map(({ item, x, y, width }) => (
+        {layoutTray(tray, width).map(({ item, x, y, width: cardWidth }) => (
           <CardNode
             key={item.id}
             item={item}
             x={x}
             y={y}
-            width={width}
+            width={cardWidth}
             fontFamily={fontFamily}
             borderColor={item.split ? border : null}
             dividerColor={border}
             onSelect={() => onSelect(item.id)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
             hidden={arriving.has(item.id)}
-            dragWidth={(center) => (center.y > BOARD_HEIGHT ? width : boardCardWidth)}
-            onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX, cardY + top)}
+            dragWidth={(center) => (center.y > BOARD_HEIGHT ? cardWidth : boardCardWidth)}
+            onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX + left, cardY + top)}
           />
         ))}
       </Group>

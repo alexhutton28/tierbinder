@@ -4,7 +4,7 @@ import type Konva from 'konva';
 import React from 'react';
 import { Group, Layer, Rect, Text } from 'react-konva';
 import CardNode from '../../canvas/CardNode';
-import { BOARD_HEIGHT, BOARD_WIDTH } from '../../canvas/size';
+import { BOARD_HEIGHT, boardWidth } from '../../canvas/size';
 import type { CanvasProps } from '../types';
 import {
   LABEL_WIDTH,
@@ -30,10 +30,10 @@ export default function TierListCanvas({
   arriving,
   onPickTarget,
   onEditSetting,
-  onNotify,
 }: CanvasProps<TierList>) {
   const placements = layoutCards(list);
   const rowHeight = tierHeight(list);
+  const width = boardWidth(list.shape);
 
   // Clicking a tier's row outside its cards picks that tier; clicks on a card are the
   // card's own (they open its menu)
@@ -51,7 +51,7 @@ export default function TierListCanvas({
       }}
       onTap={pickTier}
     >
-      <Rect name="background" width={BOARD_WIDTH} height={BOARD_HEIGHT} fill={list.background} />
+      <Rect name="background" width={width} height={BOARD_HEIGHT} fill={list.background} />
       {list.tiers.map((tier, i) => (
         <TierLabel
           key={tier.id}
@@ -67,7 +67,7 @@ export default function TierListCanvas({
         <Rect
           key={tier.id}
           y={(i + 1) * rowHeight - SEPARATOR_WIDTH / 2}
-          width={BOARD_WIDTH}
+          width={width}
           height={SEPARATOR_WIDTH}
           fill={list.border}
           listening={false}
@@ -94,10 +94,7 @@ export default function TierListCanvas({
           onDragEnd={(cardX, cardY) => {
             if (onCardDrop(item.id, cardX, cardY)) return;
             const target = dropTarget(list, item.id, cardX + width / 2, cardY + height / 2);
-            // A full tier doesn't take it: it goes back, with a toast saying why
-            const moved = moveCard(list, item.id, target.tierIndex, target.index);
-            if ('error' in moved) onNotify(moved.error);
-            else onChange(moved);
+            onChange(moveCard(list, item.id, target.tierIndex, target.index));
           }}
         />
       ))}
