@@ -104,26 +104,29 @@ export default function TierListCanvas({
 }
 
 const LABEL_PADDING = 6;
-// Inter Black
+// Inter Black, shrinking from 30px for a name that doesn't fit, down to 12px
 const LABEL_FONT_SIZE = 30;
+const LABEL_MIN_FONT_SIZE = 12;
 const LABEL_FONT_WEIGHT = '900';
-const LABEL_STROKE = LABEL_FONT_SIZE / 6;
+// The outline, as a share of the font size
+const LABEL_STROKE_SHARE = 1 / 6;
 
 let measureContext: CanvasRenderingContext2D | null = null;
 
-// Wraps a label at spaces to fit its box. Words are never split: a word too long for
-// the box gets a line to itself and overflows evenly on both sides. (Konva's own word
-// wrap splits words that don't fit, e.g. "Commen" / "t".)
-function wrapLabel(name: string, fontFamily: string) {
+// Wraps a label at spaces to fit its box at the largest size that fits, from
+// LABEL_FONT_SIZE down. Words are never split (Konva's own word wrap splits words that
+// don't fit, e.g. "Commen" / "t"): a word too long for the box ("Charmander") makes the
+// whole label smaller, as do too many lines. At the smallest size, what still doesn't fit
+// overflows evenly on both sides.
+function fitLabel(name: string, fontFamily: string) {
   measureContext ??= document.createElement('canvas').getContext('2d');
-  if (!measureContext) return name;
+  if (!measureContext) return { text: name, size: LABEL_FONT_SIZE };
   const ctx = measureContext;
-  ctx.font = `${LABEL_FONT_WEIGHT} ${LABEL_FONT_SIZE}px ${fontFamily}`;
-  // The outline adds half its width on each side
-  const maxWidth = LABEL_WIDTH - LABEL_PADDING * 2 - LABEL_STROKE;
-  return name
-    .split('\n')
-    .map((paragraph) => {
+  const wrap = (size: number) => {
+    ctx.font = `${LABEL_FONT_WEIGHT} ${size}px ${fontFamily}`;
+    // The outline adds half its width on each side
+    const maxWidth = LABEL_WIDTH - LABEL_PADDING * 2 - size * LABEL_STROKE_SHARE;
+    const lines = name.split('\n').flatMap((paragraph) => {
       const lines: string[] = [];
       for (const word of paragraph.split(/\s+/).filter(Boolean)) {
         const last = lines.at(-1);
@@ -133,9 +136,19 @@ function wrapLabel(name: string, fontFamily: string) {
           lines.push(word);
         }
       }
-      return lines.join('\n');
-    })
-    .join('\n');
+      // An empty line (two line breaks in a row) keeps its place
+      return lines.length ? lines : [''];
+    });
+    const fits =
+      lines.every((line) => ctx.measureText(line).width <= maxWidth) &&
+      lines.length * size + size * LABEL_STROKE_SHARE <= TIER_HEIGHT - LABEL_PADDING * 2;
+    return { text: lines.join('\n'), fits };
+  };
+  for (let size = LABEL_FONT_SIZE; size > LABEL_MIN_FONT_SIZE; size--) {
+    const { text, fits } = wrap(size);
+    if (fits) return { text, size };
+  }
+  return { text: wrap(LABEL_MIN_FONT_SIZE).text, size: LABEL_MIN_FONT_SIZE };
 }
 
 function TierLabel({
@@ -151,7 +164,7 @@ function TierLabel({
   fontFamily: string;
   onEdit: () => void;
 }) {
-  const text = React.useMemo(() => wrapLabel(name, fontFamily), [name, fontFamily]);
+  const { text, size } = React.useMemo(() => fitLabel(name, fontFamily), [name, fontFamily]);
   return (
     <Group y={y} onDblClick={onEdit} onDblTap={onEdit}>
       <Rect width={LABEL_WIDTH} height={TIER_HEIGHT} fill={color} />
@@ -165,10 +178,10 @@ function TierLabel({
         lineHeight={1}
         fontFamily={fontFamily}
         fontStyle={LABEL_FONT_WEIGHT}
-        fontSize={LABEL_FONT_SIZE}
+        fontSize={size}
         fill="#ffffff"
         stroke="#1b1b1b"
-        strokeWidth={LABEL_STROKE}
+        strokeWidth={size * LABEL_STROKE_SHARE}
         fillAfterStrokeEnabled
         lineJoin="round"
       />

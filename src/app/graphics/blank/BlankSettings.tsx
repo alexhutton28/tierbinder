@@ -51,7 +51,8 @@ export function BlankBoardSettings({ graphic: canvas, onChange }: SettingsProps<
 }
 
 // Card width in pixels. Typing applies as soon as the number is in range, so a size can be
-// typed digit by digit; leaving the field shows the size in use.
+// typed digit by digit; leaving the field takes a number out of range to the nearest
+// limit, or shows the size in use for anything else.
 function CardSizeField({ value, onChange }: { value: number; onChange: (width: number) => void }) {
   const [draft, setDraft] = React.useState(String(value));
   const [shown, setShown] = React.useState(value);
@@ -62,8 +63,8 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
   }
 
   return (
-    // Its name at the left and the field at the right, as the color settings are
-    <label className="tierbinder-prop">
+    // Its name, then the field, hugging them, as the color rows do
+    <label className="flex gap-3 items-center self-start">
       Card Size
       <span className="flex gap-3 items-center">
         <input
@@ -80,7 +81,19 @@ function CardSizeField({ value, onChange }: { value: number; onChange: (width: n
               onChange(width);
             }
           }}
-          onBlur={() => setDraft(String(value))}
+          onBlur={() => {
+            const width = Math.round(Number(draft));
+            if (draft.trim() === '' || !Number.isFinite(width)) {
+              setDraft(String(value));
+              return;
+            }
+            const clamped = Math.min(MAX_CARD_WIDTH, Math.max(MIN_CARD_WIDTH, width));
+            setDraft(String(clamped));
+            if (clamped !== value) {
+              setShown(clamped);
+              onChange(clamped);
+            }
+          }}
         />
         px wide
       </span>

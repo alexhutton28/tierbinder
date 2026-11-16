@@ -154,6 +154,51 @@ function durationOf(token: string) {
 const SIDEBAR_SHORTCUT = () =>
   /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318\\' : 'Ctrl+\\';
 
+// Undo's shortcuts as the tooltips and screen readers get them: ⌘Z and ⇧⌘Z on a Mac,
+// Ctrl+Z and Ctrl+Y elsewhere (the keys also take Ctrl+Shift+Z)
+const IS_MAC = () => /Mac|iPhone|iPad/.test(navigator.platform);
+const UNDO_SHORTCUT = () => (IS_MAC() ? '\u2318Z' : 'Ctrl+Z');
+const REDO_SHORTCUT = () => (IS_MAC() ? '\u21e7\u2318Z' : 'Ctrl+Y');
+const UNDO_KEYS = () => (IS_MAC() ? 'Meta+Z' : 'Control+Z');
+const REDO_KEYS = () => (IS_MAC() ? 'Meta+Shift+Z' : 'Control+Y Control+Shift+Z');
+
+// How many steps each board keeps to undo
+const HISTORY_LIMIT = 100;
+// Changes this close together are one step to undo: a color dragged in the picker (once a
+// frame), a name typed
+const HISTORY_MERGE = 400;
+type History = { past: Graphic[]; future: Graphic[] };
+const NO_HISTORY: History = { past: [], future: [] };
+
+// Every card id on a board and in its card tray
+function cardIds(g: Graphic) {
+  return new Set([
+    ...typeOf(g.kind)
+      .layout(g)
+      .map((p) => p.item.id),
+    ...g.tray.items.map((i) => i.id),
+  ]);
+}
+
+// Where every card is and how much ink there is: a change to any of it (a card added,
+// moved or removed, a stroke) is always a step of its own, never merged
+function cardsAndInk(g: Graphic) {
+  return JSON.stringify([
+    typeOf(g.kind)
+      .layout(g)
+      .map((p) => [p.item.id, p.x, p.y]),
+    g.tray.items.map((i) => i.id),
+    'strokes' in g ? g.strokes.length : 0,
+  ]);
+}
+
+// The key a keydown is for, by its letter, or by its place on a layout without Latin
+// letters (a Russian layout's ⌘Z gives "я")
+function shortcutKey(e: KeyboardEvent) {
+  const key = e.key.toLowerCase();
+  return /^[a-z]$/.test(key) ? key : e.code.replace(/^Key/, '').toLowerCase();
+}
+
 // From b8 up, where the board has the room beside the sidebar
 function wideQuery() {
   const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
@@ -952,7 +997,11 @@ export default function Editor() {
         : []
     ),
     { name: 'Background', color: graphic.background },
-    { name: 'Border', color: graphic.border },
+    // Named as Customize names it
+    {
+      name: graphic.kind === 'tier-list' ? 'Tier dividers' : 'Split card border',
+      color: graphic.border,
+    },
     { name: 'Card tray', color: graphic.tray.color },
     { name: 'White', color: '#ffffff' },
   ]);
@@ -964,6 +1013,96 @@ export default function Editor() {
       setDoc((d) => ({ ...d, graphics: { ...d.graphics, [d.kind]: change(currentGraphic(d)) } })),
     []
   );
+
+  // Undo and redo. Each board type keeps its own history of its board (switching types
+  // isn't a step), taken from every change to it, so nothing has to remember to record:
+  // changes to settings (colors, names) within HISTORY_MERGE of each other are one step,
+  // but cards and ink changing always start one. Kept for the visit only.
+  const [history, setHistory] = React.useState<Partial<Record<GraphicKind, History>>>({});
+  const boardHistory = history[doc.kind] ?? NO_HISTORY;
+  const historyRef = React.useRef(history);
+  const lastDoc = React.useRef(doc);
+  const lastChange = React.useRef(0);
+  // The change undo or redo itself makes, which isn't recorded
+  const restoring = React.useRef<Graphic | null>(null);
+  React.useEffect(() => {
+    const before = lastDoc.current.graphics[doc.kind];
+    const now = doc.graphics[doc.kind];
+    const sameKind = lastDoc.current.kind === doc.kind;
+    lastDoc.current = doc;
+    if (!sameKind) {
+      // A change on the board switched to is a step of its own
+      lastChange.current = 0;
+      return;
+    }
+    if (!before || !now || before === now) return;
+    if (restoring.current === now) {
+      restoring.current = null;
+      return;
+    }
+    // Only settings changes merge, and only into a step of settings changes
+    const at = performance.now();
+    const settingsOnly = cardsAndInk(before) === cardsAndInk(now);
+    const merge = settingsOnly && at - lastChange.current < HISTORY_MERGE;
+    lastChange.current = settingsOnly ? at : 0;
+    const h = historyRef.current[doc.kind] ?? NO_HISTORY;
+    // Still the same step (undo and redo always start a new one, so nothing to redo)
+    if (merge && h.past.length) return;
+    const past = [...h.past, before].slice(-HISTORY_LIMIT);
+    historyRef.current = { ...historyRef.current, [doc.kind]: { past, future: [] } };
+    setHistory(historyRef.current);
+  }, [doc]);
+
+  // Puts back the board from one step back (undo) or forward (redo). The card menu closes
+  // (its card may have moved); a card that's no longer there takes its selection and
+  // replacement being picked with it. A button that's run out (Undo at the first step)
+  // hands focus to the other, or to the board, rather than dropping it.
+  const stepHistory = React.useCallback((back: boolean) => {
+    const d = lastDoc.current;
+    const h = historyRef.current[d.kind] ?? NO_HISTORY;
+    const next = back ? h.past.at(-1) : h.future[0];
+    if (!next) return;
+    const now = currentGraphic(d);
+    historyRef.current = {
+      ...historyRef.current,
+      [d.kind]: back
+        ? { past: h.past.slice(0, -1), future: [now, ...h.future] }
+        : { past: [...h.past, now], future: h.future.slice(1) },
+    };
+    setHistory(historyRef.current);
+    // The next change is a step of its own
+    lastChange.current = 0;
+    restoring.current = next;
+    setDoc((doc) => ({ ...doc, graphics: { ...doc.graphics, [doc.kind]: next } }));
+    const ids = cardIds(next);
+    setSelectedId((id) => (id && ids.has(id) ? id : null));
+    setCardMenu(null);
+    setPicking((p) => (p && ids.has(p.id) ? p : null));
+    const left = back ? h.past.length - 1 : h.future.length - 1;
+    const pressed = back ? undoRef.current : redoRef.current;
+    if (!left && pressed && document.activeElement === pressed)
+      requestAnimationFrame(() =>
+        (back ? redoRef.current : undoRef.current)?.focus({ preventScroll: true })
+      );
+  }, []);
+  const undoRef = React.useRef<HTMLButtonElement>(null);
+  const redoRef = React.useRef<HTMLButtonElement>(null);
+
+  // ⌘Z (Ctrl+Z) undoes and ⇧⌘Z (Ctrl+Shift+Z, Ctrl+Y) redoes, except in a text field,
+  // which keeps its own. Viewing a card stops them, as it does every key.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      if (e.target instanceof Element && e.target.closest('input, textarea, select')) return;
+      const key = shortcutKey(e);
+      // Y only with Ctrl (⌘Y is the browser's History on a Mac)
+      if (key !== 'z' && !(key === 'y' && e.ctrlKey)) return;
+      e.preventDefault();
+      stepHistory(key === 'z' && !e.shiftKey);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [stepHistory]);
 
   // Shows another board type's board (kept from when it was last used, or new)
   function showBoard(kind: GraphicKind) {
@@ -1737,9 +1876,8 @@ export default function Editor() {
       return box && onScreen(box) ? box : null;
     });
     const gone = new Set(ids);
-    setPoolAdds((adds) =>
-      Object.fromEntries(Object.entries(adds).filter(([k]) => k !== poolAddsKey(pool)))
-    );
+    // Its entry in poolAdds stays: with its cards out of the tray it reads Add again, and
+    // undoing the removal brings them back with the same ids, so it reads Remove again
     setPicking((p) => (p && gone.has(p.id) ? null : p));
     setGraphic(() => ({
       ...graphic,
@@ -2600,14 +2738,15 @@ export default function Editor() {
               hidden={tab !== 'customize'}
               className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, and
-              16px between sections, its toggles last. Board holds what's the editor's (the
-              board type, Clear Board) around the graphic's own colors. */}
-              <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Board</h3>
+              {/* The board type first, on its own with no heading, in the primary color: it
+              changes everything under it. Then sections as in Add Cards: each a heading over
+              its controls, 8px apart, and 16px between sections, its toggles last. Board
+              holds the graphic's own colors, then Clear Board. */}
+              <div className="flex self-start min-w-0">
                 <Dropdown
                   label="Board type"
                   hideLabel
+                  primary
                   value={doc.kind}
                   options={GRAPHIC_TYPES.map((t) => ({
                     value: t.kind,
@@ -2618,9 +2757,11 @@ export default function Editor() {
                     if (kind !== doc.kind) showBoard(kind);
                   }}
                 />
+              </div>
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Board</h3>
                 <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-                {/* Asks first, saying what goes: the board (a new one, colors and names too),
-                    and a showing card tray's cards; a hidden tray keeps them */}
+                {/* Asks first with a menu of only the clears that would change something */}
                 <ClearButton
                   choices={boardClears}
                   // Nothing left to clear: the button's disabled, so focus goes to the board
@@ -2902,9 +3043,43 @@ export default function Editor() {
                 )}
             </div>
 
-            {type.Toolbar && (
-              <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
-            )}
+            {/* The graphic's tools, then undo and redo at the right, for every graphic */}
+            <div className="flex gap-3 items-start">
+              <div className="flex-1 min-w-0">
+                {type.Toolbar && (
+                  <type.Toolbar
+                    graphic={graphic}
+                    onChange={setGraphic}
+                    tool={tool}
+                    onTool={setTool}
+                  />
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  ref={undoRef}
+                  variant="icon"
+                  aria-label="Undo"
+                  title={`Undo (${UNDO_SHORTCUT()})`}
+                  aria-keyshortcuts={UNDO_KEYS()}
+                  disabled={!boardHistory.past.length}
+                  onClick={() => stepHistory(true)}
+                >
+                  <span aria-hidden className={`${styles.historyIcon} ${styles.undoIcon}`} />
+                </Button>
+                <Button
+                  ref={redoRef}
+                  variant="icon"
+                  aria-label="Redo"
+                  title={`Redo (${REDO_SHORTCUT()})`}
+                  aria-keyshortcuts={REDO_KEYS()}
+                  disabled={!boardHistory.future.length}
+                  onClick={() => stepHistory(false)}
+                >
+                  <span aria-hidden className={`${styles.historyIcon} ${styles.redoIcon}`} />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

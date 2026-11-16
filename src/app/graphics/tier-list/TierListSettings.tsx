@@ -3,6 +3,7 @@
 import React from 'react';
 import ColorField from '../../ui/ColorField';
 import Toggle from '../../ui/Toggle';
+import styles from './TierListSettings.module.css';
 import type { SettingsProps } from '../types';
 import type { Tier, TierList } from './model';
 
@@ -15,7 +16,8 @@ export default function TierListSettings({
   onChange,
   focus,
 }: SettingsProps<TierList>) {
-  const tierNameRefs = React.useRef<(HTMLInputElement | null)[]>([]);
+  const hintId = React.useId();
+  const tierNameRefs = React.useRef<(HTMLTextAreaElement | null)[]>([]);
 
   React.useEffect(() => {
     const tier = focus?.key.match(/^tier:(\d+)$/)?.[1];
@@ -33,22 +35,37 @@ export default function TierListSettings({
     <>
       <div className="flex flex-col gap-3">
         <h3 className="tierbinder-heading">Tiers</h3>
+        <span id={hintId} className="sr-only">
+          Shift+Enter for a new line
+        </span>
         {list.tiers.map((tier, i) => (
-          <div key={tier.id} className="flex gap-3 items-center">
-            <ColorField
-              label={`${tier.name} color`}
-              value={tier.color}
-              onChange={(color) => updateTier(i, { color })}
-            />
-            {/* One line, so line breaks are typed as \n (as in bulk import) */}
-            <input
+          <div key={tier.id} className="flex gap-3 items-start">
+            <div className={styles.swatch}>
+              <ColorField
+                label={`${tier.name.replace(/\s+/g, ' ')} color`}
+                value={tier.color}
+                onChange={(color) => updateTier(i, { color })}
+              />
+            </div>
+            {/* Shift+Enter starts a new line, the field growing a line at a time; Enter
+                alone does nothing. Lines don't wrap in it, so it shows them as the label
+                breaks them. */}
+            <textarea
               ref={(el) => {
                 tierNameRefs.current[i] = el;
               }}
               aria-label={`Tier ${i + 1} name`}
-              className="tierbinder-field flex-1 min-w-0"
-              value={tier.name.replaceAll('\n', '\\n')}
-              onChange={(e) => updateTier(i, { name: e.target.value.replaceAll('\\n', '\n') })}
+              aria-describedby={hintId}
+              title="Shift+Enter for a new line"
+              rows={tier.name.split('\n').length}
+              wrap="off"
+              spellCheck={false}
+              className={`tierbinder-field ${styles.name} flex-1 min-w-0`}
+              value={tier.name}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+              }}
+              onChange={(e) => updateTier(i, { name: e.target.value })}
             />
           </div>
         ))}
@@ -73,9 +90,10 @@ export function TierListBoardSettings({ graphic: list, onChange }: SettingsProps
         value={list.background}
         onChange={(background) => onChange((l) => ({ ...l, background }))}
       />
+      {/* The lines between tiers, and split cards' divider and edge */}
       <ColorField
-        name="Border"
-        label="Border color"
+        name="Tier Dividers"
+        label="Tier dividers color"
         value={list.border}
         onChange={(border) => onChange((l) => ({ ...l, border }))}
       />
