@@ -36,6 +36,7 @@ const tierList: GraphicType<TierList> = {
       ...list,
       background: fresh.background,
       border: fresh.border,
+      labelWidth: fresh.labelWidth,
       tierCardBorders: fresh.tierCardBorders,
       // However many tiers it has: they hold its cards, which it keeps
       tiers: list.tiers.map((t, i) => ({ ...t, ...defaultTierStyle(i, list.tiers.length) })),
