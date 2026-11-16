@@ -4,16 +4,16 @@ import type Konva from 'konva';
 import React from 'react';
 import { Group, Layer, Rect, Text } from 'react-konva';
 import CardNode from '../../canvas/CardNode';
-import { BOARD_HEIGHT, BOARD_WIDTH, CARD_HEIGHT, CARD_WIDTH } from '../../canvas/size';
+import { BOARD_HEIGHT, BOARD_WIDTH } from '../../canvas/size';
 import type { CanvasProps } from '../types';
 import {
   LABEL_WIDTH,
   SEPARATOR_WIDTH,
-  TIER_HEIGHT,
   dropTarget,
   layoutCards,
   moveCard,
   tierAt,
+  tierHeight,
   type TierList,
 } from './model';
 
@@ -30,8 +30,10 @@ export default function TierListCanvas({
   arriving,
   onPickTarget,
   onEditSetting,
+  onNotify,
 }: CanvasProps<TierList>) {
   const placements = layoutCards(list);
+  const rowHeight = tierHeight(list);
 
   // Clicking a tier's row outside its cards picks that tier; clicks on a card are the
   // card's own (they open its menu)
@@ -39,7 +41,7 @@ export default function TierListCanvas({
     const stage = e.target.getStage();
     const pointer = stage?.getPointerPosition();
     if (!pointer || e.target.findAncestor('.card')) return;
-    onPickTarget(tierAt(pointer.y / stage!.scaleY()));
+    onPickTarget(tierAt(list, pointer.y / stage!.scaleY()));
   };
 
   return (
@@ -55,7 +57,8 @@ export default function TierListCanvas({
           key={tier.id}
           name={tier.name}
           color={tier.color}
-          y={i * TIER_HEIGHT}
+          y={i * rowHeight}
+          height={rowHeight}
           fontFamily={fontFamily}
           onEdit={() => onEditSetting(`tier:${i}`)}
         />
@@ -63,19 +66,20 @@ export default function TierListCanvas({
       {list.tiers.slice(1).map((tier, i) => (
         <Rect
           key={tier.id}
-          y={(i + 1) * TIER_HEIGHT - SEPARATOR_WIDTH / 2}
+          y={(i + 1) * rowHeight - SEPARATOR_WIDTH / 2}
           width={BOARD_WIDTH}
           height={SEPARATOR_WIDTH}
           fill={list.border}
           listening={false}
         />
       ))}
-      {placements.map(({ item, tierIndex, x, y }) => (
+      {placements.map(({ item, tierIndex, x, y, width, height }) => (
         <CardNode
           key={item.id}
           item={item}
           x={x}
           y={y}
+          width={width}
           fontFamily={fontFamily}
           // Split cards always have a border and divider: the tier's color if tier
           // borders are on, else the board's border color
@@ -89,13 +93,11 @@ export default function TierListCanvas({
           hidden={arriving.has(item.id)}
           onDragEnd={(cardX, cardY) => {
             if (onCardDrop(item.id, cardX, cardY)) return;
-            const target = dropTarget(
-              list,
-              item.id,
-              cardX + CARD_WIDTH / 2,
-              cardY + CARD_HEIGHT / 2
-            );
-            onChange(moveCard(list, item.id, target.tierIndex, target.index));
+            const target = dropTarget(list, item.id, cardX + width / 2, cardY + height / 2);
+            // A full tier doesn't take it: it goes back, with a toast saying why
+            const moved = moveCard(list, item.id, target.tierIndex, target.index);
+            if ('error' in moved) onNotify(moved.error);
+            else onChange(moved);
           }}
         />
       ))}
@@ -118,7 +120,7 @@ let measureContext: CanvasRenderingContext2D | null = null;
 // don't fit, e.g. "Commen" / "t"): a word too long for the box ("Charmander") makes the
 // whole label smaller, as do too many lines. At the smallest size, what still doesn't fit
 // overflows evenly on both sides.
-function fitLabel(name: string, fontFamily: string) {
+function fitLabel(name: string, fontFamily: string, height: number) {
   measureContext ??= document.createElement('canvas').getContext('2d');
   if (!measureContext) return { text: name, size: LABEL_FONT_SIZE };
   const ctx = measureContext;
@@ -141,7 +143,7 @@ function fitLabel(name: string, fontFamily: string) {
     });
     const fits =
       lines.every((line) => ctx.measureText(line).width <= maxWidth) &&
-      lines.length * size + size * LABEL_STROKE_SHARE <= TIER_HEIGHT - LABEL_PADDING * 2;
+      lines.length * size + size * LABEL_STROKE_SHARE <= height - LABEL_PADDING * 2;
     return { text: lines.join('\n'), fits };
   };
   for (let size = LABEL_FONT_SIZE; size > LABEL_MIN_FONT_SIZE; size--) {
@@ -155,23 +157,29 @@ function TierLabel({
   name,
   color,
   y,
+  height,
   fontFamily,
   onEdit,
 }: {
   name: string;
   color: string;
   y: number;
+  // Its tier's
+  height: number;
   fontFamily: string;
   onEdit: () => void;
 }) {
-  const { text, size } = React.useMemo(() => fitLabel(name, fontFamily), [name, fontFamily]);
+  const { text, size } = React.useMemo(
+    () => fitLabel(name, fontFamily, height),
+    [name, fontFamily, height]
+  );
   return (
     <Group y={y} onDblClick={onEdit} onDblTap={onEdit}>
-      <Rect width={LABEL_WIDTH} height={TIER_HEIGHT} fill={color} />
+      <Rect width={LABEL_WIDTH} height={height} fill={color} />
       <Text
         text={text}
         width={LABEL_WIDTH}
-        height={TIER_HEIGHT}
+        height={height}
         align="center"
         verticalAlign="middle"
         wrap="none"

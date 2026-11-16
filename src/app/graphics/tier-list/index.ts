@@ -3,11 +3,13 @@ import TierListCanvas from './TierListCanvas';
 import TierListSettings, { TierListBoardSettings } from './TierListSettings';
 import {
   defaultTierList,
+  defaultTierStyle,
   dropTarget,
   importCards,
   insertCard,
   layoutCards,
   parseTierList,
+  tierCardWidth,
   type TierList,
 } from './model';
 
@@ -35,15 +37,13 @@ const tierList: GraphicType<TierList> = {
       background: fresh.background,
       border: fresh.border,
       tierCardBorders: fresh.tierCardBorders,
-      tiers: list.tiers.map((t, i) => ({
-        ...t,
-        name: fresh.tiers[i].name,
-        color: fresh.tiers[i].color,
-      })),
+      // However many tiers it has: they hold its cards, which it keeps
+      tiers: list.tiers.map((t, i) => ({ ...t, ...defaultTierStyle(i, list.tiers.length) })),
       tray: { ...list.tray, color: fresh.tray.color },
     };
   },
-  targets: (list) => list.tiers.map((t) => ({ name: t.name, color: t.color })),
+  cardWidth: (list) => tierCardWidth(list.tiers.length),
+  targets: (list) => list.tiers.map((t) => ({ id: t.id, name: t.name, color: t.color })),
   // At the end of the tier
   addCard: (list, item, tier) => insertCard(list, item, tier, list.tiers[tier].items.length),
   // In the tier under the pointer, before the first card whose center is to its right
