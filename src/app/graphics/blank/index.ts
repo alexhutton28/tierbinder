@@ -24,6 +24,7 @@ const blank: GraphicType<BlankCanvas> = {
   BoardSettings: BlankBoardSettings,
   Settings: BlankSettings,
   Toolbar: BlankToolbar,
+  toolSettings: ['penColor', 'penWidth', 'eraserWidth'],
   cardWidth: (canvas) => canvas.cardWidth,
   layout: layoutCards,
   mapCards,

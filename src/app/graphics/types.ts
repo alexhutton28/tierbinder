@@ -83,6 +83,8 @@ export type GraphicType<G extends { kind: string }> = {
   // Tools beyond moving cards (e.g. a pen), shown under the board; the Canvas gets the
   // active one as `tool`
   Toolbar?: React.ComponentType<ToolbarProps<G>>;
+  // The tools' own settings saved with the board (the pen's color), which undo leaves be
+  toolSettings?: (keyof G)[];
   // The width cards are drawn at on the board, if not CARD_WIDTH (a card dragged out of
   // the card tray grows to it)
   cardWidth?: (graphic: G) => number;

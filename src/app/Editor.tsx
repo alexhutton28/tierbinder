@@ -184,6 +184,20 @@ function cardsAndInk(g: Graphic) {
   ]);
 }
 
+// The tools' settings on a board (the pen's color), which undo leaves as they are
+function toolSettings(g: Graphic): Partial<Graphic> {
+  const keys = (typeOf(g.kind).toolSettings ?? []) as (keyof Graphic)[];
+  return Object.fromEntries(keys.map((k) => [k, g[k]]));
+}
+
+// Whether a change only touched the tools' settings
+function toolsOnly(before: Graphic, now: Graphic) {
+  const tools = new Set<string>((typeOf(now.kind).toolSettings ?? []) as string[]);
+  return Object.keys(now).every(
+    (k) => tools.has(k) || now[k as keyof Graphic] === before[k as keyof Graphic]
+  );
+}
+
 // The key a keydown is for, by its letter, or by its place on a layout without Latin
 // letters (a Russian layout's ⌘Z gives "я")
 function shortcutKey(e: KeyboardEvent) {
@@ -1026,7 +1040,8 @@ export default function Editor() {
       lastChange.current = 0;
       return;
     }
-    if (!before || !now || before === now) return;
+    // The pen's and eraser's settings aren't steps
+    if (!before || !now || before === now || toolsOnly(before, now)) return;
     if (restoring.current === now) {
       restoring.current = null;
       return;
@@ -1049,9 +1064,11 @@ export default function Editor() {
   const stepHistory = React.useCallback((back: boolean) => {
     const d = lastDoc.current;
     const h = historyRef.current[d.kind] ?? NO_HISTORY;
-    const next = back ? h.past.at(-1) : h.future[0];
-    if (!next) return;
     const now = currentGraphic(d);
+    const step = back ? h.past.at(-1) : h.future[0];
+    if (!step) return;
+    // The tools stay as they are now
+    const next = { ...step, ...toolSettings(now) } as Graphic;
     historyRef.current = {
       ...historyRef.current,
       [d.kind]: back
