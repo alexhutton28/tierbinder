@@ -72,7 +72,7 @@ const SPLIT_SWATCH = '#ffffff';
 
 // How long a toast stays before it fades (ms), and how much longer for each line past the
 // first (an import's list of cards it couldn't find), so there's time to read them
-const TOAST_DURATION = 3000;
+const TOAST_DURATION = 5000;
 const TOAST_LINE_DURATION = 1500;
 // An import's toast lists at most this many problems, then how many more there were
 const MAX_TOAST_PROBLEMS = 4;
@@ -379,32 +379,39 @@ export default function Editor() {
   // message replaces it, and the same one again keeps it up longer without replaying its entrance, so repeated clicks can't
   // pile them up. `id` changes with the message (replaying the entrance), `n` with every
   // showing (restarting the timer); `closing` while it fades, like the card menu.
+  // `undo`: the message is for a change to the board (a clear, cards added or removed), and
+  // it offers Undo until the board changes again ('waiting' for that change to be
+  // recorded, then 'armed'; history's effect moves it on). Hovering or focusing it holds
+  // it up (`held`).
   const [toast, setToast] = React.useState<{
     message: string;
     id: number;
     n: number;
     closing: boolean;
     stay: boolean;
+    undo?: 'waiting' | 'armed';
   } | null>(null);
-  const showToast = (message: string, { stay = false } = {}) =>
+  const [toastHeld, setToastHeld] = React.useState(false);
+  const showToast = (message: string, { stay = false, undo = false } = {}) =>
     setToast((t) => ({
       message,
       id: t && t.message === message && !t.closing ? t.id : (t?.id ?? 0) + 1,
       n: (t?.n ?? 0) + 1,
       closing: false,
       stay,
+      undo: undo ? 'waiting' : undefined,
     }));
   React.useEffect(() => {
-    if (!toast || toast.closing || toast.stay) return;
+    if (!toast || toast.closing || toast.stay || toastHeld) return;
     const lines = toast.message.split('\n').length;
     const timer = setTimeout(
       () => setToast((t) => (t ? { ...t, closing: true } : t)),
       TOAST_DURATION + (lines - 1) * TOAST_LINE_DURATION
     );
     return () => clearTimeout(timer);
-    // Restarts with each showing (`n`), not on closing
+    // Restarts with each showing (`n`) and when it's let go, not on closing
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast?.n]);
+  }, [toast?.n, toastHeld]);
   React.useEffect(() => {
     if (!toast?.closing) return;
     const timer = setTimeout(() => setToast(null), FOLD_CLEARANCE);
@@ -1042,6 +1049,15 @@ export default function Editor() {
     }
     // The pen's and eraser's settings aren't steps
     if (!before || !now || before === now || toolsOnly(before, now)) return;
+    // A toast's Undo is for the change it reports: the first change after it's shown;
+    // any later one (or an undo or redo) takes the button away
+    setToast((t) =>
+      t?.undo === 'waiting' && restoring.current !== now
+        ? { ...t, undo: 'armed' }
+        : t?.undo
+          ? { ...t, undo: undefined }
+          : t
+    );
     if (restoring.current === now) {
       restoring.current = null;
       return;
@@ -1238,7 +1254,7 @@ export default function Editor() {
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
-    showToast('Board Cleared');
+    showToast('Board Cleared', { undo: true });
   }
 
   // Empties the card tray, keeping it on; a selected tray card goes with it
@@ -1248,14 +1264,14 @@ export default function Editor() {
     setGraphic((g) => ({ ...g, tray: { ...g.tray, items: [] } }));
     setSelectedId((selected) => (selected && ids.has(selected) ? null : selected));
     setPicking((p) => (p && ids.has(p.id) ? null : p));
-    if (count) showToast(removedMessage(count));
+    if (count) showToast(removedMessage(count), { undo: true });
   }
 
   // Resets the board's styles (names, colors, card size, the card tray's color) to a new
   // board's, keeping everything on it
   function restyleBoard() {
     setGraphic((g) => typeOf(g.kind).restyle(g));
-    showToast('Board Styles Reset');
+    showToast('Board Styles Reset', { undo: true });
   }
 
   // Clear All: the board as new, but for its tools; a showing card tray is emptied, kept
@@ -1271,7 +1287,7 @@ export default function Editor() {
     setPicking(null);
     setQuery('');
     clearSearch();
-    showToast('All Cleared');
+    showToast('All Cleared', { undo: true });
   }
 
   // Clear Board's choices: only those that would change something, and none that would do
@@ -1398,7 +1414,8 @@ export default function Editor() {
         ...added,
         ...errors.slice(0, MAX_TOAST_PROBLEMS),
         ...(more > 0 ? [`And ${more} More ${more === 1 ? 'Problem' : 'Problems'}`] : []),
-      ].join('\n') || 'No Cards Found'
+      ].join('\n') || 'No Cards Found',
+      { undo: added.length > 0 }
     );
   }
 
@@ -1628,7 +1645,7 @@ export default function Editor() {
       // Its menu is gone with it: focus goes to the board, as closing View's does
       boardBoxRef.current?.focus({ preventScroll: true });
       // Where it went, and how to get it back
-      showToast('Card Tray Hidden; Show It Again in Customize');
+      showToast('Card Tray Hidden; Show It Again in Customize', { undo: true });
       return;
     }
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
@@ -1822,7 +1839,8 @@ export default function Editor() {
         ...(already ? [`${cardCount(already)} Already on the Board or in the Card Tray`] : []),
         ...(failed ? [`${cardCount(failed)} Couldn't Load`] : []),
         ...placed.errors,
-      ].join('\n')
+      ].join('\n'),
+      { undo: added.length > 0 }
     );
     if (!added.length) return;
     setPoolAdds((adds) => ({ ...adds, [poolAddsKey(pool)]: added.map((item) => item.id) }));
@@ -1881,7 +1899,7 @@ export default function Editor() {
       tray: mapTray(graphic.tray, (i) => (gone.has(i.id) ? null : i)),
     }));
     setSelectedId((selected) => (selected && gone.has(selected) ? null : selected));
-    showToast(removedMessage(ids.length));
+    showToast(removedMessage(ids.length), { undo: true });
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // Each card's thumbnail: its place in the pool's preview (the pool may have added only
     // some of its cards), or past it, the preview's again in turn, as they flew in
@@ -2223,10 +2241,28 @@ export default function Editor() {
           <div
             // A new element for each new message, so it plays its entrance
             key={toast.id}
-            aria-hidden
             className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
+            data-undo={toast.undo === 'armed' || undefined}
+            onPointerEnter={() => setToastHeld(true)}
+            onPointerLeave={() => setToastHeld(false)}
+            onFocus={() => setToastHeld(true)}
+            onBlur={() => setToastHeld(false)}
           >
-            {toast.message}
+            {/* Read from the live region above */}
+            <span aria-hidden>{toast.message}</span>
+            {toast.undo === 'armed' && (
+              <Button
+                variant="text"
+                className={styles.toastUndo}
+                onClick={() => {
+                  stepHistory(true);
+                  setToastHeld(false);
+                  setToast((t) => (t ? { ...t, closing: true, undo: undefined } : t));
+                }}
+              >
+                Undo
+              </Button>
+            )}
           </div>
         )}
         {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
