@@ -8,7 +8,7 @@ import styles from './TierListSettings.module.css';
 import type { SettingsProps } from '../types';
 import { MAX_TIERS, MIN_TIERS, addTier, removeTier, type Tier, type TierList } from './model';
 
-// The tier list's part of the Customize tab: its background and border in the Board
+// The tier list's part of the Customize tab: its background and border in the Appearance
 // section, and the Tiers section (tier colors and names, removing and adding tiers, tier
 // card borders). Double-clicking a tier label focuses its name (`tier:<index>`).
 
@@ -157,7 +157,7 @@ export default function TierListSettings({
   );
 }
 
-// Its colors, in the editor's Board section
+// Its colors, in the editor's Appearance section
 export function TierListBoardSettings({ graphic: list, onChange }: SettingsProps<TierList>) {
   return (
     <>

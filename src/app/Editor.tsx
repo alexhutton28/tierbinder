@@ -2862,54 +2862,52 @@ export default function Editor() {
               hidden={tab !== 'customize'}
               className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              {/* What the board is, first, with no heading: its type, in the primary color
-              (it changes everything under it), and beside it its shape (where it's posted:
-              it sets the board's width and the image's size), each under its name. Then
-              sections as in Add Cards: each a heading over its controls, 8px apart, and 16px
-              between sections, its toggles last. Board holds the graphic's own colors, then
-              Clear Board. */}
-              <div className="flex flex-wrap gap-3 self-start min-w-0">
-                <Dropdown
-                  label="Type"
-                  caption
-                  primary
-                  value={doc.kind}
-                  options={GRAPHIC_TYPES.map((t) => ({
-                    value: t.kind,
-                    label: t.label,
-                    icon: t.icon,
-                  }))}
-                  onChange={(kind) => {
-                    if (kind !== doc.kind) showBoard(kind);
-                  }}
-                />
-                <Dropdown
-                  label="Shape"
-                  caption
-                  value={graphic.shape}
-                  options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
-                  onChange={(shape) => {
-                    if (shape !== graphic.shape)
-                      setGraphic((g) => typeOf(g.kind).reshape(g, shape));
-                  }}
-                />
-              </div>
+              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, and 16px
+              between sections, its toggles last. Board first, what the board is and
+              starting it over: its type, in the primary color (it changes everything under
+              it), its shape (where it's posted: it sets the board's width and the image's
+              size), each under its name, and Clear Board; stacked beside the board (from
+              b8), and under it, on narrow screens, in one row that wraps, Clear Board level
+              with the dropdowns. Then the graphic's own sections, then Appearance (its
+              colors), then the card tray. */}
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Board</h3>
-                <type.BoardSettings
-                  graphic={graphic}
-                  onChange={setGraphic}
-                  focus={settingsFocus}
-                  onNotify={showToast}
-                />
-                {/* Asks first with a menu of only the clears that would change something */}
-                <ClearButton
-                  choices={boardClears}
-                  // Nothing left to clear: the button's disabled, so focus goes to the board
-                  onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
-                >
-                  Clear Board
-                </ClearButton>
+                <div className="flex flex-wrap gap-3 items-end min-w-0 b8:flex-col b8:flex-nowrap b8:items-start">
+                  <Dropdown
+                    label="Type"
+                    caption
+                    primary
+                    value={doc.kind}
+                    options={GRAPHIC_TYPES.map((t) => ({
+                      value: t.kind,
+                      label: t.label,
+                      icon: t.icon,
+                    }))}
+                    onChange={(kind) => {
+                      if (kind !== doc.kind) showBoard(kind);
+                    }}
+                  />
+                  <Dropdown
+                    label="Shape"
+                    caption
+                    value={graphic.shape}
+                    options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
+                    onChange={(shape) => {
+                      if (shape !== graphic.shape)
+                        setGraphic((g) => typeOf(g.kind).reshape(g, shape));
+                    }}
+                  />
+                  {/* Asks first with a menu of only the clears that would change something */}
+                  <div className="flex">
+                    <ClearButton
+                      choices={boardClears}
+                      // Nothing left to clear: the button's disabled, so focus goes to the board
+                      onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
+                    >
+                      Clear Board
+                    </ClearButton>
+                  </div>
+                </div>
               </div>
               <type.Settings
                 graphic={graphic}
@@ -2917,6 +2915,17 @@ export default function Editor() {
                 focus={settingsFocus}
                 onNotify={showToast}
               />
+              {/* How the board itself looks: its colors (a tier's are with its name, the tray's
+                  with the tray) */}
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Appearance</h3>
+                <type.BoardSettings
+                  graphic={graphic}
+                  onChange={setGraphic}
+                  focus={settingsFocus}
+                  onNotify={showToast}
+                />
+              </div>
               <div ref={traySectionRef} className="flex flex-col gap-3">
                 {/* Its switch turns the whole section on or off, so the heading is the
                     switch: its name, then the switch right after it; its other rows show
