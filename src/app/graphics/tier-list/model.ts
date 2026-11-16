@@ -191,8 +191,9 @@ export function insertCard(list: TierList, item: CardItem, tierIndex: number, in
 // its place's, once they all are). While no tier has been named, they all take the names
 // of a list that long, so a fifth tier turns Goated, Solid, Mid, Fraud into S, A, B, C, D;
 // otherwise the others keep theirs and it's named for its place ("Tier 5", or the next
-// number no tier is named for), or takes the first letter not in use if they're all letters. A tier given a `name` (an import's) leaves the others be.
-// Null when the list is full.
+// number no tier is named for), or takes the first letter not in use if they're all
+// letters. A tier given a `name` (an import's) leaves the others be. Null when the list
+// is full.
 export function addTier(list: TierList, name?: string): TierList | null {
   const count = list.tiers.length + 1;
   if (count > MAX_TIERS) return null;
@@ -273,7 +274,7 @@ export function parseTierList(value: unknown): TierList | null {
     !Array.isArray(list.tiers) ||
     list.tiers.length < MIN_TIERS ||
     list.tiers.length > MAX_TIERS ||
-    !list.tiers.every((t) => typeof t.name === 'string' && Array.isArray(t.items))
+    !list.tiers.every((t) => typeof t?.name === 'string' && Array.isArray(t.items))
   ) {
     return null;
   }
