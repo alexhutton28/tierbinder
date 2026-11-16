@@ -181,6 +181,14 @@ body * {
   padding: var(--spacing-4) var(--spacing-3) 0;
 }
 
+/* A subheader inside a section or a popup, naming the control under it (the color picker's
+   Board Colors and Hex, Customize's Type and Shape): small and muted */
+.tierbinder-caption {
+  color: var(--tb-muted);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
 /* Trimmed to the capitals at the top, so the space above a heading (16px under the main
    nav) reaches its letters rather than the font's empty ascender room */
 .tierbinder-heading {

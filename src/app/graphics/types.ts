@@ -1,5 +1,6 @@
 import type React from 'react';
 import type { CardItem } from '../cards';
+import type { ShapeId } from '../canvas/size';
 import type { ResolvedGroup } from '../importText';
 
 // The interface every graphic type implements. The editor (Editor.tsx) owns everything
@@ -41,8 +42,6 @@ export type CanvasProps<G> = {
   onEditSetting: (key: string) => void;
   // The active tool, one of the graphic's own (see Toolbar); DEFAULT_TOOL moves cards
   tool: string;
-  // Shows a toast: why a dragged card couldn't go where it was dropped
-  onNotify: (message: string) => void;
 };
 
 // The tool every board starts with: moving and clicking cards
@@ -104,6 +103,9 @@ export type GraphicType<G extends { kind: string }> = {
   // The board with a new one's styles (names, colors, card size, the card tray's color),
   // everything on it, its tools and the card tray's cards kept: Reset Board Styles
   restyle: (graphic: G) => G;
+  // The board in another shape (its `shape`, which sets its width: canvas/size.ts),
+  // everything on it kept and still on the board
+  reshape: (graphic: G, shape: ShapeId) => G;
   // Where a search result can be added (the Add to choices), e.g. the tiers, each with
   // a color for its swatch in the picker if it has one, and an `id` if targets can come
   // and go (a tier list's tiers), so the chosen one stays chosen as the others change

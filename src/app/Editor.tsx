@@ -8,11 +8,13 @@ import { flushSync } from 'react-dom';
 import { Group, Layer, Rect, Stage } from 'react-konva';
 import {
   BOARD_HEIGHT,
-  BOARD_WIDTH,
+  SHAPES,
+  boardWidth,
+  exportScale,
+  exportSize,
   CARD_CORNER_RADIUS,
   CARD_HEIGHT,
   CARD_WIDTH,
-  EXPORT_SCALE,
 } from './canvas/size';
 import {
   faceOf,
@@ -35,6 +37,7 @@ import {
   insertTrayCard,
   layoutTray,
   mapTray,
+  TRAY_WIDTH,
   trayCardWidth,
   trayHeight,
   moveTrayCard,
@@ -83,6 +86,9 @@ const TRAY_HINT_KEY = 'tierbinder-tray-hint-seen';
 // The selection outline, drawn just outside the card (canvas values; see Exceptions in
 // design/hutton-design-system.md)
 const OUTLINE = { width: 3, radius: 8, color: '#ffffff' };
+// Added to the image's size in pixels when asking Konva for it, which cuts the size to a
+// whole number: half a pixel, so a float just under the size still gives it
+const EXPORT_MARGIN = 0.5;
 
 // Changes every card on a graphic, on the board and in the card tray (null removes it)
 function mapEveryCard(g: Graphic, change: (item: CardItem) => CardItem | null): Graphic {
@@ -376,7 +382,7 @@ export default function Editor() {
   // The interface's font (Figtree), for canvas text that belongs to the editor (the empty
   // card tray's hint)
   const [interfaceFont, setInterfaceFont] = React.useState('sans-serif');
-  // Every message (a tier or the card tray is full, import results, copying) is a toast at
+  // Every message (the card tray is full, import results, copying) is a toast at
   // the top of the window, never on the board. It fades after TOAST_DURATION, plus
   // TOAST_LINE_DURATION for each line past the first; `stay` keeps work under way
   // ("Importing…") up until the next message replaces it (another message during an
@@ -853,6 +859,13 @@ export default function Editor() {
   // The card tray, under the board: its top edge in design pixels sits TRAY_GAP on-screen
   // pixels below the board, whatever the scale
   const trayShown = graphic.tray.enabled;
+  // The board's width in design pixels, from its shape
+  const width = boardWidth(graphic.shape);
+  // The card tray keeps its own width whatever the board's shape, the board centered over
+  // it. What the stage shows across, and how far in the board starts (the stage is shifted
+  // by it, so the board's own left edge stays x = 0 for everything laid out on it)
+  const stageWidth = trayShown ? TRAY_WIDTH : width;
+  const boardLeft = (stageWidth - width) / 2;
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
@@ -875,7 +888,12 @@ export default function Editor() {
   const exportTray = trayShown && includeTray;
   // The tray's height follows its cards
   const shownTrayHeight = trayShown ? trayHeight(graphic.tray.items.length) : 0;
-  const exportHeight = BOARD_HEIGHT + (exportTray ? shownTrayHeight : 0);
+  // The image's size in its own pixels. An included card tray goes under the board at the
+  // board's width, its cards laid out again to fit, so the image is one rectangle.
+  const exported = exportSize(
+    graphic.shape,
+    BOARD_HEIGHT + (exportTray ? trayHeight(graphic.tray.items.length, width) : 0)
+  );
 
   // A dragged card shows at the board's card size over the board, and the tray's over
   // the card tray (as a new card there would be)
@@ -889,7 +907,11 @@ export default function Editor() {
   // Every card and where it's drawn: the board's, then the tray's
   const boardPlacements = type.layout(graphic);
   const trayPlacements = trayShown
-    ? layoutTray(graphic.tray).map((p) => ({ ...p, y: p.y + trayTop }))
+    ? layoutTray(graphic.tray).map((p) => ({
+        ...p,
+        x: p.x - boardLeft,
+        y: p.y + trayTop,
+      }))
     : [];
 
   const placements = [...boardPlacements, ...trayPlacements];
@@ -898,10 +920,10 @@ export default function Editor() {
   // each lands: its spot on the board or in the tray on screen, read every frame (from the latest render)
   // so it follows the board as it rescales or the page scrolls
   const [arriving, setArriving] = React.useState<ReadonlySet<string>>(new Set());
-  const landingRef = React.useRef({ placements, scale });
+  const landingRef = React.useRef({ placements, scale, boardLeft });
   // Before the browser's next frame, so the flights' first frame sees the cards just added
   React.useLayoutEffect(() => {
-    landingRef.current = { placements, scale };
+    landingRef.current = { placements, scale, boardLeft };
   });
   const stopFlights = React.useRef(new Set<() => void>());
   React.useEffect(() => {
@@ -911,12 +933,12 @@ export default function Editor() {
   // Measured once a frame: the board's place on screen, then each card's spot from it
   const landing = () => {
     const board = stageRef.current?.container().getBoundingClientRect();
-    const { placements: places, scale: s } = landingRef.current;
+    const { placements: places, scale: s, boardLeft: left } = landingRef.current;
     return (id: string) => {
       const place = places.find((p) => p.item.id === id);
       if (!board || !place) return null;
       return {
-        left: board.left + place.x * s,
+        left: board.left + (left + place.x) * s,
         top: board.top + place.y * s,
         width: place.width * s,
         height: place.height * s,
@@ -985,7 +1007,7 @@ export default function Editor() {
     if (viewedPlace) {
       const board = stage.container().getBoundingClientRect();
       origin = {
-        x: board.left + (viewedPlace.x + viewedPlace.width / 2) * scale,
+        x: board.left + (boardLeft + viewedPlace.x + viewedPlace.width / 2) * scale,
         y: board.top + (viewedPlace.y + viewedPlace.height / 2) * scale,
         height: viewedPlace.height * scale,
       };
@@ -1197,9 +1219,9 @@ export default function Editor() {
     if (!workspace || !board || !box) return;
     const fit = () => {
       const style = getComputedStyle(workspace);
-      const width =
+      const room =
         workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      let next = width / BOARD_WIDTH;
+      let next = room / stageWidth;
       if (wide) {
         const height =
           workspace.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
@@ -1219,7 +1241,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayShown, shownTrayHeight]);
+  }, [wide, trayShown, shownTrayHeight, stageWidth]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -1553,17 +1575,16 @@ export default function Editor() {
   const addToTarget = ({ dropped }: CardMenu) =>
     dropped && dropped.point.y > BOARD_HEIGHT ? 'Add to card tray' : `Add to ${type.targetNoun}`;
 
+  // A point on the board (design pixels from its corner) measured from the tray's corner
+  const inTray = (point: Point) => ({ x: point.x + boardLeft, y: point.y - trayTop });
+
   // Adds a card where it was dropped: in the card tray (or the gap above it) by position,
   // or where the graphic puts it
   const dropAt = (item: CardItem, point: Point): Placed<Graphic> =>
     trayShown && point.y > BOARD_HEIGHT
       ? withTray(
           graphic,
-          insertTrayCard(
-            graphic.tray,
-            item,
-            trayDropIndex(graphic.tray, '', { x: point.x, y: point.y - trayTop })
-          )
+          insertTrayCard(graphic.tray, item, trayDropIndex(graphic.tray, '', inTray(point)))
         )
       : type.dropCard(graphic, item, point);
 
@@ -1571,7 +1592,7 @@ export default function Editor() {
   const boardCardDrop = (id: string, x: number, y: number) => {
     const place = boardPlacements.find((p) => p.item.id === id);
     if (!trayShown || !place || y + place.height / 2 <= BOARD_HEIGHT) return false;
-    const point = { x: x + place.width / 2, y: y + place.height / 2 - trayTop };
+    const point = inTray({ x: x + place.width / 2, y: y + place.height / 2 });
     const placed = withTray(
       typeOf(graphic.kind).mapCards(graphic, (i) => (i.id === id ? null : i)),
       insertTrayCard(graphic.tray, place.item, trayDropIndex(graphic.tray, '', point))
@@ -1587,7 +1608,7 @@ export default function Editor() {
     if (!place) return;
     const center = { x: x + place.width / 2, y: y + place.height / 2 };
     if (center.y > BOARD_HEIGHT) {
-      const point = { x: center.x, y: center.y - trayTop };
+      const point = inTray(center);
       setGraphic((g) => ({
         ...g,
         tray: moveTrayCard(g.tray, id, trayDropIndex(g.tray, id, point)),
@@ -2106,7 +2127,12 @@ export default function Editor() {
     if (clientX < box.left || clientX > box.right || clientY < box.top || clientY > box.bottom) {
       return;
     }
-    const point = { x: (clientX - box.left) / scale, y: (clientY - box.top) / scale };
+    const point = {
+      x: (clientX - box.left) / scale - boardLeft,
+      y: (clientY - box.top) / scale,
+    };
+    // Beside a narrower board, over nothing (the stage is as wide as the card tray)
+    if (point.y <= BOARD_HEIGHT && (point.x < 0 || point.x > width)) return;
     // Later cards overlap earlier ones, so the last card under the pointer is the top one
     const under = placements.findLast(
       (p) =>
@@ -2182,35 +2208,51 @@ export default function Editor() {
     // The editor's own layer, and any a graphic adds (e.g. the eraser's circle)
     const editorOnly = stage.find('.editor');
     editorOnly.forEach((node) => node.hide());
-    // An exported card tray sits flush and square under the board
-    const tray = stage.findOne('.tray');
-    const trayBox = stage.findOne<Konva.Rect>('.trayBox');
-    // Put back as they are now
-    const trayY = tray?.y();
-    const trayRadius = trayBox?.cornerRadius();
-    const stageScale = stage.scaleX();
-    if (exportTray) {
-      tray?.y(BOARD_HEIGHT);
-      trayBox?.cornerRadius(0);
-    }
-    // Drawn at design size times EXPORT_SCALE, not from the on-screen scale, so the image
-    // is always whole pixels (2400 wide). Konva draws it as toBlob is called, so the board
-    // is put back before the screen next draws.
-    stage.scale({ x: 1, y: 1 });
+    // Whatever's moved for the image is put back as it is now
+    const restore: (() => void)[] = [];
+    const set = (node: Konva.Node | undefined, attrs: Record<string, unknown>) => {
+      if (!node) return;
+      const before = Object.fromEntries(Object.keys(attrs).map((k) => [k, node.getAttr(k)]));
+      restore.push(() => node.setAttrs(before));
+      node.setAttrs(attrs);
+    };
     let blob: Promise<Blob>;
     try {
+      // The board starts at the image's corner, not centered over a wider card tray
+      set(stage, { x: 0, scaleX: 1, scaleY: 1 });
+      // An exported card tray sits flush and square under the board, at the board's width,
+      // its cards laid out again to fit it
+      if (exportTray) {
+        const tray = stage.findOne<Konva.Group>('.tray');
+        set(tray, { x: 0, y: BOARD_HEIGHT });
+        set(stage.findOne('.trayBox'), {
+          width,
+          height: trayHeight(graphic.tray.items.length, width),
+          cornerRadius: 0,
+        });
+        for (const place of layoutTray(graphic.tray, width)) {
+          const card = tray?.findOne(`#${place.item.id}`);
+          const cardScale = place.width / CARD_WIDTH;
+          set(card, { x: place.x, y: place.y, scaleX: cardScale, scaleY: cardScale });
+        }
+      }
+      // Drawn at design size times the shape's export scale, not from the on-screen scale,
+      // so the image is always its shape's size in whole pixels (2400 wide at 16:9, 1080 for
+      // the others). Konva sizes its canvas as the design size times the scale, cut to a
+      // whole number, so the design size asked for is half an image pixel over: a float just
+      // short of 1080 is still 1080. Konva draws it as toBlob is called, so the board is put
+      // back before the screen next draws.
+      const pixelRatio = exportScale(graphic.shape);
       blob = stage.toBlob({
-        pixelRatio: EXPORT_SCALE,
+        pixelRatio,
         x: 0,
         y: 0,
-        width: BOARD_WIDTH,
-        height: exportHeight,
+        width: (exported.width + EXPORT_MARGIN) / pixelRatio,
+        height: (exported.height + EXPORT_MARGIN) / pixelRatio,
       }) as Promise<Blob>;
     } finally {
-      stage.scale({ x: stageScale, y: stageScale });
       editorOnly.forEach((node) => node.show());
-      if (trayY !== undefined) tray?.y(trayY);
-      if (trayRadius !== undefined) trayBox?.cornerRadius(trayRadius);
+      restore.reverse().forEach((put) => put());
     }
     return blob;
   }
@@ -2820,14 +2862,16 @@ export default function Editor() {
               hidden={tab !== 'customize'}
               className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              {/* The board type first, on its own with no heading, in the primary color: it
-              changes everything under it. Then sections as in Add Cards: each a heading over
-              its controls, 8px apart, and 16px between sections, its toggles last. Board
-              holds the graphic's own colors, then Clear Board. */}
-              <div className="flex self-start min-w-0">
+              {/* What the board is, first, with no heading: its type, in the primary color
+              (it changes everything under it), and beside it its shape (where it's posted:
+              it sets the board's width and the image's size), each under its name. Then
+              sections as in Add Cards: each a heading over its controls, 8px apart, and 16px
+              between sections, its toggles last. Board holds the graphic's own colors, then
+              Clear Board. */}
+              <div className="flex flex-wrap gap-3 self-start min-w-0">
                 <Dropdown
-                  label="Board type"
-                  hideLabel
+                  label="Type"
+                  caption
                   primary
                   value={doc.kind}
                   options={GRAPHIC_TYPES.map((t) => ({
@@ -2837,6 +2881,16 @@ export default function Editor() {
                   }))}
                   onChange={(kind) => {
                     if (kind !== doc.kind) showBoard(kind);
+                  }}
+                />
+                <Dropdown
+                  label="Shape"
+                  caption
+                  value={graphic.shape}
+                  options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
+                  onChange={(shape) => {
+                    if (shape !== graphic.shape)
+                      setGraphic((g) => typeOf(g.kind).reshape(g, shape));
                   }}
                 />
               </div>
@@ -2909,7 +2963,7 @@ export default function Editor() {
                 <div className="tierbinder-prop">
                   Size
                   <span className="text-(--tb-text)">
-                    {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
+                    {exported.width} × {exported.height}
                   </span>
                 </div>
                 <div className="tierbinder-prop">
@@ -2961,17 +3015,15 @@ export default function Editor() {
           className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
           inert={viewing !== null}
         >
-          <div
-            ref={boardRef}
-            className="flex flex-col gap-4"
-            style={{ width: BOARD_WIDTH * scale }}
-          >
+          <div ref={boardRef} className="flex flex-col gap-4" style={{ width: stageWidth * scale }}>
             <div ref={boardBoxRef} tabIndex={-1} className={`${styles.boardBox} w-full relative`}>
               <Stage
                 ref={(stage) => {
                   stageRef.current = stage;
                 }}
-                width={BOARD_WIDTH * scale}
+                width={stageWidth * scale}
+                // Shifted so the board, centered over a wider card tray, starts at x = 0
+                x={boardLeft * scale}
                 height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + shownTrayHeight * scale : 0)}
                 scaleX={scale}
                 scaleY={scale}
@@ -3001,11 +3053,12 @@ export default function Editor() {
                     setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
                   }}
                   tool={tool}
-                  onNotify={showToast}
                 />
                 {trayShown && (
                   <CardTray
                     tray={graphic.tray}
+                    width={TRAY_WIDTH}
+                    left={-boardLeft}
                     top={trayTop}
                     scale={scale}
                     border={graphic.border}
@@ -3064,7 +3117,7 @@ export default function Editor() {
                     // Kept inside the board's right edge
                     style={{
                       minWidth: MENU_WIDTH,
-                      left: Math.min(shownMenu.x, BOARD_WIDTH * scale - MENU_WIDTH),
+                      left: Math.max(0, Math.min(shownMenu.x, stageWidth * scale - MENU_WIDTH)),
                       // In the card tray, at the board's foot, it opens upward from the pointer
                       ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
                         ? { bottom: `calc(100% - ${shownMenu.y}px)` }

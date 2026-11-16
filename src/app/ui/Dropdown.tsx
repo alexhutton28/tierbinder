@@ -20,6 +20,7 @@ type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card'; ico
 export default function Dropdown<T extends string | number>({
   label,
   hideLabel = false,
+  caption = false,
   chevron = true,
   primary = false,
   value,
@@ -29,6 +30,9 @@ export default function Dropdown<T extends string | number>({
 }: {
   label: string;
   hideLabel?: boolean;
+  // The label over the dropdown as a subheader (.tierbinder-caption), as the color picker's
+  // Hex is over its field, in place of beside it
+  caption?: boolean;
   chevron?: boolean;
   // In the primary color, for a choice that changes the whole board (its type)
   primary?: boolean;
@@ -80,8 +84,13 @@ export default function Dropdown<T extends string | number>({
 
   return (
     // Shrinks to fit (its button's words cut short with an ellipsis) rather than overflowing
-    <div className="flex gap-3 items-center min-w-0">
-      <span id={labelId} className={hideLabel ? 'sr-only' : undefined}>
+    <div
+      className={`flex min-w-0 ${caption ? 'flex-col gap-2 items-start' : 'gap-3 items-center'}`}
+    >
+      <span
+        id={labelId}
+        className={hideLabel ? 'sr-only' : caption ? 'tierbinder-caption' : undefined}
+      >
         {label}
       </span>
       <div ref={boxRef} className="relative min-w-0">
