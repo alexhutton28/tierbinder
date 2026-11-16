@@ -62,8 +62,10 @@ export type SettingsProps<G> = {
 
 export type GraphicType<G extends { kind: string }> = {
   kind: G['kind'];
-  // In Change board type
+  // In the board type dropdown, with its icon (a 16px SVG in public/, drawn in the text
+  // color)
   label: string;
+  icon: string;
   // What cards are added to, as in "Add to tier"
   targetNoun: string;
   create: () => G;
@@ -72,11 +74,17 @@ export type GraphicType<G extends { kind: string }> = {
   parse: (value: unknown) => G | null;
   // Konva layers, drawn inside the editor's stage. Cards should use canvas/CardNode.
   Canvas: React.ComponentType<CanvasProps<G>>;
-  // The graphic's part of the Customize tab
+  // The graphic's rows in the Customize tab's Board section, between the board type and
+  // Clear Board (its colors)
+  BoardSettings: React.ComponentType<SettingsProps<G>>;
+  // The graphic's own sections of the Customize tab, after Board: each a
+  // `flex flex-col gap-3` div with its heading first, controls before toggles
   Settings: React.ComponentType<SettingsProps<G>>;
   // Tools beyond moving cards (e.g. a pen), shown under the board; the Canvas gets the
   // active one as `tool`
   Toolbar?: React.ComponentType<ToolbarProps<G>>;
+  // The tools' own settings saved with the board (the pen's color), which undo leaves be
+  toolSettings?: (keyof G)[];
   // The width cards are drawn at on the board, if not CARD_WIDTH (a card dragged out of
   // the card tray grows to it)
   cardWidth?: (graphic: G) => number;
@@ -84,6 +92,13 @@ export type GraphicType<G extends { kind: string }> = {
   layout: (graphic: G) => CardPlacement[];
   // Changes cards, or removes them (null)
   mapCards: (graphic: G, change: (item: CardItem) => CardItem | null) => G;
+  // Whether anything's on the board (cards, ink), and the board with all of it gone, its
+  // styles (names, colors, card size) kept: Clear Board
+  hasContents: (graphic: G) => boolean;
+  clear: (graphic: G) => G;
+  // The board with a new one's styles (names, colors, card size, the card tray's color),
+  // everything on it, its tools and the card tray's cards kept: Reset Board Styles
+  restyle: (graphic: G) => G;
   // Where a search result can be added (the Add to choices), e.g. the tiers, each with
   // a color for its swatch in the picker if it has one
   targets: (graphic: G) => { name: string; color?: string }[];

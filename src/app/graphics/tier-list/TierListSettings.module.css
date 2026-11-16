@@ -1,0 +1,15 @@
+/* A tier's name: one line as tall as the other fields, a line taller for each line break
+   (its rows), never scrolling up and down or resized by hand. On the textarea, to win
+   over the fields' own textarea padding (globals.css). */
+textarea.name {
+  padding-block: calc((var(--tb-control-height) - 1lh - 2 * var(--tb-line-width)) / 2);
+  overflow: hidden;
+  resize: none;
+}
+
+/* The tier's swatch, centered on its name's first line */
+.swatch {
+  display: flex;
+  align-items: center;
+  height: var(--tb-control-height);
+}

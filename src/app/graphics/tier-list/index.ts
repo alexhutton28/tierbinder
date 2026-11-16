@@ -1,6 +1,6 @@
 import type { GraphicType } from '../types';
 import TierListCanvas from './TierListCanvas';
-import TierListSettings from './TierListSettings';
+import TierListSettings, { TierListBoardSettings } from './TierListSettings';
 import {
   defaultTierList,
   dropTarget,
@@ -14,16 +14,35 @@ import {
 const tierList: GraphicType<TierList> = {
   kind: 'tier-list',
   label: 'Tier List',
+  icon: '/tier-list.svg',
   targetNoun: 'tier',
   create: defaultTierList,
   parse: parseTierList,
   Canvas: TierListCanvas,
+  BoardSettings: TierListBoardSettings,
   Settings: TierListSettings,
   layout: layoutCards,
   mapCards: (list, change) => ({
     ...list,
     tiers: list.tiers.map((t) => ({ ...t, items: t.items.flatMap((i) => change(i) ?? []) })),
   }),
+  hasContents: (list) => list.tiers.some((t) => t.items.length),
+  clear: (list) => ({ ...list, tiers: list.tiers.map((t) => ({ ...t, items: [] })) }),
+  restyle: (list) => {
+    const fresh = defaultTierList();
+    return {
+      ...list,
+      background: fresh.background,
+      border: fresh.border,
+      tierCardBorders: fresh.tierCardBorders,
+      tiers: list.tiers.map((t, i) => ({
+        ...t,
+        name: fresh.tiers[i].name,
+        color: fresh.tiers[i].color,
+      })),
+      tray: { ...list.tray, color: fresh.tray.color },
+    };
+  },
   targets: (list) => list.tiers.map((t) => ({ name: t.name, color: t.color })),
   // At the end of the tier
   addCard: (list, item, tier) => insertCard(list, item, tier, list.tiers[tier].items.length),

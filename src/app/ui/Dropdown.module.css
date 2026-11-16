@@ -31,6 +31,16 @@
   box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-muted);
 }
 
+/* An option's icon (the board types'), colored by the text around it; Dropdown.tsx sets
+   its image */
+.icon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: center / contain no-repeat;
+}
+
 /* Feather's chevron-down, colored by the text around it */
 .chevron {
   width: var(--tb-icon);

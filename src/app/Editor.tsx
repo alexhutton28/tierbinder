@@ -48,7 +48,9 @@ import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
-import Checkbox from './ui/Checkbox';
+import ClearButton, { type ClearChoice } from './ui/ClearButton';
+import { followOpen, revealBelow } from './ui/reveal';
+import Toggle from './ui/Toggle';
 import ColorField, { BoardColors, boardColors } from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
@@ -58,7 +60,7 @@ import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
 import { FOLD_CLEARANCE } from './ui/motion';
 import { launchFlights, onScreen, wholeOnScreen, type Flight } from './ui/flights';
-import { titleCase } from './text';
+import { titleCase, cardCount } from './text';
 
 // The editor: the board, drawn by the document's graphic type (see graphics/types.ts), plus
 // the top bar and sidebar shared by every graphic.
@@ -70,7 +72,7 @@ const SPLIT_SWATCH = '#ffffff';
 
 // How long a toast stays before it fades (ms), and how much longer for each line past the
 // first (an import's list of cards it couldn't find), so there's time to read them
-const TOAST_DURATION = 3000;
+const TOAST_DURATION = 5000;
 const TOAST_LINE_DURATION = 1500;
 // An import's toast lists at most this many problems, then how many more there were
 const MAX_TOAST_PROBLEMS = 4;
@@ -102,8 +104,7 @@ const POOL_ACTIONS = {
 } as const;
 
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
-const removedMessage = (n: number) =>
-  `Removed ${n} ${n === 1 ? 'Card' : 'Cards'} From the Card Tray`;
+const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
 
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
 const TRAY_MENU = 'tray';
@@ -152,6 +153,60 @@ function durationOf(token: string) {
 // The sidebar shortcut as the keyboard shows it, for the toggle's tooltip
 const SIDEBAR_SHORTCUT = () =>
   /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318\\' : 'Ctrl+\\';
+
+// How many steps each board keeps to undo
+const HISTORY_LIMIT = 100;
+// Changes this close together are one step to undo: a color dragged in the picker (once a
+// frame), a name typed
+const HISTORY_MERGE = 400;
+type History = { past: Graphic[]; future: Graphic[] };
+const NO_HISTORY: History = { past: [], future: [] };
+
+// Every card id on a board and in its card tray
+function cardIds(g: Graphic) {
+  return new Set([
+    ...typeOf(g.kind)
+      .layout(g)
+      .map((p) => p.item.id),
+    ...g.tray.items.map((i) => i.id),
+  ]);
+}
+
+// Where every card is and how much ink there is: a change to any of it (a card added,
+// moved or removed, a stroke) is always a step of its own, never merged
+function cardsAndInk(g: Graphic) {
+  return JSON.stringify([
+    typeOf(g.kind)
+      .layout(g)
+      .map((p) => [p.item.id, p.x, p.y]),
+    g.tray.items.map((i) => i.id),
+    'strokes' in g ? g.strokes.length : 0,
+  ]);
+}
+
+// The tools' settings on a board (the pen's color), which undo leaves as they are
+function toolSettings(g: Graphic): Partial<Graphic> {
+  const keys = (typeOf(g.kind).toolSettings ?? []) as (keyof Graphic)[];
+  return Object.fromEntries(keys.map((k) => [k, g[k]]));
+}
+
+// Whether a change only touched the tools' settings
+function toolsOnly(before: Graphic, now: Graphic) {
+  const tools = new Set<string>((typeOf(now.kind).toolSettings ?? []) as string[]);
+  return Object.keys(now).every(
+    (k) => tools.has(k) || now[k as keyof Graphic] === before[k as keyof Graphic]
+  );
+}
+
+// Undo's shortcut, as screen readers hear it with a toast that offers Undo
+const UNDO_KEY = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? 'Command+Z' : 'Ctrl+Z');
+
+// The key a keydown is for, by its letter, or by its place on a layout without Latin
+// letters (a Russian layout's ⌘Z gives "я")
+function shortcutKey(e: KeyboardEvent) {
+  const key = e.key.toLowerCase();
+  return /^[a-z]$/.test(key) ? key : e.code.replace(/^Key/, '').toLowerCase();
+}
 
 // From b8 up, where the board has the room beside the sidebar
 function wideQuery() {
@@ -327,32 +382,50 @@ export default function Editor() {
   // message replaces it, and the same one again keeps it up longer without replaying its entrance, so repeated clicks can't
   // pile them up. `id` changes with the message (replaying the entrance), `n` with every
   // showing (restarting the timer); `closing` while it fades, like the card menu.
+  // `undo`: the message is for a change to the board (a clear, cards added or removed), and
+  // it offers Undo until the board changes again ('waiting' for that change to be
+  // recorded, then 'armed'; history's effect moves it on). Hovering or focusing it holds
+  // it up (`held`).
   const [toast, setToast] = React.useState<{
     message: string;
     id: number;
     n: number;
     closing: boolean;
     stay: boolean;
+    undo?: 'waiting' | 'armed';
   } | null>(null);
-  const showToast = (message: string, { stay = false } = {}) =>
+  // When the board's history last took a settings change (undo's merging, below); a toast
+  // that offers Undo starts a new step
+  const lastChange = React.useRef(0);
+  // The toast the pointer or focus is on, by id: it holds up only that toast, and only
+  // while it offers Undo, so a toast that goes away under the pointer can't hold the next
+  const [heldToast, setHeldToast] = React.useState<number | null>(null);
+  const toastHeld =
+    toast !== null && heldToast === toast.id && toast.undo === 'armed' && !toast.closing;
+  // `undo` must come with a change to the board showing, in the same update: that change
+  // arms its Undo, and starts a step of its own, so Undo takes back only what it reports
+  const showToast = (message: string, { stay = false, undo = false } = {}) => {
+    if (undo) lastChange.current = 0;
     setToast((t) => ({
       message,
       id: t && t.message === message && !t.closing ? t.id : (t?.id ?? 0) + 1,
       n: (t?.n ?? 0) + 1,
       closing: false,
       stay,
+      undo: undo ? 'waiting' : undefined,
     }));
+  };
   React.useEffect(() => {
-    if (!toast || toast.closing || toast.stay) return;
+    if (!toast || toast.closing || toast.stay || toastHeld) return;
     const lines = toast.message.split('\n').length;
     const timer = setTimeout(
       () => setToast((t) => (t ? { ...t, closing: true } : t)),
       TOAST_DURATION + (lines - 1) * TOAST_LINE_DURATION
     );
     return () => clearTimeout(timer);
-    // Restarts with each showing (`n`), not on closing
+    // Restarts with each showing (`n`) and when it's let go, not on closing
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast?.n]);
+  }, [toast?.n, toastHeld]);
   React.useEffect(() => {
     if (!toast?.closing) return;
     const timer = setTimeout(() => setToast(null), FOLD_CLEARANCE);
@@ -435,14 +508,9 @@ export default function Editor() {
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
   const [tool, setTool] = React.useState(DEFAULT_TOOL);
-  // Board button whose choices are showing: confirming Clear board, or picking a type
-  const [confirmingClear, setConfirmingClear] = React.useState(false);
-  // Confirming Clear Card Tray, in Customize
-  const [confirmingTrayClear, setConfirmingTrayClear] = React.useState(false);
-  // Its button, Cancel, and Clear Board's button, for focus to move between as it confirms
-  const clearTrayRef = React.useRef<HTMLButtonElement>(null);
-  const cancelTrayClearRef = React.useRef<HTMLButtonElement>(null);
-  const clearBoardRef = React.useRef<HTMLButtonElement>(null);
+  // Card Tray's section and Bulk Import's, scrolled into view as they open (revealBelow)
+  const traySectionRef = React.useRef<HTMLDivElement>(null);
+  const importRef = React.useRef<HTMLDivElement>(null);
   // Pools whose cards are still flying in: they don't offer to take them back out yet, so a
   // double click doesn't send them straight back
   const [flyingPools, setFlyingPools] = React.useState<ReadonlySet<string>>(new Set());
@@ -956,7 +1024,11 @@ export default function Editor() {
         : []
     ),
     { name: 'Background', color: graphic.background },
-    { name: 'Border', color: graphic.border },
+    // Named as Customize names it
+    {
+      name: graphic.kind === 'tier-list' ? 'Tier dividers' : 'Split card border',
+      color: graphic.border,
+    },
     { name: 'Card tray', color: graphic.tray.color },
     { name: 'White', color: '#ffffff' },
   ]);
@@ -969,35 +1041,109 @@ export default function Editor() {
     []
   );
 
-  // Shows another board type's board (kept from when it was last used, or new), or
-  // replaces the board showing with a new one
-  function showBoard(kind: GraphicKind, clear = false) {
-    setDoc((d) => {
-      const old = d.graphics[kind];
-      if (old && !clear) return { ...d, kind };
-      // Clearing empties the card tray if it shows, keeping it on in its color; a hidden
-      // tray (turned off) keeps its cards, as it promises
-      const fresh = typeOf(kind).create();
-      const keepTray = kind !== d.kind || !trayShown;
-      const next = old
-        ? { ...fresh, tray: { ...old.tray, items: keepTray ? old.tray.items : [] } }
-        : fresh;
-      return { ...d, kind, graphics: { ...d.graphics, [kind]: next } };
-    });
+  // Undo and redo. Each board type keeps its own history of its board (switching types
+  // isn't a step), taken from every change to it, so nothing has to remember to record:
+  // changes to settings (colors, names) within HISTORY_MERGE of each other are one step,
+  // but cards and ink changing always start one. Kept for the visit only. Keys only: buttons
+  // would take room under the board.
+  const historyRef = React.useRef<Partial<Record<GraphicKind, History>>>({});
+  const lastDoc = React.useRef(doc);
+  // The change undo or redo itself makes, which isn't recorded
+  const restoring = React.useRef<Graphic | null>(null);
+  React.useEffect(() => {
+    const before = lastDoc.current.graphics[doc.kind];
+    const now = doc.graphics[doc.kind];
+    const sameKind = lastDoc.current.kind === doc.kind;
+    lastDoc.current = doc;
+    if (!sameKind) {
+      // A change on the board switched to is a step of its own, and a toast's Undo was
+      // for the other board
+      lastChange.current = 0;
+      setToast((t) => (t?.undo ? { ...t, undo: undefined } : t));
+      return;
+    }
+    // The pen's and eraser's settings aren't steps
+    if (!before || !now || before === now || toolsOnly(before, now)) return;
+    // A toast's Undo is for the change it reports: the first change after it's shown;
+    // any later one (or an undo or redo) takes the button away
+    setToast((t) =>
+      t?.undo === 'waiting' && restoring.current !== now
+        ? { ...t, undo: 'armed' }
+        : t?.undo
+          ? { ...t, undo: undefined }
+          : t
+    );
+    if (restoring.current === now) {
+      restoring.current = null;
+      return;
+    }
+    // Only settings changes merge, and only into a step of settings changes
+    const at = performance.now();
+    const settingsOnly = cardsAndInk(before) === cardsAndInk(now);
+    const merge = settingsOnly && at - lastChange.current < HISTORY_MERGE;
+    lastChange.current = settingsOnly ? at : 0;
+    const h = historyRef.current[doc.kind] ?? NO_HISTORY;
+    // Still the same step (undo and redo always start a new one, so nothing to redo)
+    if (merge && h.past.length) return;
+    const past = [...h.past, before].slice(-HISTORY_LIMIT);
+    historyRef.current = { ...historyRef.current, [doc.kind]: { past, future: [] } };
+  }, [doc]);
+
+  // Puts back the board from one step back (undo) or forward (redo). The card menu closes
+  // (its card may have moved); a card that's no longer there takes its selection and
+  // replacement being picked with it.
+  const stepHistory = React.useCallback((back: boolean) => {
+    const d = lastDoc.current;
+    const h = historyRef.current[d.kind] ?? NO_HISTORY;
+    const now = currentGraphic(d);
+    const step = back ? h.past.at(-1) : h.future[0];
+    if (!step) return;
+    // The tools stay as they are now
+    const next = { ...step, ...toolSettings(now) } as Graphic;
+    historyRef.current = {
+      ...historyRef.current,
+      [d.kind]: back
+        ? { past: h.past.slice(0, -1), future: [now, ...h.future] }
+        : { past: [...h.past, now], future: h.future.slice(1) },
+    };
+    // The next change is a step of its own
+    lastChange.current = 0;
+    restoring.current = next;
+    setDoc((doc) => ({ ...doc, graphics: { ...doc.graphics, [doc.kind]: next } }));
+    const ids = cardIds(next);
+    setSelectedId((id) => (id && ids.has(id) ? id : null));
+    setCardMenu(null);
+    setPicking((p) => (p && ids.has(p.id) ? p : null));
+  }, []);
+
+  // ⌘Z (Ctrl+Z) undoes and ⇧⌘Z (Ctrl+Shift+Z, Ctrl+Y) redoes, except in a text field,
+  // which keeps its own. Viewing a card stops them, as it does every key.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      if (e.target instanceof Element && e.target.closest('input, textarea, select')) return;
+      const key = shortcutKey(e);
+      // Y only with Ctrl (⌘Y is the browser's History on a Mac)
+      if (key !== 'z' && !(key === 'y' && e.ctrlKey)) return;
+      e.preventDefault();
+      stepHistory(key === 'z' && !e.shiftKey);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [stepHistory]);
+
+  // Shows another board type's board (kept from when it was last used, or new)
+  function showBoard(kind: GraphicKind) {
+    setDoc((d) =>
+      d.graphics[kind]
+        ? { ...d, kind }
+        : { ...d, kind, graphics: { ...d.graphics, [kind]: typeOf(kind).create() } }
+    );
     setSelectedId(null);
     setCardMenu(null);
     setPicking(null);
-    // A cleared board starts Add Cards over too
-    if (clear) {
-      setQuery('');
-      clearSearch();
-    }
-    if (kind !== doc.kind) {
-      setTarget(0);
-      setTool(DEFAULT_TOOL);
-    }
-    setConfirmingClear(false);
-    setConfirmingTrayClear(false);
+    setTarget(0);
+    setTool(DEFAULT_TOOL);
   }
 
   // Applies a placed card, or shows why it couldn't be placed
@@ -1109,16 +1255,21 @@ export default function Editor() {
     removeCard(selectedId);
   }, [selectedId, selectedShown, removeCard]);
 
-  // Nothing to confirm once the tray is off or empty, however it got there
-  if (confirmingTrayClear && (!graphic.tray.enabled || !graphic.tray.items.length)) {
-    setConfirmingTrayClear(false);
-  }
-
   // Turns the card tray on or off (its cards stay saved). Turned off while it's the Add to
   // choice: back to the first tier, so the next card doesn't quietly turn it on again
   function showTray(enabled: boolean) {
     setGraphic((g) => ({ ...g, tray: { ...g.tray, enabled } }));
     if (!enabled && targetIndex === boardTargets.length) setTarget(0);
+  }
+
+  // Empties the board showing (its cards, and the blank canvas's ink), keeping its names
+  // and colors. Its cards' menu, selection and a replacement being picked go with them.
+  function clearBoard() {
+    setGraphic((g) => typeOf(g.kind).clear(g));
+    setSelectedId(null);
+    setCardMenu(null);
+    setPicking(null);
+    showToast('Board Cleared', { undo: true });
   }
 
   // Empties the card tray, keeping it on; a selected tray card goes with it
@@ -1128,9 +1279,47 @@ export default function Editor() {
     setGraphic((g) => ({ ...g, tray: { ...g.tray, items: [] } }));
     setSelectedId((selected) => (selected && ids.has(selected) ? null : selected));
     setPicking((p) => (p && ids.has(p.id) ? null : p));
-    setConfirmingTrayClear(false);
-    if (count) showToast(removedMessage(count));
+    if (count) showToast(removedMessage(count), { undo: true });
   }
+
+  // Resets the board's styles (names, colors, card size, the card tray's color) to a new
+  // board's, keeping everything on it
+  function restyleBoard() {
+    setGraphic((g) => typeOf(g.kind).restyle(g));
+    showToast('Board Styles Reset', { undo: true });
+  }
+
+  // Clear All: the board as new, but for its tools; a showing card tray is emptied, kept
+  // on, and a hidden one keeps its cards, as it promises. Add Cards starts over too.
+  function clearAll() {
+    setGraphic((g) => {
+      const type = typeOf(g.kind);
+      const next = type.restyle(type.clear(g));
+      return trayShown ? { ...next, tray: { ...next.tray, items: [] } } : next;
+    });
+    setSelectedId(null);
+    setCardMenu(null);
+    setPicking(null);
+    setQuery('');
+    clearSearch();
+    showToast('All Cleared', { undo: true });
+  }
+
+  // Clear Board's choices: only those that would change something, and none that would do
+  // the same as another. The board's cards and ink, keeping its styles; a showing card
+  // tray's cards; its styles reset; and Clear All, when that's more than one of them (it
+  // stands in for clearing the board and the tray together, keeping the menu short).
+  const hasContents = type.hasContents(graphic);
+  const trayCards = trayShown ? graphic.tray.items.length : 0;
+  const styled = JSON.stringify(type.restyle(graphic)) !== JSON.stringify(graphic);
+  const boardClears: ClearChoice[] = [
+    ...(hasContents ? [{ label: 'Clear Board', onSelect: clearBoard }] : []),
+    ...(trayCards ? [{ label: 'Clear Card Tray', onSelect: clearTray }] : []),
+    ...(styled ? [{ label: 'Reset Board Styles', onSelect: restyleBoard }] : []),
+    ...([hasContents, trayCards, styled].filter(Boolean).length > 1
+      ? [{ label: 'Clear All', onSelect: clearAll }]
+      : []),
+  ];
 
   // Pressing anywhere off the board (the sidebar, the toolbar) deselects, as pressing the
   // board's background does; the card menu is on the board, so using it keeps the card.
@@ -1218,18 +1407,17 @@ export default function Editor() {
     ];
     let next = current;
     const added: string[] = [];
-    const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
     if (trayItems.length) {
       const placed = importTrayCards(next.tray, trayItems);
       const n = placed.tray.items.length - next.tray.items.length;
-      if (n) added.push(`Added ${count(n)} to the Card Tray`);
+      if (n) added.push(`Added ${cardCount(n)} to the Card Tray`);
       next = { ...next, tray: placed.tray };
       errors.push(...placed.errors);
     }
     if (resolvedGroups.length) {
       const placed = currentType.importCards(next, resolvedGroups);
       const n = currentType.layout(placed.graphic).length - currentType.layout(next).length;
-      if (n) added.push(`Added ${count(n)} to the Board`);
+      if (n) added.push(`Added ${cardCount(n)} to the Board`);
       next = placed.graphic;
       errors.push(...placed.errors);
     }
@@ -1241,7 +1429,8 @@ export default function Editor() {
         ...added,
         ...errors.slice(0, MAX_TOAST_PROBLEMS),
         ...(more > 0 ? [`And ${more} More ${more === 1 ? 'Problem' : 'Problems'}`] : []),
-      ].join('\n') || 'No Cards Found'
+      ].join('\n') || 'No Cards Found',
+      { undo: added.length > 0 }
     );
   }
 
@@ -1471,7 +1660,7 @@ export default function Editor() {
       // Its menu is gone with it: focus goes to the board, as closing View's does
       boardBoxRef.current?.focus({ preventScroll: true });
       // Where it went, and how to get it back
-      showToast('Card Tray Hidden; Show It Again in Customize');
+      showToast('Card Tray Hidden; Show It Again in Customize', { undo: true });
       return;
     }
     // A dropped result replaces a half, becomes the bottom half, or is added where it was
@@ -1657,16 +1846,16 @@ export default function Editor() {
     ) {
       showTray(true);
     }
-    const count = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;
     const already = cards.length - fresh.length;
     const failed = pool.cards.length - cards.length;
     showToast(
       [
-        ...(added.length ? [`Added ${count(added.length)} to the Card Tray`] : []),
-        ...(already ? [`${count(already)} Already on the Board or in the Card Tray`] : []),
-        ...(failed ? [`${count(failed)} Couldn't Load`] : []),
+        ...(added.length ? [`Added ${cardCount(added.length)} to the Card Tray`] : []),
+        ...(already ? [`${cardCount(already)} Already on the Board or in the Card Tray`] : []),
+        ...(failed ? [`${cardCount(failed)} Couldn't Load`] : []),
         ...placed.errors,
-      ].join('\n')
+      ].join('\n'),
+      { undo: added.length > 0 }
     );
     if (!added.length) return;
     setPoolAdds((adds) => ({ ...adds, [poolAddsKey(pool)]: added.map((item) => item.id) }));
@@ -1717,16 +1906,15 @@ export default function Editor() {
       return box && onScreen(box) ? box : null;
     });
     const gone = new Set(ids);
-    setPoolAdds((adds) =>
-      Object.fromEntries(Object.entries(adds).filter(([k]) => k !== poolAddsKey(pool)))
-    );
+    // Its entry in poolAdds stays: with its cards out of the tray it reads Add again, and
+    // undoing the removal brings them back with the same ids, so it reads Remove again
     setPicking((p) => (p && gone.has(p.id) ? null : p));
     setGraphic(() => ({
       ...graphic,
       tray: mapTray(graphic.tray, (i) => (gone.has(i.id) ? null : i)),
     }));
     setSelectedId((selected) => (selected && gone.has(selected) ? null : selected));
-    showToast(removedMessage(ids.length));
+    showToast(removedMessage(ids.length), { undo: true });
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     // Each card's thumbnail: its place in the pool's preview (the pool may have added only
     // some of its cards), or past it, the preview's again in turn, as they flew in
@@ -2062,16 +2250,42 @@ export default function Editor() {
         that appears with its text in it is often not read out) */}
         <div role="status" className="sr-only">
           {/* A new element for each showing, so the same message again is read again */}
-          {toast && !toast.closing && <p key={toast.n}>{toast.message}</p>}
+          {toast && !toast.closing && (
+            <p key={toast.n}>
+              {toast.message}
+              {toast.undo && ` (${UNDO_KEY()} to undo)`}
+            </p>
+          )}
         </div>
         {toast && (
           <div
             // A new element for each new message, so it plays its entrance
             key={toast.id}
-            aria-hidden
             className={`${styles.toast} tierbinder-popup ${toast.closing ? styles.toastClosing : ''}`}
+            data-undo={(toast.undo === 'armed' && !toast.closing) || undefined}
+            onPointerEnter={() => setHeldToast(toast.id)}
+            onPointerLeave={() => setHeldToast(null)}
+            onFocus={() => setHeldToast(toast.id)}
+            onBlur={() => setHeldToast(null)}
           >
-            {toast.message}
+            {/* Read from the live region above */}
+            <span aria-hidden>{toast.message}</span>
+            {toast.undo === 'armed' && !toast.closing && (
+              <Button
+                variant="text"
+                className={styles.toastUndo}
+                aria-label={`Undo: ${toast.message.split('\n')[0]}`}
+                onClick={() => {
+                  // Focus goes to the board, not lost with the button
+                  boardBoxRef.current?.focus({ preventScroll: true });
+                  stepHistory(true);
+                  setHeldToast(null);
+                  setToast((t) => (t ? { ...t, closing: true, undo: undefined } : t));
+                }}
+              >
+                Undo
+              </Button>
+            )}
           </div>
         )}
         {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
@@ -2528,12 +2742,18 @@ export default function Editor() {
                       className="self-start"
                       aria-expanded={importing}
                       aria-controls="bulk-import"
-                      onClick={() => setImporting((on) => !on)}
+                      onClick={() => {
+                        setImporting(!importing);
+                        // The page follows it down as it slides open, so it isn't left
+                        // opening off screen under a phone's board
+                        if (!importing && importRef.current) followOpen(importRef.current);
+                      }}
                     >
                       Bulk Import
                       <span aria-hidden className={styles.disclosureChevron} />
                     </Button>
                     <div
+                      ref={importRef}
                       id="bulk-import"
                       className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
                       inert={!importing}
@@ -2572,129 +2792,107 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
-              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
             >
-              <Dropdown
-                label="Board Type"
-                value={doc.kind}
-                options={GRAPHIC_TYPES.map((t) => ({ value: t.kind, label: t.label }))}
-                onChange={(kind) => {
-                  if (kind !== doc.kind) showBoard(kind);
-                }}
-              />
+              {/* The board type first, on its own with no heading, in the primary color: it
+              changes everything under it. Then sections as in Add Cards: each a heading over
+              its controls, 8px apart, and 16px between sections, its toggles last. Board
+              holds the graphic's own colors, then Clear Board. */}
+              <div className="flex self-start min-w-0">
+                <Dropdown
+                  label="Board type"
+                  hideLabel
+                  primary
+                  value={doc.kind}
+                  options={GRAPHIC_TYPES.map((t) => ({
+                    value: t.kind,
+                    label: t.label,
+                    icon: t.icon,
+                  }))}
+                  onChange={(kind) => {
+                    if (kind !== doc.kind) showBoard(kind);
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Board</h3>
+                <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+                {/* Asks first with a menu of only the clears that would change something */}
+                <ClearButton
+                  choices={boardClears}
+                  // Nothing left to clear: the button's disabled, so focus goes to the board
+                  onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
+                >
+                  Clear Board
+                </ClearButton>
+              </div>
               <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
-              <h3 className="tierbinder-heading">Card Tray</h3>
-              <Checkbox checked={graphic.tray.enabled} onChange={showTray}>
-                Show card tray under the board
-              </Checkbox>
-              {graphic.tray.enabled && (
-                <div className="tierbinder-prop">
-                  Tray Color
+              <div ref={traySectionRef} className="flex flex-col gap-3">
+                {/* Its switch turns the whole section on or off, so the heading is the
+                    switch: its name, then the switch right after it; its other rows show
+                    only while the tray is on */}
+                <h3 className="tierbinder-heading flex">
+                  <Toggle
+                    checked={graphic.tray.enabled}
+                    onChange={(on) => {
+                      showTray(on);
+                      // Its rows come into view once they and the tray are laid out (on
+                      // phones the tray under the board moves the sidebar down too)
+                      if (on)
+                        requestAnimationFrame(() =>
+                          requestAnimationFrame(() => {
+                            if (traySectionRef.current) revealBelow(traySectionRef.current);
+                          })
+                        );
+                    }}
+                    heading
+                  >
+                    Card Tray
+                  </Toggle>
+                </h3>
+                {graphic.tray.enabled && (
                   <ColorField
+                    name="Tray Color"
                     label="Card tray color"
                     value={graphic.tray.color}
                     onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
                   />
-                </div>
-              )}
-              {/* While it holds cards; confirmed on the page, as Clear Board is */}
-              {graphic.tray.enabled &&
-                graphic.tray.items.length > 0 &&
-                // Focus follows: to Cancel while it asks (the question is read with it), back to
-                // the button on Cancel, and to Clear Board once the tray is cleared and its
-                // button gone
-                (confirmingTrayClear ? (
-                  <div
-                    role="group"
-                    // Named by its question, read once
-                    aria-labelledby="clear-tray-question"
-                    className="flex flex-wrap gap-3 items-center"
-                  >
-                    <span id="clear-tray-question">Clear the Card Tray?</span>
-                    <Button
-                      onClick={() => {
-                        flushSync(clearTray);
-                        clearBoardRef.current?.focus();
-                      }}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      ref={cancelTrayClearRef}
-                      onClick={() => {
-                        flushSync(() => setConfirmingTrayClear(false));
-                        clearTrayRef.current?.focus();
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    ref={clearTrayRef}
-                    className="self-start"
-                    onClick={() => {
-                      // One confirmation at a time, so Yes always has Clear Board to hand
-                      // focus to
-                      flushSync(() => {
-                        setConfirmingClear(false);
-                        setConfirmingTrayClear(true);
-                      });
-                      cancelTrayClearRef.current?.focus();
-                    }}
-                  >
-                    Clear Card Tray
-                  </Button>
-                ))}
-              {/* Confirmed on the page: some browsers (the in-app one) never show confirm().
-              16px above it, as between sections, so it doesn't read as part of the last one */}
-              {confirmingClear ? (
-                <div className="mt-3 flex flex-wrap gap-3 items-center">
-                  {trayShown && graphic.tray.items.length
-                    ? 'Clear the Board and Card Tray?'
-                    : 'Clear the Board?'}
-                  <Button onClick={() => showBoard(doc.kind, true)}>Yes</Button>
-                  <Button onClick={() => setConfirmingClear(false)}>Cancel</Button>
-                </div>
-              ) : (
-                <Button
-                  ref={clearBoardRef}
-                  className="mt-3 self-start"
-                  onClick={() => setConfirmingClear(true)}
-                >
-                  Clear Board
-                </Button>
-              )}
+                )}
+              </div>
             </section>
 
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
-              className="tierbinder-panel flex flex-col gap-3 b8:flex-1 b8:min-h-0"
+              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
             >
-              <h3 className="tierbinder-heading">Image</h3>
-              <div className="tierbinder-prop">
-                Size
-                <span className="text-(--tb-text)">
-                  {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
-                </span>
-              </div>
-              <div className="tierbinder-prop">
-                Format
-                <span className="text-(--tb-text)">PNG</span>
-              </div>
-              {trayShown && (
-                <Checkbox checked={includeTray} onChange={setIncludeTray}>
-                  Include card tray in export
-                </Checkbox>
-              )}
-              <div className="flex flex-wrap gap-3">
-                <Button variant="primary" onClick={exportPng} disabled={busy}>
-                  Export PNG
-                </Button>
-                <Button onClick={copyPng} disabled={busy}>
-                  Copy PNG
-                </Button>
+              {/* Sections as in Add Cards and Customize; its buttons act on the image, so they
+              sit in its section, as Import does in Advanced */}
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Image</h3>
+                <div className="tierbinder-prop">
+                  Size
+                  <span className="text-(--tb-text)">
+                    {BOARD_WIDTH * EXPORT_SCALE} × {exportHeight * EXPORT_SCALE}
+                  </span>
+                </div>
+                <div className="tierbinder-prop">
+                  Format
+                  <span className="text-(--tb-text)">PNG</span>
+                </div>
+                {trayShown && (
+                  <Toggle checked={includeTray} onChange={setIncludeTray}>
+                    Include Card Tray
+                  </Toggle>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="primary" onClick={exportPng} disabled={busy}>
+                    Export PNG
+                  </Button>
+                  <Button onClick={copyPng} disabled={busy}>
+                    Copy PNG
+                  </Button>
+                </div>
               </div>
             </section>
 
@@ -2878,9 +3076,7 @@ export default function Editor() {
                                   boardBoxRef.current?.focus({ preventScroll: true });
                                 }}
                               >
-                                {titleCase(
-                                  `Clear ${shownTrayFlyout} ${shownTrayFlyout === 1 ? 'card' : 'cards'}`
-                                )}
+                                {`Clear ${cardCount(shownTrayFlyout)}`}
                               </button>
                             </div>
                           )}

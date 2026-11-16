@@ -16,3 +16,6 @@ export const titleCase = (text: string) =>
         : word.charAt(0).toUpperCase() + word.slice(1)
     )
     .join(' ');
+
+// "1 Card", "12 Cards"
+export const cardCount = (n: number) => `${n} ${n === 1 ? 'Card' : 'Cards'}`;

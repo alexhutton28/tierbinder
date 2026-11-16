@@ -176,6 +176,14 @@
   animation:
     toast-in var(--duration-drop) var(--ease-spring),
     view-fade var(--duration-fade) ease-out;
+
+  /* With Undo after its words, which takes presses */
+  &[data-undo] {
+    display: flex;
+    gap: var(--spacing-4);
+    align-items: baseline;
+    pointer-events: auto;
+  }
 }
 
 .toastClosing {
@@ -184,6 +192,20 @@
   transition:
     opacity var(--duration-fold) var(--ease-fold),
     transform var(--duration-fold) var(--ease-fold);
+}
+
+/* In the primary color, so it reads as the toast's one action, brightening on hover (over
+   Button's own text hover, hence the toast's class too) */
+.toast .toastUndo {
+  flex: none;
+  color: var(--tb-primary);
+  font-weight: 600;
+}
+
+@media (hover: hover) {
+  .toast .toastUndo:hover:not(:disabled) {
+    color: var(--tb-primary-hover);
+  }
 }
 
 @keyframes toast-in {
