@@ -1,0 +1,58 @@
+/* The segments, joined in one box as tall as a control, in the fields' colors */
+.group {
+  display: flex;
+  flex: none;
+  height: var(--tb-control-height);
+  padding: var(--spacing-1);
+  gap: var(--spacing-1);
+  border: var(--tb-line-width) solid var(--tb-field-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+}
+
+/* Each choice, at least square, its words centered; muted until hovered or chosen */
+.option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--tb-control-height) - 2 * (var(--spacing-1) + var(--tb-line-width)));
+  padding-inline: var(--spacing-button);
+  border-radius: var(--radius-small);
+  color: var(--tb-muted);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-hover) ease-out,
+    color var(--duration-hover) ease-out;
+}
+
+/* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
+.option:hover {
+  background: var(--tb-control-hover);
+  color: var(--tb-text);
+}
+
+.option:has(:checked) {
+  background: var(--tb-segment-on);
+  color: var(--tb-text);
+}
+
+.option:has(:focus-visible) {
+  outline: var(--tb-focus-width) solid var(--tb-focus);
+  outline-offset: var(--tb-line-width);
+}
+
+/* On touch screens each is 44px wide and takes presses 44px tall, reaching above and
+   below without moving anything */
+@media (pointer: coarse) {
+  .option {
+    min-width: var(--tb-touch-target);
+  }
+
+  .option::after {
+    position: absolute;
+    inset-block: calc(50% - var(--tb-touch-target) / 2);
+    inset-inline: 0;
+    content: '';
+  }
+}

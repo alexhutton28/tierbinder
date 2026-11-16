@@ -8,9 +8,10 @@ import styles from './ColorField.module.css';
 // A color as a swatch that opens our own picker in a popup like a dropdown's, floating over
 // the board: react-colorful's saturation and brightness square over a hue bar (restyled in
 // ColorField.module.css, its handles kept inside them), then the board's own colors to pick
-// in one click (BoardColors, given by the editor), then its hex field. With a `name`, the
-// swatch and the name after it are one row that opens it (the Customize tab's colors);
-// without, the swatch alone (a tier's, beside its name field; the pen's).
+// in one click (BoardColors, given by the editor), then its hex field. With a `name`, it's a
+// setting's row, the name at the left and the swatch at the right, that opens it (the
+// Customize tab's colors); without, the swatch alone (a tier's, beside its name field; the
+// pen's).
 // Typing applies as soon as the text is a full hex color (#rgb or #rrggbb, # optional);
 // dragging in the picker applies as it goes, once per frame. Escape, a press outside or
 // focus leaving it (Tab past the last field) closes it.
@@ -105,7 +106,7 @@ export default function ColorField({
   return (
     <span
       ref={boxRef}
-      className={name ? 'flex self-start' : 'inline-flex'}
+      className={name ? 'flex' : 'inline-flex'}
       // Closes once focus moves on past it, as a dropdown does
       onBlur={(e) => {
         if (!(e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)))
@@ -130,13 +131,13 @@ export default function ColorField({
       >
         {name && (
           <>
+            {name}
             <span
               ref={swatchRef}
               aria-hidden
               className={styles.swatch}
               style={{ background: value }}
             />
-            {name}
             {/* The value, which the swatch shows only to the eye */}
             <span className="sr-only">{value}</span>
           </>

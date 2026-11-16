@@ -28,8 +28,7 @@ textarea.name {
   mask-image: url('/plus.svg');
 }
 
-/* On touch screens the remove buttons and Add Tier take presses as a 44px target around
-   them, the rows keeping their size and spacing */
+/* On touch screens the remove buttons take presses as a 44px target around them, the rows keeping their size and spacing */
 @media (pointer: coarse) {
   .touch {
     position: relative;
@@ -39,5 +38,13 @@ textarea.name {
     position: absolute;
     inset: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
     content: '';
+  }
+}
+
+/* Add Tier, a text button, is a 44px target on touch screens; it gives the extra height
+   back, so the section keeps its spacing */
+@media (pointer: coarse) {
+  .addTier {
+    margin-block: calc((1lh - var(--tb-touch-target)) / 2);
   }
 }

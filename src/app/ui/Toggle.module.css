@@ -1,27 +1,36 @@
 @reference "../globals.css";
 
-/* The switch and its words, 8px apart, as tall as a control so a section of colors and
-   toggles keeps one rhythm. Like a color row, it hugs its switch and words, lights up on
-   hover and reaches 4px past them on each side, so the switch lines up with the swatches.
-   The switch stays on the first line when the words wrap. */
+/* A setting's row: its words muted at the left and the switch at the right, as tall as a
+   control so a section of settings keeps one rhythm. Like a color row, it spans its
+   section, lights up on hover and reaches 4px past it on each side, so its words line up
+   with the other labels and the switch with the swatches. The switch stays on the first
+   line when the words wrap. */
 .row {
   display: flex;
-  align-self: flex-start;
-  gap: var(--spacing-3);
+  align-self: stretch;
+  gap: var(--spacing-4);
   align-items: flex-start;
+  justify-content: space-between;
   min-height: var(--tb-control-height);
   margin-inline: calc(-1 * var(--spacing-2));
   padding-block: calc((var(--tb-control-height) - 1lh) / 2);
   padding-inline: var(--spacing-2);
   border-radius: var(--tb-radius);
-  color: var(--tb-text);
+  color: var(--tb-muted);
   text-align: start;
   cursor: pointer;
-  transition: background-color var(--duration-hover) ease-out;
+  transition:
+    background-color var(--duration-hover) ease-out,
+    color var(--duration-hover) ease-out;
 }
 
 .row:hover {
   background: var(--tb-control-hover);
+  color: var(--tb-text);
+}
+
+.words {
+  min-width: 0;
 }
 
 /* On touch screens a full touch target that gives the extra height back as negative
@@ -42,6 +51,10 @@
   color: inherit;
   margin-block: calc(-1 * var(--spacing-1));
   padding-block: var(--spacing-1);
+}
+
+.row.heading:hover {
+  color: inherit;
 }
 
 @media (pointer: coarse) {

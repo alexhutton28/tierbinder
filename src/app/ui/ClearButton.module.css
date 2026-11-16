@@ -13,3 +13,20 @@
     min-height: var(--tb-touch-target);
   }
 }
+
+/* Quiet: muted until hovered (Button's text hover brightens it); on touch screens its 44px
+   target gives the extra height back, so the heading it sits beside keeps its line */
+button.quiet {
+  color: var(--tb-muted);
+}
+
+/* Lit while its menu is open, as every button with an open popup is */
+button.quiet[aria-expanded='true'] {
+  color: var(--tb-heading);
+}
+
+@media (pointer: coarse) {
+  button.quiet {
+    margin-block: calc((1lh - var(--tb-touch-target)) / 2);
+  }
+}

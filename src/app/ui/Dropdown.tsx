@@ -20,9 +20,8 @@ type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card'; ico
 export default function Dropdown<T extends string | number>({
   label,
   hideLabel = false,
-  caption = false,
+  prop = false,
   chevron = true,
-  primary = false,
   value,
   options,
   current,
@@ -30,12 +29,10 @@ export default function Dropdown<T extends string | number>({
 }: {
   label: string;
   hideLabel?: boolean;
-  // The label over the dropdown as a subheader (.tierbinder-caption), as the color picker's
-  // Hex is over its field, in place of beside it
-  caption?: boolean;
+  // A setting's row (.tierbinder-prop): its label muted at the left, the dropdown at the
+  // right, as every Customize setting is (Type, Shape)
+  prop?: boolean;
   chevron?: boolean;
-  // In the primary color, for a choice that changes the whole board (its type)
-  primary?: boolean;
   value: T;
   // `outlined` gives the swatch a light stroke; a `card` shape draws it card-shaped
   options: ({ value: T; label: string } & Look)[];
@@ -84,13 +81,8 @@ export default function Dropdown<T extends string | number>({
 
   return (
     // Shrinks to fit (its button's words cut short with an ellipsis) rather than overflowing
-    <div
-      className={`flex min-w-0 ${caption ? 'flex-col gap-2 items-start' : 'gap-3 items-center'}`}
-    >
-      <span
-        id={labelId}
-        className={hideLabel ? 'sr-only' : caption ? 'tierbinder-caption' : undefined}
-      >
+    <div className={`min-w-0 ${prop ? 'tierbinder-prop' : 'flex gap-3 items-center'}`}>
+      <span id={labelId} className={hideLabel ? 'sr-only' : prop ? 'flex-none' : undefined}>
         {label}
       </span>
       <div ref={boxRef} className="relative min-w-0">
@@ -98,7 +90,6 @@ export default function Dropdown<T extends string | number>({
           ref={buttonRef}
           id={`${id}-button`}
           type="button"
-          variant={primary ? 'primary' : 'default'}
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-labelledby={`${labelId} ${id}-button`}

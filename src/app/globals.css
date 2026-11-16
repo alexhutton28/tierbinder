@@ -70,6 +70,7 @@ body {
   --tb-selected-text: var(--color-petrel-950);
   --tb-popup: var(--color-petrel-850);
   --tb-option-hover: var(--color-petrel-700);
+  --tb-segment-on: var(--color-petrel-700);
   --tb-popup-shadow: 0 8px 24px color-mix(in srgb, var(--color-petrel-950) 45%, transparent);
   --tb-focus: var(--color-storm-200);
   --tb-icon-rest: var(--color-petrel-600);
@@ -182,7 +183,7 @@ body * {
 }
 
 /* A subheader inside a section or a popup, naming the control under it (the color picker's
-   Board Colors and Hex, Customize's Type and Shape): small and muted */
+   Board Colors and Hex): small and muted */
 .tierbinder-caption {
   color: var(--tb-muted);
   font-size: var(--text-caption);
@@ -198,6 +199,14 @@ body * {
   text-box: trim-start cap alphabetic;
 }
 
+/* A tab of settings sections (Customize, Save & Share): a hairline between them, 16px
+   above and below it, so a section's end reads apart from the gaps inside it */
+.tierbinder-sections > * + * {
+  padding-block-start: var(--spacing-4);
+  border-block-start: var(--tb-line-width) solid var(--tb-line);
+}
+
+/* A setting's row: its label muted at the left, its control or value at the right */
 .tierbinder-prop {
   display: flex;
   align-items: center;
@@ -291,6 +300,16 @@ textarea.tierbinder-field {
   max-height: calc(100dvh - var(--anchor-top, 0px) - var(--spacing-2) - var(--edge));
   margin: 0;
   color: var(--tb-text);
+}
+
+/* Lined up with its button's right edge instead (data-align="end": a button at the end of
+   a row, Customize's Clear), so it hangs under the row rather than out past it */
+.tierbinder-anchored[data-align='end'] {
+  left: clamp(
+    var(--edge),
+    var(--anchor-left, 0px) + var(--anchor-width, 0px) - var(--anchor-popup-width, 0px),
+    100vw - var(--edge) - var(--anchor-popup-width, 0px)
+  );
 }
 
 /* Above its button (useAnchored found more room there), growing up from it */

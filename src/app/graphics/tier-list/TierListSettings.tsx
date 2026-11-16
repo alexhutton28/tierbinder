@@ -3,7 +3,7 @@
 import React from 'react';
 import Button from '../../ui/Button';
 import ColorField from '../../ui/ColorField';
-import Slider from '../../ui/Slider';
+import Segmented from '../../ui/Segmented';
 import Toggle from '../../ui/Toggle';
 import styles from './TierListSettings.module.css';
 import type { SettingsProps } from '../types';
@@ -17,9 +17,10 @@ import {
   type TierList,
 } from './model';
 
-// The tier list's part of the Customize tab: its background and border in the Appearance
-// section, and the Tiers section (tier colors and names, removing and adding tiers, tier
-// card borders). Double-clicking a tier label focuses its name (`tier:<index>`).
+// The tier list's part of the Customize tab: the Tiers section (tier colors and names,
+// removing and adding tiers), and in the Style section its label width, background,
+// dividers and tier card borders. Double-clicking a tier label focuses its name
+// (`tier:<index>`).
 
 const plural = (count: number) => `${count} ${count === 1 ? 'Card' : 'Cards'}`;
 
@@ -127,7 +128,7 @@ export default function TierListSettings({
               ref={(el) => {
                 removeRefs.current[i] = el;
               }}
-              variant="icon"
+              variant="quiet"
               className={styles.touch}
               disabled={count <= MIN_TIERS}
               // A tier with no name is "Tier 2", as its color is in the picker
@@ -144,9 +145,10 @@ export default function TierListSettings({
         ))}
         <Button
           ref={addRef}
+          variant="text"
           disabled={count >= MAX_TIERS}
           title={count >= MAX_TIERS ? `${MAX_TIERS} tiers at most` : undefined}
-          className={`${styles.touch} flex gap-2 items-center self-start`}
+          className={`${styles.addTier} self-start`}
           onClick={() => {
             focusNext.current = { added: true };
             onChange((l) => addTier(l) ?? l);
@@ -155,29 +157,29 @@ export default function TierListSettings({
           <span aria-hidden className={styles.addIcon} />
           Add Tier
         </Button>
-        {/* How wide the tiers' labels are: narrower gives a narrow board's cards more room */}
-        <Slider
-          label="Tier Size"
-          values={LABEL_WIDTHS}
-          value={list.labelWidth}
-          describe={(width) => `${width} pixels wide`}
-          onChange={(labelWidth) => onChange((l) => ({ ...l, labelWidth }))}
-        />
-        <Toggle
-          checked={list.tierCardBorders}
-          onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}
-        >
-          Tier Card Borders
-        </Toggle>
       </div>
     </>
   );
 }
 
-// Its colors, in the editor's Appearance section
+// How wide the tiers' labels are, by name: narrower gives a narrow board's cards more room
+const LABEL_WIDTH_OPTIONS = LABEL_WIDTHS.map((value, i) => ({
+  value,
+  // The tooltip and what screen readers hear: what it is, and what it means
+  label: `${['Small', 'Medium', 'Large'][i]}: ${value} pixels wide`,
+  short: ['S', 'M', 'L'][i],
+}));
+
+// How it looks, in the editor's Style section: its label width, colors and tier card borders
 export function TierListBoardSettings({ graphic: list, onChange }: SettingsProps<TierList>) {
   return (
     <>
+      <Segmented
+        label="Label Width"
+        value={list.labelWidth}
+        options={LABEL_WIDTH_OPTIONS}
+        onChange={(labelWidth) => onChange((l) => ({ ...l, labelWidth }))}
+      />
       <ColorField
         name="Background"
         label="Background color"
@@ -191,6 +193,12 @@ export function TierListBoardSettings({ graphic: list, onChange }: SettingsProps
         value={list.border}
         onChange={(border) => onChange((l) => ({ ...l, border }))}
       />
+      <Toggle
+        checked={list.tierCardBorders}
+        onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}
+      >
+        Tier Card Borders
+      </Toggle>
     </>
   );
 }
