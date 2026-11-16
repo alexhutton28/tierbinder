@@ -749,19 +749,3 @@ img.poolCard:not([data-loaded]) {
     transition: opacity var(--duration-fade) ease-out;
   }
 }
-
-/* Undo and redo, under the board: Feather's corner-up-left and corner-up-right */
-.historyIcon {
-  width: var(--tb-icon);
-  height: var(--tb-icon);
-  background: currentcolor;
-  mask: center / contain no-repeat;
-}
-
-.undoIcon {
-  mask-image: url('/undo.svg');
-}
-
-.redoIcon {
-  mask-image: url('/redo.svg');
-}

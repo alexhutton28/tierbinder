@@ -154,14 +154,6 @@ function durationOf(token: string) {
 const SIDEBAR_SHORTCUT = () =>
   /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318\\' : 'Ctrl+\\';
 
-// Undo's shortcuts as the tooltips and screen readers get them: ⌘Z and ⇧⌘Z on a Mac,
-// Ctrl+Z and Ctrl+Y elsewhere (the keys also take Ctrl+Shift+Z)
-const IS_MAC = () => /Mac|iPhone|iPad/.test(navigator.platform);
-const UNDO_SHORTCUT = () => (IS_MAC() ? '\u2318Z' : 'Ctrl+Z');
-const REDO_SHORTCUT = () => (IS_MAC() ? '\u21e7\u2318Z' : 'Ctrl+Y');
-const UNDO_KEYS = () => (IS_MAC() ? 'Meta+Z' : 'Control+Z');
-const REDO_KEYS = () => (IS_MAC() ? 'Meta+Shift+Z' : 'Control+Y Control+Shift+Z');
-
 // How many steps each board keeps to undo
 const HISTORY_LIMIT = 100;
 // Changes this close together are one step to undo: a color dragged in the picker (once a
@@ -1017,10 +1009,9 @@ export default function Editor() {
   // Undo and redo. Each board type keeps its own history of its board (switching types
   // isn't a step), taken from every change to it, so nothing has to remember to record:
   // changes to settings (colors, names) within HISTORY_MERGE of each other are one step,
-  // but cards and ink changing always start one. Kept for the visit only.
-  const [history, setHistory] = React.useState<Partial<Record<GraphicKind, History>>>({});
-  const boardHistory = history[doc.kind] ?? NO_HISTORY;
-  const historyRef = React.useRef(history);
+  // but cards and ink changing always start one. Kept for the visit only. Keys only: buttons
+  // would take room under the board.
+  const historyRef = React.useRef<Partial<Record<GraphicKind, History>>>({});
   const lastDoc = React.useRef(doc);
   const lastChange = React.useRef(0);
   // The change undo or redo itself makes, which isn't recorded
@@ -1050,13 +1041,11 @@ export default function Editor() {
     if (merge && h.past.length) return;
     const past = [...h.past, before].slice(-HISTORY_LIMIT);
     historyRef.current = { ...historyRef.current, [doc.kind]: { past, future: [] } };
-    setHistory(historyRef.current);
   }, [doc]);
 
   // Puts back the board from one step back (undo) or forward (redo). The card menu closes
   // (its card may have moved); a card that's no longer there takes its selection and
-  // replacement being picked with it. A button that's run out (Undo at the first step)
-  // hands focus to the other, or to the board, rather than dropping it.
+  // replacement being picked with it.
   const stepHistory = React.useCallback((back: boolean) => {
     const d = lastDoc.current;
     const h = historyRef.current[d.kind] ?? NO_HISTORY;
@@ -1069,7 +1058,6 @@ export default function Editor() {
         ? { past: h.past.slice(0, -1), future: [now, ...h.future] }
         : { past: [...h.past, now], future: h.future.slice(1) },
     };
-    setHistory(historyRef.current);
     // The next change is a step of its own
     lastChange.current = 0;
     restoring.current = next;
@@ -1078,15 +1066,7 @@ export default function Editor() {
     setSelectedId((id) => (id && ids.has(id) ? id : null));
     setCardMenu(null);
     setPicking((p) => (p && ids.has(p.id) ? p : null));
-    const left = back ? h.past.length - 1 : h.future.length - 1;
-    const pressed = back ? undoRef.current : redoRef.current;
-    if (!left && pressed && document.activeElement === pressed)
-      requestAnimationFrame(() =>
-        (back ? redoRef.current : undoRef.current)?.focus({ preventScroll: true })
-      );
   }, []);
-  const undoRef = React.useRef<HTMLButtonElement>(null);
-  const redoRef = React.useRef<HTMLButtonElement>(null);
 
   // ⌘Z (Ctrl+Z) undoes and ⇧⌘Z (Ctrl+Shift+Z, Ctrl+Y) redoes, except in a text field,
   // which keeps its own. Viewing a card stops them, as it does every key.
@@ -3043,43 +3023,9 @@ export default function Editor() {
                 )}
             </div>
 
-            {/* The graphic's tools, then undo and redo at the right, for every graphic */}
-            <div className="flex gap-3 items-start">
-              <div className="flex-1 min-w-0">
-                {type.Toolbar && (
-                  <type.Toolbar
-                    graphic={graphic}
-                    onChange={setGraphic}
-                    tool={tool}
-                    onTool={setTool}
-                  />
-                )}
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  ref={undoRef}
-                  variant="icon"
-                  aria-label="Undo"
-                  title={`Undo (${UNDO_SHORTCUT()})`}
-                  aria-keyshortcuts={UNDO_KEYS()}
-                  disabled={!boardHistory.past.length}
-                  onClick={() => stepHistory(true)}
-                >
-                  <span aria-hidden className={`${styles.historyIcon} ${styles.undoIcon}`} />
-                </Button>
-                <Button
-                  ref={redoRef}
-                  variant="icon"
-                  aria-label="Redo"
-                  title={`Redo (${REDO_SHORTCUT()})`}
-                  aria-keyshortcuts={REDO_KEYS()}
-                  disabled={!boardHistory.future.length}
-                  onClick={() => stepHistory(false)}
-                >
-                  <span aria-hidden className={`${styles.historyIcon} ${styles.redoIcon}`} />
-                </Button>
-              </div>
-            </div>
+            {type.Toolbar && (
+              <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
+            )}
           </div>
         </div>
 
