@@ -13,3 +13,31 @@ textarea.name {
   align-items: center;
   height: var(--tb-control-height);
 }
+
+/* Feather's x in a tier's remove button, and its plus before Add Tier's words */
+.removeIcon,
+.addIcon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/x.svg') center / contain no-repeat;
+}
+
+.addIcon {
+  mask-image: url('/plus.svg');
+}
+
+/* On touch screens the remove buttons and Add Tier take presses as a 44px target around
+   them, the rows keeping their size and spacing */
+@media (pointer: coarse) {
+  .touch {
+    position: relative;
+  }
+
+  .touch::after {
+    position: absolute;
+    inset: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}

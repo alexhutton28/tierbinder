@@ -1,28 +1,75 @@
 'use client';
 
 import React from 'react';
+import Button from '../../ui/Button';
 import ColorField from '../../ui/ColorField';
 import Toggle from '../../ui/Toggle';
 import styles from './TierListSettings.module.css';
 import type { SettingsProps } from '../types';
-import type { Tier, TierList } from './model';
+import { MAX_TIERS, MIN_TIERS, addTier, removeTier, type Tier, type TierList } from './model';
 
 // The tier list's part of the Customize tab: its background and border in the Board
-// section, and the Tiers section (tier colors and names, tier card borders).
-// Double-clicking a tier label focuses its name (`tier:<index>`).
+// section, and the Tiers section (tier colors and names, removing and adding tiers, tier
+// card borders). Double-clicking a tier label focuses its name (`tier:<index>`).
+
+const plural = (count: number) => `${count} ${count === 1 ? 'Card' : 'Cards'}`;
 
 export default function TierListSettings({
   graphic: list,
   onChange,
   focus,
+  onNotify,
 }: SettingsProps<TierList>) {
   const hintId = React.useId();
   const tierNameRefs = React.useRef<(HTMLTextAreaElement | null)[]>([]);
+  const removeRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const addRef = React.useRef<HTMLButtonElement>(null);
+  // Where focus goes once the tiers change: a new tier's name, or from a removed tier's
+  // button to the one that took its place
+  const focusNext = React.useRef<{ added: true } | { removed: number } | null>(null);
 
   React.useEffect(() => {
     const tier = focus?.key.match(/^tier:(\d+)$/)?.[1];
     if (tier !== undefined) tierNameRefs.current[Number(tier)]?.focus();
   }, [focus]);
+
+  const count = list.tiers.length;
+  React.useEffect(() => {
+    const next = focusNext.current;
+    focusNext.current = null;
+    if (!next) return;
+    if ('added' in next) {
+      // Its name, selected, ready to type over (not on touch screens, where it would
+      // bring up the keyboard)
+      const name = tierNameRefs.current[count - 1];
+      if (matchMedia('(pointer: coarse)').matches) return;
+      name?.focus();
+      name?.select();
+      return;
+    }
+    // The last tier left can't be removed, so its button is disabled
+    if (count <= MIN_TIERS) addRef.current?.focus();
+    else removeRefs.current[Math.min(next.removed, count - 1)]?.focus();
+  }, [count]);
+
+  // Its cards go to the card tray, as many as fit; the toast says so, and offers Undo
+  const remove = (index: number) => {
+    const removed = removeTier(list, index);
+    if (!removed) return;
+    focusNext.current = { removed: index };
+    onChange((l) => removeTier(l, index)?.list ?? l);
+    onNotify(
+      [
+        removed.moved
+          ? `Tier Removed; Moved ${plural(removed.moved)} to the Card Tray`
+          : 'Tier Removed',
+        ...(removed.left
+          ? [`${plural(removed.left)} Didn't Fit in the Card Tray and Were Removed`]
+          : []),
+      ].join('\n'),
+      { undo: true }
+    );
+  };
 
   const updateTier = (index: number, change: Partial<Tier>) =>
     onChange((l) => ({
@@ -67,8 +114,38 @@ export default function TierListSettings({
               }}
               onChange={(e) => updateTier(i, { name: e.target.value })}
             />
+            <Button
+              ref={(el) => {
+                removeRefs.current[i] = el;
+              }}
+              variant="icon"
+              className={styles.touch}
+              disabled={count <= MIN_TIERS}
+              // A tier with no name is "Tier 2", as its color is in the picker
+              aria-label={`Remove tier ${i + 1}${tier.name.trim() ? `: ${tier.name.replace(/\s+/g, ' ').trim()}` : ''}`}
+              title={count <= MIN_TIERS ? 'A tier list needs at least one tier' : 'Remove tier'}
+              // A double click's second click would land on the tier that took its place
+              onClick={(e) => {
+                if (e.detail <= 1) remove(i);
+              }}
+            >
+              <span aria-hidden className={styles.removeIcon} />
+            </Button>
           </div>
         ))}
+        <Button
+          ref={addRef}
+          disabled={count >= MAX_TIERS}
+          title={count >= MAX_TIERS ? `${MAX_TIERS} tiers at most` : undefined}
+          className={`${styles.touch} flex gap-2 items-center self-start`}
+          onClick={() => {
+            focusNext.current = { added: true };
+            onChange((l) => addTier(l) ?? l);
+          }}
+        >
+          <span aria-hidden className={styles.addIcon} />
+          Add Tier
+        </Button>
         <Toggle
           checked={list.tierCardBorders}
           onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}

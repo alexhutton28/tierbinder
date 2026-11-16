@@ -181,6 +181,8 @@ function cardsAndInk(g: Graphic) {
       .map((p) => [p.item.id, p.x, p.y]),
     g.tray.items.map((i) => i.id),
     'strokes' in g ? g.strokes.length : 0,
+    // A tier added or removed, even an empty one
+    'tiers' in g ? g.tiers.map((t) => t.id) : 0,
   ]);
 }
 
@@ -1033,6 +1035,24 @@ export default function Editor() {
     { name: 'White', color: '#ffffff' },
   ]);
   const targetIndex = Math.min(target, targets.length - 1);
+  // The Add to choice stays on its target as the others come and go (a tier added or
+  // removed, or put back by undo): it follows its target's id to its new place, takes the
+  // one now in its place if it's gone, and the card tray stays the card tray
+  const targetIds = boardTargets.map((t) => t.id ?? '');
+  const targetIdsKey = targetIds.join(' ');
+  const lastTargetIds = React.useRef(targetIds);
+  React.useEffect(() => {
+    const before = lastTargetIds.current;
+    lastTargetIds.current = targetIds;
+    if (target >= before.length) {
+      setTarget(targetIds.length);
+      return;
+    }
+    const at = before[target] ? targetIds.indexOf(before[target]) : -1;
+    setTarget(at >= 0 ? at : Math.min(target, targetIds.length - 1));
+    // Only when the targets themselves change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetIdsKey]);
 
   // Changes the board showing
   const setGraphic = React.useCallback(
@@ -1064,6 +1084,11 @@ export default function Editor() {
     }
     // The pen's and eraser's settings aren't steps
     if (!before || !now || before === now || toolsOnly(before, now)) return;
+    // A card that went without the editor taking it (a removed tier's that didn't fit in
+    // the card tray) takes its selection and a replacement being picked with it
+    const ids = cardIds(now);
+    setSelectedId((id) => (id && ids.has(id) ? id : null));
+    setPicking((p) => (p && ids.has(p.id) ? p : null));
     // A toast's Undo is for the change it reports: the first change after it's shown;
     // any later one (or an undo or redo) takes the button away
     setToast((t) =>
@@ -1430,7 +1455,8 @@ export default function Editor() {
         ...errors.slice(0, MAX_TOAST_PROBLEMS),
         ...(more > 0 ? [`And ${more} More ${more === 1 ? 'Problem' : 'Problems'}`] : []),
       ].join('\n') || 'No Cards Found',
-      { undo: added.length > 0 }
+      // Any change to the board: cards added, or only tiers named or added for its groups
+      { undo: JSON.stringify(next) !== JSON.stringify(current) }
     );
   }
 
@@ -2816,7 +2842,12 @@ export default function Editor() {
               </div>
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Board</h3>
-                <type.BoardSettings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+                <type.BoardSettings
+                  graphic={graphic}
+                  onChange={setGraphic}
+                  focus={settingsFocus}
+                  onNotify={showToast}
+                />
                 {/* Asks first with a menu of only the clears that would change something */}
                 <ClearButton
                   choices={boardClears}
@@ -2826,7 +2857,12 @@ export default function Editor() {
                   Clear Board
                 </ClearButton>
               </div>
-              <type.Settings graphic={graphic} onChange={setGraphic} focus={settingsFocus} />
+              <type.Settings
+                graphic={graphic}
+                onChange={setGraphic}
+                focus={settingsFocus}
+                onNotify={showToast}
+              />
               <div ref={traySectionRef} className="flex flex-col gap-3">
                 {/* Its switch turns the whole section on or off, so the heading is the
                     switch: its name, then the switch right after it; its other rows show
@@ -2965,6 +3001,7 @@ export default function Editor() {
                     setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
                   }}
                   tool={tool}
+                  onNotify={showToast}
                 />
                 {trayShown && (
                   <CardTray

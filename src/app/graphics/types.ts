@@ -41,6 +41,8 @@ export type CanvasProps<G> = {
   onEditSetting: (key: string) => void;
   // The active tool, one of the graphic's own (see Toolbar); DEFAULT_TOOL moves cards
   tool: string;
+  // Shows a toast: why a dragged card couldn't go where it was dropped
+  onNotify: (message: string) => void;
 };
 
 // The tool every board starts with: moving and clicking cards
@@ -58,6 +60,9 @@ export type SettingsProps<G> = {
   onChange: (change: (graphic: G) => G) => void;
   // The setting asked for through onEditSetting; `n` changes with every request
   focus: { key: string; n: number } | null;
+  // Shows a toast. `undo` (it ends in an Undo button) only together with the change to
+  // the graphic it reports, in the same handler.
+  onNotify: (message: string, options?: { undo?: boolean }) => void;
 };
 
 export type GraphicType<G extends { kind: string }> = {
@@ -100,8 +105,9 @@ export type GraphicType<G extends { kind: string }> = {
   // everything on it, its tools and the card tray's cards kept: Reset Board Styles
   restyle: (graphic: G) => G;
   // Where a search result can be added (the Add to choices), e.g. the tiers, each with
-  // a color for its swatch in the picker if it has one
-  targets: (graphic: G) => { name: string; color?: string }[];
+  // a color for its swatch in the picker if it has one, and an `id` if targets can come
+  // and go (a tier list's tiers), so the chosen one stays chosen as the others change
+  targets: (graphic: G) => { id?: string; name: string; color?: string }[];
   addCard: (graphic: G, item: CardItem, target: number) => Placed<G>;
   // Adds a card dropped with the pointer at `point`
   dropCard: (graphic: G, item: CardItem, point: Point) => Placed<G>;
