@@ -7,7 +7,7 @@ import type { SettingsProps } from '../types';
 import { MAX_CARD_WIDTH, MIN_CARD_WIDTH, setCardShape, type BlankCanvas } from './model';
 
 // The blank canvas's part of the Customize tab: its background and split cards' border in
-// the Board section, and the Cards section (card size and top halves)
+// the Appearance section, and the Cards section (card size and top halves)
 
 export default function BlankSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
@@ -30,7 +30,7 @@ export default function BlankSettings({ graphic: canvas, onChange }: SettingsPro
   );
 }
 
-// Its colors, in the editor's Board section
+// Its colors, in the editor's Appearance section
 export function BlankBoardSettings({ graphic: canvas, onChange }: SettingsProps<BlankCanvas>) {
   return (
     <>

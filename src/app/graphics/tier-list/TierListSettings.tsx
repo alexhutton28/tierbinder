@@ -3,12 +3,21 @@
 import React from 'react';
 import Button from '../../ui/Button';
 import ColorField from '../../ui/ColorField';
+import Slider from '../../ui/Slider';
 import Toggle from '../../ui/Toggle';
 import styles from './TierListSettings.module.css';
 import type { SettingsProps } from '../types';
-import { MAX_TIERS, MIN_TIERS, addTier, removeTier, type Tier, type TierList } from './model';
+import {
+  LABEL_WIDTHS,
+  MAX_TIERS,
+  MIN_TIERS,
+  addTier,
+  removeTier,
+  type Tier,
+  type TierList,
+} from './model';
 
-// The tier list's part of the Customize tab: its background and border in the Board
+// The tier list's part of the Customize tab: its background and border in the Appearance
 // section, and the Tiers section (tier colors and names, removing and adding tiers, tier
 // card borders). Double-clicking a tier label focuses its name (`tier:<index>`).
 
@@ -146,6 +155,14 @@ export default function TierListSettings({
           <span aria-hidden className={styles.addIcon} />
           Add Tier
         </Button>
+        {/* How wide the tiers' labels are: narrower gives a narrow board's cards more room */}
+        <Slider
+          label="Tier Size"
+          values={LABEL_WIDTHS}
+          value={list.labelWidth}
+          describe={(width) => `${width} pixels wide`}
+          onChange={(labelWidth) => onChange((l) => ({ ...l, labelWidth }))}
+        />
         <Toggle
           checked={list.tierCardBorders}
           onChange={(tierCardBorders) => onChange((l) => ({ ...l, tierCardBorders }))}
@@ -157,7 +174,7 @@ export default function TierListSettings({
   );
 }
 
-// Its colors, in the editor's Board section
+// Its colors, in the editor's Appearance section
 export function TierListBoardSettings({ graphic: list, onChange }: SettingsProps<TierList>) {
   return (
     <>

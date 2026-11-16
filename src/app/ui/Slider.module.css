@@ -1,0 +1,110 @@
+/* A notched slider (ui/Slider.tsx): a thin track in the fields' colors with a notch at
+   each value, and a round knob in the primary color, as big as Feather's icons, that
+   stops on them. As tall as a control, so a section keeps one rhythm, and a fixed width
+   (space-7, 128px), not its column's: it holds only a few notches. */
+.box {
+  --knob: var(--tb-icon);
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: var(--spacing-7);
+  max-width: 100%;
+  height: var(--tb-control-height);
+}
+
+/* The notches, behind the knob: the first and last under the knob's center at each end */
+.notches {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: calc((var(--knob) - var(--spacing-1)) / 2);
+  pointer-events: none;
+}
+
+.notch {
+  width: var(--spacing-1);
+  height: var(--spacing-3);
+  border-radius: var(--radius-full);
+  background: var(--tb-field-border);
+}
+
+/* The browser's range input, drawn our way; it fills the box, so the whole height takes
+   presses */
+.input {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.input::-webkit-slider-runnable-track {
+  height: var(--spacing-2);
+  border-radius: var(--radius-full);
+  background: var(--tb-field);
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border);
+}
+
+.input::-moz-range-track {
+  height: var(--spacing-2);
+  border-radius: var(--radius-full);
+  background: var(--tb-field);
+  box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border);
+}
+
+/* WebKit places the knob from the track's top, so it's moved up to center on it */
+.input::-webkit-slider-thumb {
+  width: var(--knob);
+  height: var(--knob);
+  margin-block-start: calc((var(--spacing-2) - var(--knob)) / 2);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--tb-primary);
+  transition: background-color var(--duration-hover) ease-out;
+  appearance: none;
+}
+
+.input::-moz-range-thumb {
+  width: var(--knob);
+  height: var(--knob);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--tb-primary);
+  transition: background-color var(--duration-hover) ease-out;
+}
+
+.input:hover::-webkit-slider-thumb {
+  background: var(--tb-primary-hover);
+}
+
+.input:hover::-moz-range-thumb {
+  background: var(--tb-primary-hover);
+}
+
+/* The focus ring goes around the knob */
+.input:focus-visible {
+  outline: none;
+}
+
+.input:focus-visible::-webkit-slider-thumb {
+  outline: var(--tb-focus-width) solid var(--tb-focus);
+  outline-offset: var(--tb-focus-width);
+}
+
+.input:focus-visible::-moz-range-thumb {
+  outline: var(--tb-focus-width) solid var(--tb-focus);
+  outline-offset: var(--tb-focus-width);
+}
+
+/* On touch screens a full touch target, the extra height given back as negative margin */
+@media (pointer: coarse) {
+  .box {
+    height: var(--tb-touch-target);
+    margin-block: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
+  }
+}

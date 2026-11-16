@@ -29,6 +29,9 @@ export type TierList = {
   background: string;
   // Lines between tiers
   border: string;
+  // How wide the tiers' labels are (Tier Size), one of LABEL_WIDTHS: narrower leaves more
+  // of a narrow board to its cards
+  labelWidth: number;
   // Each card gets an inside stroke in its tier's color
   tierCardBorders: boolean;
   tiers: Tier[];
@@ -45,13 +48,16 @@ const FULL_SIZE_TIERS = 4;
 
 export const DEFAULT_GAP = 25;
 
-export const LABEL_WIDTH = 170;
+// The widths a tier's label can be, and a new tier list's
+export const LABEL_WIDTHS = [70, 120, 170] as const;
+const DEFAULT_LABEL_WIDTH = 170;
 // Between the label and the first card, and between a full row's last card and the
 // board's edge
 const CARDS_PADDING = 20;
-const CARDS_LEFT = LABEL_WIDTH + CARDS_PADDING;
+// Where a tier's cards start, after its label
+const cardsLeft = (list: TierList) => list.labelWidth + CARDS_PADDING;
 // The width a tier's cards have to themselves, on a board of the list's shape
-const cardsAreaWidth = (list: TierList) => boardWidth(list.shape) - CARDS_LEFT - CARDS_PADDING;
+const cardsAreaWidth = (list: TierList) => boardWidth(list.shape) - cardsLeft(list) - CARDS_PADDING;
 export const SEPARATOR_WIDTH = 3;
 
 // A new tier list's tiers, top to bottom: name and color
@@ -104,6 +110,7 @@ export function defaultTierList(): TierList {
     shape: DEFAULT_SHAPE,
     background: DEFAULT_BACKGROUND,
     border: DEFAULT_BORDER,
+    labelWidth: DEFAULT_LABEL_WIDTH,
     tierCardBorders: false,
     tiers: DEFAULT_TIERS.map(([name, color]) => ({ id: newId(), name, color, items: [] })),
     tray: defaultTray(DEFAULT_TRAY_COLOR),
@@ -125,13 +132,14 @@ export function layoutCards(list: TierList): TierPlacement[] {
   const width = tierCardWidth(list.tiers.length);
   const height = (width * CARD_HEIGHT) / CARD_WIDTH;
   const area = cardsAreaWidth(list);
+  const left = cardsLeft(list);
   return list.tiers.flatMap((tier, tierIndex) => {
     const gap = tierGap(tier.items.length, width, area);
     const y = tierIndex * rowHeight + (rowHeight - height) / 2;
     return tier.items.map((item, i) => ({
       item,
       tierIndex,
-      x: CARDS_LEFT + i * (width + gap),
+      x: left + i * (width + gap),
       y,
       width,
       height,
@@ -266,6 +274,7 @@ export function parseTierList(value: unknown): TierList | null {
     shape: parseShape(list.shape),
     background: list.background,
     border: typeof list.border === 'string' ? list.border : DEFAULT_BORDER,
+    labelWidth: LABEL_WIDTHS.find((w) => w === list.labelWidth) ?? DEFAULT_LABEL_WIDTH,
     tierCardBorders: list.tierCardBorders === true,
     tiers: list.tiers,
     tray: parseTray(list.tray, DEFAULT_TRAY_COLOR),

@@ -78,8 +78,8 @@ export type GraphicType<G extends { kind: string }> = {
   parse: (value: unknown) => G | null;
   // Konva layers, drawn inside the editor's stage. Cards should use canvas/CardNode.
   Canvas: React.ComponentType<CanvasProps<G>>;
-  // The graphic's rows in the Customize tab's Board section, between the board type and
-  // Clear Board (its colors)
+  // The graphic's rows in the Customize tab's Appearance section, after its own sections
+  // (its colors)
   BoardSettings: React.ComponentType<SettingsProps<G>>;
   // The graphic's own sections of the Customize tab, after Board: each a
   // `flex flex-col gap-3` div with its heading first, controls before toggles

@@ -7,7 +7,6 @@ import CardNode from '../../canvas/CardNode';
 import { BOARD_HEIGHT, boardWidth } from '../../canvas/size';
 import type { CanvasProps } from '../types';
 import {
-  LABEL_WIDTH,
   SEPARATOR_WIDTH,
   dropTarget,
   layoutCards,
@@ -58,6 +57,7 @@ export default function TierListCanvas({
           name={tier.name}
           color={tier.color}
           y={i * rowHeight}
+          width={list.labelWidth}
           height={rowHeight}
           fontFamily={fontFamily}
           onEdit={() => onEditSetting(`tier:${i}`)}
@@ -117,14 +117,14 @@ let measureContext: CanvasRenderingContext2D | null = null;
 // don't fit, e.g. "Commen" / "t"): a word too long for the box ("Charmander") makes the
 // whole label smaller, as do too many lines. At the smallest size, what still doesn't fit
 // overflows evenly on both sides.
-function fitLabel(name: string, fontFamily: string, height: number) {
+function fitLabel(name: string, fontFamily: string, width: number, height: number) {
   measureContext ??= document.createElement('canvas').getContext('2d');
   if (!measureContext) return { text: name, size: LABEL_FONT_SIZE };
   const ctx = measureContext;
   const wrap = (size: number) => {
     ctx.font = `${LABEL_FONT_WEIGHT} ${size}px ${fontFamily}`;
     // The outline adds half its width on each side
-    const maxWidth = LABEL_WIDTH - LABEL_PADDING * 2 - size * LABEL_STROKE_SHARE;
+    const maxWidth = width - LABEL_PADDING * 2 - size * LABEL_STROKE_SHARE;
     const lines = name.split('\n').flatMap((paragraph) => {
       const lines: string[] = [];
       for (const word of paragraph.split(/\s+/).filter(Boolean)) {
@@ -154,6 +154,7 @@ function TierLabel({
   name,
   color,
   y,
+  width,
   height,
   fontFamily,
   onEdit,
@@ -161,21 +162,22 @@ function TierLabel({
   name: string;
   color: string;
   y: number;
-  // Its tier's
+  // The label's width (the list's Tier Size) and its tier's height
+  width: number;
   height: number;
   fontFamily: string;
   onEdit: () => void;
 }) {
   const { text, size } = React.useMemo(
-    () => fitLabel(name, fontFamily, height),
-    [name, fontFamily, height]
+    () => fitLabel(name, fontFamily, width, height),
+    [name, fontFamily, width, height]
   );
   return (
     <Group y={y} onDblClick={onEdit} onDblTap={onEdit}>
-      <Rect width={LABEL_WIDTH} height={height} fill={color} />
+      <Rect width={width} height={height} fill={color} />
       <Text
         text={text}
-        width={LABEL_WIDTH}
+        width={width}
         height={height}
         align="center"
         verticalAlign="middle"
