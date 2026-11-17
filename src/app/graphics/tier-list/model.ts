@@ -1,7 +1,8 @@
 // The tier list graphic: its document, layout and edits. Plain JSON, separate from
 // rendering (TierListCanvas.tsx).
 
-import { newId, type CardItem } from '../../cards';
+import { newId, parseCardItem, type CardItem } from '../../cards';
+import { parseColor } from '../../color';
 import type { ResolvedGroup } from '../../importText';
 import {
   BOARD_HEIGHT,
@@ -272,11 +273,18 @@ export function parseTierList(value: unknown): TierList | null {
   return {
     kind: 'tier-list',
     shape: parseShape(list.shape),
-    background: list.background,
-    border: typeof list.border === 'string' ? list.border : DEFAULT_BORDER,
+    background: parseColor(list.background, DEFAULT_BACKGROUND),
+    border: parseColor(list.border, DEFAULT_BORDER),
     labelWidth: LABEL_WIDTHS.find((w) => w === list.labelWidth) ?? DEFAULT_LABEL_WIDTH,
     tierCardBorders: list.tierCardBorders === true,
-    tiers: list.tiers,
+    // Only what a tier holds, its cards checked one by one (a shared board comes from
+    // anywhere); a tier without an id gets one
+    tiers: list.tiers.map((t) => ({
+      id: typeof t.id === 'string' && t.id ? t.id : newId(),
+      name: t.name,
+      color: parseColor(t.color, ADDED_TIER_COLORS.at(-1)!),
+      items: t.items.map(parseCardItem).filter((item) => item !== null),
+    })),
     tray: parseTray(list.tray, DEFAULT_TRAY_COLOR),
   };
 }

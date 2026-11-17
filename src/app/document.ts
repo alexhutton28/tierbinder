@@ -22,7 +22,8 @@ export function currentGraphic(doc: TierBinderDoc): Graphic {
   return doc.graphics[doc.kind]!;
 }
 
-function parseGraphic(value: unknown): Graphic | null {
+// One board from a saved or shared document, or null when it isn't a known type's valid board
+export function parseGraphic(value: unknown): Graphic | null {
   const kind = (value as { kind?: string } | null | undefined)?.kind;
   const type = kind ? typeOf(kind as GraphicKind) : undefined;
   return type?.parse(value) ?? null;

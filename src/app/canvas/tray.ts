@@ -5,9 +5,10 @@
 // JSON, separate from rendering (CardTray.tsx); the editor draws it and moves cards in
 // and out.
 
-import type { CardItem } from '../cards';
+import { parseCardItem, type CardItem } from '../cards';
 import type { CardPlacement, Point } from '../graphics/types';
 import { CARD_HEIGHT, CARD_WIDTH } from './size';
+import { parseColor } from '../color';
 
 export type Tray = {
   // Shown under the board; cards stay in it while it's off
@@ -49,8 +50,11 @@ export function parseTray(value: unknown, color: string): Tray {
   if (!tray || !Array.isArray(tray.items)) return defaultTray(color);
   return {
     enabled: tray.enabled === true,
-    color: typeof tray.color === 'string' ? tray.color : color,
-    items: tray.items.slice(0, MAX_TRAY_CARDS),
+    color: parseColor(tray.color, color),
+    items: tray.items
+      .map(parseCardItem)
+      .filter((item) => item !== null)
+      .slice(0, MAX_TRAY_CARDS),
   };
 }
 
