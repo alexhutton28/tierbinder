@@ -275,6 +275,16 @@ body * {
   color: var(--tb-text);
 }
 
+/* On touch screens it takes presses as a 44px target centered on the icon, reaching a
+   little past the field, as the sidebar toggle's does */
+@media (pointer: coarse) {
+  .tierbinder-clear::before {
+    position: absolute;
+    inset: calc(50% - var(--tb-touch-target) / 2);
+    content: '';
+  }
+}
+
 .tierbinder-field::placeholder {
   color: var(--tb-muted);
 }
