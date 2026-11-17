@@ -1835,6 +1835,9 @@ export default function Editor() {
 
   // The selected card as a press on the board began (before the press deselected it)
   const pressSelection = React.useRef<string | null>(null);
+  // Whether its menu was open then: a tap opens the menu, so a tap on another tier moves the
+  // card, but one on its own tier (or the tray it's in) only closes the menu
+  const pressMenuOpen = React.useRef(false);
 
   // A tier (or the card tray, the last target) clicked on the board: it's the Add to choice
   // from then on, and with a card selected, the card moves to its end and stays selected.
@@ -1847,6 +1850,10 @@ export default function Editor() {
     if (!id || !place) return;
     const inTrayNow = trayPlacements.some((p) => p.item.id === id);
     const toTray = index === boardTargets.length;
+    const ownPlace = toTray
+      ? inTrayNow
+      : !inTrayNow && 'tierIndex' in place && place.tierIndex === index;
+    if (pressMenuOpen.current && ownPlace) return;
     let placed: Placed<Graphic> | null = null;
     if (toTray && inTrayNow) {
       // Already last: nothing to move
@@ -3431,10 +3438,8 @@ export default function Editor() {
                 // card selected moves the card there (pickTargetOnBoard)
                 // (not while a replacement is being picked, which keeps its card selected)
                 onPointerDown={() => {
-                  // A press while the card's menu is open only closes it (on a phone that's
-                  // the way to dismiss it, and a move there would have no undo in reach)
-                  pressSelection.current =
-                    selectedShown && !picking && !cardMenu ? selectedId : null;
+                  pressSelection.current = selectedShown && !picking ? selectedId : null;
+                  pressMenuOpen.current = !!cardMenu;
                 }}
                 onMouseDown={(e) => {
                   // A double click's second press (a tier label opening its name) moves nothing
