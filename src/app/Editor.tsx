@@ -255,7 +255,7 @@ const SEARCH_DELAY = 300;
 // they fly, where the browser doesn't say when the scroll is over
 const SCROLL_WAIT = 800;
 
-// Placeholders shown while a search is under way: about three rows at most widths
+// Placeholders shown while a search is under way: enough to fill the results at most sizes
 const SKELETON_TILES = 18;
 
 // Results drawn at a time (about 20 rows), and how far below the list's visible end the
@@ -693,6 +693,21 @@ export default function Editor() {
       flyout.offsetWidth;
     if (right > window.innerWidth - EDGE) flyout.dataset.side = 'left';
   }, [trayFlyout]);
+  // A menu that would run past the window's foot moves up just enough to end EDGE above it
+  // (by its key), but no higher than EDGE under the window's top: under b8 the board's foot
+  // can be near the middle of the window, and a menu reaching past the page would scroll
+  // it. Measured from layout sizes, since it opens stretching from a scale.
+  const [raisedMenu, setRaisedMenu] = React.useState<{ key: string; top: number } | null>(null);
+  React.useLayoutEffect(() => {
+    const menu = cardMenuRef.current;
+    const box = boardBoxRef.current;
+    if (!menu || !box || !shownMenu || menu.style.bottom) return;
+    const boxTop = box.getBoundingClientRect().top;
+    const over = boxTop + shownMenu.y + menu.offsetHeight - (window.innerHeight - EDGE);
+    if (over <= 0) return;
+    const top = Math.max(EDGE - boxTop, shownMenu.y - over);
+    setRaisedMenu({ key: menuKey(shownMenu), top });
+  }, [shownMenu]);
   // Removed on a timer just after its 180ms fold (globals.css) rather than on
   // animationend, which doesn't fire in a tab that isn't painting
   React.useEffect(() => {
@@ -809,8 +824,9 @@ export default function Editor() {
           'input:not([type=checkbox], [type=radio]), textarea, [contenteditable]:not([contenteditable=false])'
         );
         // Only once the keyboard has closed (the visual viewport is the window's height
-        // again), and never while zoomed in, where panning moves the window too
-        const keyboard = viewport && viewport.height < window.innerHeight - 1;
+        // again, give or take the pixel its fractional height rounds off), and never
+        // while zoomed in, where panning moves the window too
+        const keyboard = viewport && window.innerHeight - viewport.height > 1;
         const zoomed = viewport && viewport.scale > 1;
         if (field || keyboard || zoomed || !(window.scrollX || window.scrollY)) return;
         window.scrollTo(0, 0);
@@ -834,6 +850,16 @@ export default function Editor() {
     return () => query.removeEventListener('change', update);
   }, []);
   const hideSidebarRef = React.useRef<HTMLButtonElement>(null);
+  // The sidebar's foot (the credits) shows under every tab from b8 up, and below it only
+  // under Save & Share. Hiding it with focus inside (the window narrowed, or a tab switched
+  // from the keyboard) would drop focus to the page, so it goes to the main nav's tab.
+  const footRef = React.useRef<HTMLElement>(null);
+  const footHidden = !wide && tab !== 'save';
+  React.useLayoutEffect(() => {
+    const foot = footRef.current;
+    if (!footHidden || !foot?.contains(document.activeElement)) return;
+    foot.closest('aside')?.querySelector<HTMLElement>('[role=tab][aria-selected=true]')?.focus();
+  }, [footHidden]);
   const toggleSidebar = React.useCallback(() => {
     if (sidebarHidden) {
       // The show button goes as the sidebar comes back: focus on it moves to the hide button
@@ -1871,7 +1897,7 @@ export default function Editor() {
   // thumbnails again in turn, so a big pool goes out in waves across the row), showing
   // that thumbnail's picture when it's its own (`own`), else `src`, for its spot on the
   // board or in the card tray, where the card is hidden until it lands (`arriving`). A card whose spot is
-  // off screen (on a phone, the board scrolled away above the results) appears there at
+  // off screen (beside the sidebar, the workspace scrolled away from it) appears there at
   // once; a pool's cards instead scroll the tray into view first, then fly up to it.
   function flyIn(
     cards: { id: string; thumb: HTMLImageElement | undefined; own: boolean; src: string }[],
@@ -2079,7 +2105,8 @@ export default function Editor() {
   // thumbnail in the pool (`button`), the way it came, unless motion is reduced
   function removePool(pool: Pool, ids: string[], button: HTMLElement) {
     const spot = landing();
-    // Only those on screen fly (on a phone the tray may be scrolled away above the pools)
+    // Only those on screen fly (beside the sidebar, the workspace may be scrolled away from
+    // the tray)
     const from = ids.map((id) => {
       const box = spot(id);
       return box && onScreen(box) ? box : null;
@@ -3148,7 +3175,7 @@ export default function Editor() {
             {/* The credits, and from b8 up the button that hides the sidebar at its other end:
             at the sidebar's foot under every tab beside the board, and under b8 only in
             Save & Share, where the sidebar's height is too short to spend on them */}
-            <footer className={styles.foot} hidden={!wide && tab !== 'save'}>
+            <footer ref={footRef} className={styles.foot} hidden={footHidden}>
               <Credits />
               {wide && (
                 <button
@@ -3290,10 +3317,14 @@ export default function Editor() {
                     style={{
                       minWidth: MENU_WIDTH,
                       left: Math.max(0, Math.min(shownMenu.x, stageWidth * scale - MENU_WIDTH)),
-                      // In the card tray, at the board's foot, it opens upward from the pointer
+                      // In the card tray, at the board's foot, it opens upward from the pointer;
+                      // elsewhere down from it, raised where it wouldn't fit in the window
                       ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
                         ? { bottom: `calc(100% - ${shownMenu.y}px)` }
-                        : { top: shownMenu.y }),
+                        : {
+                            top:
+                              raisedMenu?.key === menuKey(shownMenu) ? raisedMenu.top : shownMenu.y,
+                          }),
                     }}
                   >
                     {cardMenuItems(shownMenu).map((label) =>

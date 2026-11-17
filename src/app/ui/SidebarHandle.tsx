@@ -33,14 +33,20 @@ function saveShare(share: number | null) {
   } catch {}
 }
 
-// CSS keeps the sidebar between these (--tb-sidebar-min, and the window less
-// --tb-workspace-min; the minimum wins). A width saved outside them would make the sidebar
-// jump on a different window, so it's saved within them.
+// CSS keeps the sidebar between these (--tb-sidebar-min, and the page's width less
+// --tb-workspace-min; the minimum wins). The page is the window less its safe-area insets
+// (a phone turned sideways). A width saved outside them would make the sidebar jump on a
+// different window, so it's saved within them.
 function limits(sidebar: HTMLElement) {
   const style = getComputedStyle(sidebar);
   const min = parseFloat(style.getPropertyValue('--tb-sidebar-min')) || 0;
   const workspace = parseFloat(style.getPropertyValue('--tb-workspace-min')) || 0;
-  return { min, max: Math.max(min, window.innerWidth - workspace) };
+  const page = sidebar.parentElement;
+  const pageStyle = page && getComputedStyle(page);
+  const room = pageStyle
+    ? page.clientWidth - parseFloat(pageStyle.paddingLeft) - parseFloat(pageStyle.paddingRight)
+    : window.innerWidth;
+  return { min, max: Math.max(min, room - workspace) };
 }
 
 // Sets the width on the sidebar itself rather than through React state, so dragging

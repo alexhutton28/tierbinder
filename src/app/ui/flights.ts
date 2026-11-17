@@ -78,8 +78,8 @@ export const onScreen = (box: Box) =>
 
 // Flies each card from its `from` box to where it lands, calling `onLand` with the cards
 // that arrived (or whose landing spot went away: the board cleared mid-flight), once a frame.
-// With `onScreenOnly`, a card whose landing spot is off screen when it would leave (on a
-// phone, the board scrolled away above the results) lands there at once instead. A copy
+// With `onScreenOnly`, a card whose landing spot is off screen when it would leave (beside
+// the sidebar, the workspace scrolled away from it) lands there at once instead. A copy
 // shows only once it leaves, so ones waiting their turn don't pile up where they start,
 // unless `showWaiting` (cards flying back out of the tray, which wait where they were).
 // `measure` is called once a frame, before anything moves, and gives each card's landing

@@ -1,8 +1,6 @@
 @reference "./globals.css";
 
 .top {
-  position: sticky;
-  top: 0;
   z-index: 20;
   display: flex;
   flex: none;
@@ -16,7 +14,6 @@
 .brand {
   display: flex;
   flex: none;
-  transition: opacity var(--duration-fade) ease-out;
 }
 
 /* The board stays centered: across the page under b8, where a tall shape is narrower than
@@ -40,7 +37,7 @@
     --side-width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
-      100vw - var(--tb-workspace-min)
+      100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - var(--tb-workspace-min)
     );
 
     position: relative;
@@ -531,8 +528,9 @@
   gap: var(--spacing-2);
 }
 
-/* The results and the shade over their top, never shorter than a row of results: past
-   that, the panel scrolls instead */
+/* The results and the shade over their top, never shorter than a thumbnail at its
+   narrowest (most of a row, as tiles stretch to fill their columns): past that, the panel
+   scrolls instead */
 .resultsBox {
   position: relative;
   display: flex;
