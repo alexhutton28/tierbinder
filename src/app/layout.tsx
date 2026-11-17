@@ -30,7 +30,8 @@ export const viewport: Viewport = {
   themeColor: '#78A5BD', // storm-400
 };
 
-// Own scroll container (html and body don't scroll)
+// Own scroll container (html and body don't scroll); from b8 up and below it alike the
+// editor fits the window, scrolling inside its own panels
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">

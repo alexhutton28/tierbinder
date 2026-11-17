@@ -1,7 +1,7 @@
-// Scrolls what just opened into view: the page on phones and tablets (where the sidebar
-// is under the board), or the sidebar from b8 up. Only scrolls down, only as far as needed
-// to show it with REVEAL_MARGIN under it, and never past the top of `el`, so whatever
-// opened it stays in sight when it's taller than the window.
+// Scrolls what just opened into view: the sidebar's tab panel, which scrolls on its own at
+// every width. Only scrolls down, only as far as needed to show it with REVEAL_MARGIN under
+// it, and never past the top of `el`, so whatever opened it stays in sight when it's taller
+// than the panel.
 
 const REVEAL_MARGIN = 16;
 // The longest a disclosure takes to slide open (past --duration-drop), in case its
@@ -34,8 +34,8 @@ export function revealBelow(el: HTMLElement) {
   });
 }
 
-// A disclosure sliding open (Bulk Import): the page follows its foot down each frame as it
-// grows, since it can't scroll to where the foot will be until the page is that tall
+// A disclosure sliding open (Bulk Import): the panel follows its foot down each frame as it
+// grows, since it can't scroll to where the foot will be until the panel is that tall
 export function followOpen(el: HTMLElement) {
   const box = scroller(el);
   if (!box) return;
