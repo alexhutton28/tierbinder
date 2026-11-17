@@ -199,8 +199,7 @@ body * {
   padding: var(--spacing-4) var(--spacing-3) 0;
 }
 
-/* A subheader inside a section or a popup, naming what's under it (the color picker's
-   view: Swatches or Spectrum): small and muted */
+/* A subheader inside a section or a popup, naming what's under it: small and muted */
 .tierbinder-caption {
   color: var(--tb-muted);
   font-size: var(--text-caption);

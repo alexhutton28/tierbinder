@@ -165,14 +165,6 @@
   }
 }
 
-/* The view's name and the switch: the name muted at the left, on the switch's foot */
-.viewHead {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--spacing-3);
-}
-
 /* The color typed in: one field across the picker, its format (Hex, RGB, HSL) a text
    button at its left edge, a hairline after it, then the hex code or three channels, each
    after a hairline */

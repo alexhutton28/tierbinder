@@ -2903,11 +2903,10 @@ export default function Editor() {
                   onChange={(next, clicked) => {
                     // Picking a tab, even the one showing, opens a folded sidebar
                     setSidebarFolded(false);
-                    // Add Cards clicked or tapped: straight to the search, showing its panel
-                    // first (in this click, so a phone brings up its keyboard). The arrow
-                    // keys only move between tabs.
-                    if (next === 'add' && clicked) {
-                      flushSync(() => setTab(next));
+                    // Add Cards clicked or tapped while it's already showing: straight to
+                    // the search (in this click, so a phone brings up its keyboard).
+                    // Switching to it doesn't, nor do the arrow keys.
+                    if (next === 'add' && clicked && tab === 'add') {
                       searchInputRef.current?.focus();
                       return;
                     }

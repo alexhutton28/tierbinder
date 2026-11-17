@@ -271,12 +271,8 @@ export default function ColorField({
           }}
           className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored ${styles.popup} ${popup.closing ? 'closing pointer-events-none' : ''}`}
         >
-          {/* The view's name, muted at the left on the switch's foot, and the switch
-          between them, as icons, at the right */}
-          <div className={styles.viewHead}>
-            <span aria-hidden className="tierbinder-caption">
-              {VIEWS.find((v) => v.value === view)?.label}
-            </span>
+          {/* The switch between the views, as icons, at the left */}
+          <div className="flex">
             <Segmented
               compact
               small
