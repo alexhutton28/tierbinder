@@ -989,9 +989,11 @@ export default function Editor() {
   );
   const trayOpacity = Math.min(1, trayOpen / (fadeShare || 1));
   // The tray on screen: a 16:9 board's width beside the sidebar; on phones and tablets the
-  // board's own, its one row scrolling sideways, so a narrow board isn't drawn smaller to
-  // fit a wider tray under it (the image's tray is always the board's width)
-  const shownTrayWidth = wide ? TRAY_WIDTH : width;
+  // workspace's whole width at the board's scale, its one row scrolling sideways, so a
+  // narrow board isn't drawn smaller to fit a wider tray under it, and the tray still spans
+  // the page (the image's tray is always the board's width)
+  const [trayRoom, setTrayRoom] = React.useState(0);
+  const shownTrayWidth = wide ? TRAY_WIDTH : Math.max(width, scale > 0 ? trayRoom / scale : 0);
   const stageWidth = width + (Math.max(shownTrayWidth, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
   // The tray's left edge from the board's: centered on the stage, also while the stage
@@ -1500,7 +1502,12 @@ export default function Editor() {
       // The card tray and the gap above it, when it shows
       const tray = TRAY_GAP * trayOpen;
       const designHeight = BOARD_HEIGHT + shownTrayHeight;
-      const next = Math.min(room / stageWidth, (height - around - tray) / designHeight);
+      // (under b8 the tray takes whatever width the board leaves, so only the board's counts)
+      const next = Math.min(
+        room / (wide ? stageWidth : width),
+        (height - around - tray) / designHeight
+      );
+      setTrayRoom(Math.floor(room));
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
       setScale(Math.max(0, Math.floor(next * 1000) / 1000));
     };
@@ -1512,7 +1519,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayOpen, shownTrayHeight, stageWidth, fold]);
+  }, [wide, trayOpen, shownTrayHeight, stageWidth, width, fold]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
