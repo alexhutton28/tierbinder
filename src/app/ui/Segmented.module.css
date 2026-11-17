@@ -39,6 +39,25 @@
   padding-inline: 0;
 }
 
+/* Small: no box, as tall as a small control, the chosen segment's fill the only shape */
+.small {
+  height: var(--tb-control-height-small);
+  padding: 0;
+  border-color: transparent;
+  background: none;
+
+  & .option {
+    min-width: var(--tb-control-height-small);
+  }
+}
+
+/* (still 44px wide on touch screens, as every segment is) */
+@media (pointer: coarse) {
+  .small .option {
+    min-width: var(--tb-touch-target);
+  }
+}
+
 /* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
 .option:hover {
   background: var(--tb-control-hover);

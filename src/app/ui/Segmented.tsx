@@ -17,6 +17,7 @@ export default function Segmented<T extends string | number>({
   options,
   onChange,
   compact = false,
+  small = false,
 }: {
   label: string;
   value: T;
@@ -25,6 +26,9 @@ export default function Segmented<T extends string | number>({
   options: readonly { value: T; label: string; short?: string; icon?: string }[];
   onChange: (value: T) => void;
   compact?: boolean;
+  // Smaller and quieter, with no box around the segments: a compact switch beside a
+  // caption (the color picker's views)
+  small?: boolean;
 }) {
   const id = React.useId();
   const group = (
@@ -32,7 +36,7 @@ export default function Segmented<T extends string | number>({
       role="radiogroup"
       aria-labelledby={compact ? undefined : `${id}-label`}
       aria-label={compact ? label : undefined}
-      className={styles.group}
+      className={`${styles.group} ${small ? styles.small : ''}`}
     >
       {options.map((option) => (
         <label key={option.value} className={styles.option} title={option.label}>

@@ -190,13 +190,21 @@
   }
 }
 
-.formatButton {
+/* (inside the field, so it outranks the button's own look) */
+.colorField .formatButton {
   flex: none;
   height: 100%;
   padding-inline: var(--spacing-3);
   border-inline-end: var(--tb-line-width) solid var(--tb-field-border);
   border-radius: 0;
+  color: var(--tb-muted);
   font-size: var(--text-caption);
+}
+
+/* Plain :hover, so it also lights where hover is a tap */
+.colorField .formatButton:hover,
+.colorField .formatButton[aria-expanded='true'] {
+  color: var(--tb-text);
 }
 
 /* RGB's or HSL's three fields share the color field's row */
@@ -214,8 +222,10 @@
   }
 }
 
-/* A field inside the color field: no box of its own */
+/* A field inside the color field: no box of its own; in the interface's font with
+   figures of one width, so the numbers line up and don't outweigh the rest */
 .bare {
+  font-variant-numeric: tabular-nums;
   flex: 1;
   min-width: 0;
   padding-inline: var(--spacing-3);

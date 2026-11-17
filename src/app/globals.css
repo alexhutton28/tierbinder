@@ -89,6 +89,9 @@ body {
   --tb-focus-width: 2px;
   --tb-top-height: 48px;
   --tb-control-height: 32px;
+
+  /* A small control inside a popup, sitting by a caption (the color picker's view switch) */
+  --tb-control-height-small: 24px;
   --tb-icon: 16px;
   --tb-scrollbar: 8px;
 

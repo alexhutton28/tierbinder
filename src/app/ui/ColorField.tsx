@@ -272,6 +272,7 @@ export default function ColorField({
             </span>
             <Segmented
               compact
+              small
               label="Picker"
               value={view}
               options={VIEWS}
@@ -438,7 +439,7 @@ function ChannelInputs({
       {channels.names.map((name, i) => (
         <label key={name} className={styles.channel} title={name}>
           <input
-            className={`${styles.bare} font-mono`}
+            className={styles.bare}
             aria-label={name}
             inputMode="numeric"
             spellCheck={false}
@@ -478,7 +479,7 @@ function HexInput({ value, onChange }: { value: string; onChange: (color: string
   }
   return (
     <input
-      className={`${styles.bare} font-mono`}
+      className={styles.bare}
       aria-label="Hex"
       spellCheck={false}
       autoComplete="off"
