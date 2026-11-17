@@ -126,6 +126,7 @@ export default function CardNode({
   onDragEnd,
   dragWidth,
   hidden = false,
+  draggable = true,
 }: {
   item: CardItem;
   x: number;
@@ -152,6 +153,9 @@ export default function CardNode({
   dragWidth?: (center: Point) => number;
   // Not drawn yet, while a copy of it flies in from the sidebar (Editor's flyIn)
   hidden?: boolean;
+  // Off where something else starts its drags (the one-row card tray on touch screens,
+  // which tells a pan from a drag first and then calls startDrag)
+  draggable?: boolean;
 }) {
   // Where the card is drawn while it isn't dragged: its parent and place in it
   const home = React.useRef<{ parent: Konva.Container; zIndex: number } | null>(null);
@@ -241,7 +245,7 @@ export default function CardNode({
       clipFunc={(ctx) =>
         Konva.Util.drawRoundedRectPath(ctx, CARD_WIDTH, height, CARD_CORNER_RADIUS)
       }
-      draggable
+      draggable={draggable}
       // Keeps a resizing card's center under the same spot of the pointer
       dragBoundFunc={function (this: Konva.Node, pos) {
         const stage = this.getStage();

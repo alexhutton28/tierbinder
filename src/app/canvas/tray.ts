@@ -70,8 +70,19 @@ const columnsAt = (width: number, inner: number) =>
 // second row at that size (up to 28); then both rows shrinking to fit (48 are two rows of
 // 24, about 45% of full size).
 // That's at TRAY_WIDTH; a narrower tray (`trayWidth`, in the image) holds fewer to a row,
-// so its cards shrink sooner.
-function grid(count: number, trayWidth: number) {
+// so its cards shrink sooner. `oneRow` (phones and tablets, on screen only): every card in
+// one row at full size, however long, the tray scrolling sideways (trayRowWidth).
+function grid(count: number, trayWidth: number, oneRow = false) {
+  if (oneRow) {
+    const width = CARD_WIDTH;
+    return {
+      columns: Math.max(1, count),
+      rows: 1,
+      width,
+      height: CARD_HEIGHT,
+      gap: width * GAP_SHARE,
+    };
+  }
   const inner = trayWidth - 2 * TRAY_PADDING;
   const minWidth = CARD_WIDTH * MIN_ROW_SHARE;
   let columns = Math.max(1, count);
@@ -93,19 +104,26 @@ function grid(count: number, trayWidth: number) {
 // The tray's height in design pixels with `count` cards: its rows and padding, rounded
 // to whole pixels so exports are (the padding below the cards takes the difference).
 // Empty, it's as tall as a row of full-size cards.
-export function trayHeight(count: number, trayWidth = TRAY_WIDTH) {
-  const { rows, height, gap } = grid(count, trayWidth);
+export function trayHeight(count: number, trayWidth = TRAY_WIDTH, oneRow = false) {
+  const { rows, height, gap } = grid(count, trayWidth, oneRow);
   return Math.round(2 * TRAY_PADDING + rows * height + (rows - 1) * gap);
 }
 
 // The width the tray's cards are drawn at when it holds `count`
-export function trayCardWidth(count: number, trayWidth = TRAY_WIDTH) {
-  return grid(count, trayWidth).width;
+export function trayCardWidth(count: number, trayWidth = TRAY_WIDTH, oneRow = false) {
+  return grid(count, trayWidth, oneRow).width;
+}
+
+// How far a one-row tray's cards reach, padding included: wider than the tray once they
+// don't fit, when it scrolls sideways by the difference
+export function trayRowWidth(count: number) {
+  const { width, gap } = grid(count, TRAY_WIDTH, true);
+  return 2 * TRAY_PADDING + count * width + Math.max(0, count - 1) * gap;
 }
 
 // Every card in the tray, its top-left corner measured from the tray's
-export function layoutTray(tray: Tray, trayWidth = TRAY_WIDTH): CardPlacement[] {
-  const { columns, width, height, gap } = grid(tray.items.length, trayWidth);
+export function layoutTray(tray: Tray, trayWidth = TRAY_WIDTH, oneRow = false): CardPlacement[] {
+  const { columns, width, height, gap } = grid(tray.items.length, trayWidth, oneRow);
   return tray.items.map((item, i) => ({
     item,
     x: TRAY_PADDING + (i % columns) * (width + gap),
@@ -117,8 +135,14 @@ export function layoutTray(tray: Tray, trayWidth = TRAY_WIDTH): CardPlacement[] 
 
 // Where a card dropped with its center at `point` (from the tray's corner) goes: in the row
 // it's nearest, before the first other card whose center is to its right
-export function trayDropIndex(tray: Tray, draggedId: string, point: Point, trayWidth = TRAY_WIDTH) {
-  const placements = layoutTray(tray, trayWidth);
+export function trayDropIndex(
+  tray: Tray,
+  draggedId: string,
+  point: Point,
+  trayWidth = TRAY_WIDTH,
+  oneRow = false
+) {
+  const placements = layoutTray(tray, trayWidth, oneRow);
   if (!placements.length) return 0;
   // Above the first row or below the last counts as in it, so only x decides there
   const first = placements[0];

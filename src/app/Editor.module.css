@@ -11,6 +11,16 @@
   background: var(--tb-top);
 }
 
+/* Under b8 with the sidebar folded, the board takes the top bar's room too; the workspace
+   keeps the status bar's inset in its place (.canvasFolded) */
+.topFolded {
+  display: none;
+}
+
+.canvasFolded {
+  padding-top: calc(var(--spacing-4) + env(safe-area-inset-top));
+}
+
 .brand {
   display: flex;
   flex: none;
@@ -517,6 +527,30 @@
 /* No padding below: the panel's own 16px top padding is the gap to the content */
 .sideHead {
   padding: var(--spacing-3) var(--spacing-3) 0;
+}
+
+/* Under b8, the button folding the sidebar down under a bigger board: Feather's
+   chevron-down (fold it down), turning to point up (open it) on the spring while folded */
+.foldButton {
+  flex: none;
+}
+
+.foldIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-down.svg') center / contain no-repeat;
+  transition: rotate var(--duration-move) var(--ease-spring);
+}
+
+.foldIconUp {
+  rotate: 180deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foldIcon {
+    transition: none;
+  }
 }
 
 /* Search results: thumbnail tiles, as many per row as fit (the set and number are the

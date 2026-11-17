@@ -36,6 +36,7 @@ import {
   importTrayCards,
   insertTrayCard,
   layoutTray,
+  trayRowWidth,
   mapTray,
   TRAY_WIDTH,
   trayCardWidth,
@@ -54,6 +55,7 @@ import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from '
 import Button from './ui/Button';
 import Segmented from './ui/Segmented';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
+import { TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
@@ -126,14 +128,16 @@ const TRAY_MENU = 'tray';
 const MENU_WIDTH = 160;
 
 // A touch press held this long (ms) opens a search result's menu, unless it moves more
-// than TOUCH_SLOP (px) first, as long presses go on phones
+// than TOUCH_SLOP (px, ui/pointer.ts) first, as long presses go on phones
 const LONG_PRESS = 500;
-const TOUCH_SLOP = 8;
 
 // Under b8 the board and the card tray stay on screen above the sidebar, which scrolls on
 // its own: they take at most this share of the page's height (top bar included), leaving
 // the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
 const BOARD_SHARE = 0.6;
+// The same while the sidebar is collapsed on a phone (its button at the top of the
+// sidebar): the board takes most of the page, the sidebar its nav and a peek of its panel
+const BOARD_SHARE_COLLAPSED = 0.85;
 
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
@@ -812,6 +816,14 @@ export default function Editor() {
   // button at the sidebar's foot, sliding out to leave the window to the board; from b8 up
   // only, where it's beside the board. Not saved: a reload, or a narrower window, shows it.
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
+  // Under b8, the sidebar collapsed under a bigger board (and the top bar hidden), by the
+  // button at the sidebar's top; a tab picked (by any means) opens it again. Not saved.
+  const [sidebarFolded, setSidebarFolded] = React.useState(false);
+  const [foldedTab, setFoldedTab] = React.useState(tab);
+  if (foldedTab !== tab) {
+    setFoldedTab(tab);
+    setSidebarFolded(false);
+  }
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
@@ -875,6 +887,7 @@ export default function Editor() {
     const update = () => {
       setWide(query.matches);
       if (!query.matches) setSidebarHidden(false);
+      else setSidebarFolded(false);
     };
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
@@ -960,8 +973,22 @@ export default function Editor() {
     } catch {}
   }, [trayHintSeen]);
   const exportTray = trayShown && includeTray;
+  // Under b8 the tray on screen is one row of full-size cards, scrolled sideways (trayPan,
+  // design pixels, kept within what the row overhangs); the image keeps its two rows
+  const oneRowTray = !wide;
+  const trayCount = graphic.tray.items.length;
+  const maxTrayPan = oneRowTray ? Math.max(0, trayRowWidth(trayCount) - TRAY_WIDTH) : 0;
+  const [trayPanAsked, setTrayPan] = React.useState(0);
+  const trayPan = Math.min(trayPanAsked, maxTrayPan);
+  // A card added at the end scrolls the row to it, so it lands where it can be seen
+  const lastTrayId = graphic.tray.items.at(-1)?.id;
+  const [trayEnd, setTrayEnd] = React.useState({ count: trayCount, last: lastTrayId });
+  if (trayEnd.count !== trayCount || trayEnd.last !== lastTrayId) {
+    setTrayEnd({ count: trayCount, last: lastTrayId });
+    if (trayCount > trayEnd.count && lastTrayId !== trayEnd.last) setTrayPan(maxTrayPan);
+  }
   // The tray's height follows its cards; while it slides in or out, the share of it shown
-  const shownTrayHeight = trayDrawn ? trayHeight(graphic.tray.items.length) * trayOpen : 0;
+  const shownTrayHeight = trayDrawn ? trayHeight(trayCount, TRAY_WIDTH, oneRowTray) * trayOpen : 0;
   // The image's size in its own pixels. An included card tray goes under the board at the
   // board's width, its cards laid out again to fit, so the image is one rectangle.
   const exported = exportSize(
@@ -975,15 +1002,15 @@ export default function Editor() {
   // (a full tray won't take it, so it keeps the board's size)
   const cardDragWidth = (center: Point) =>
     trayShown && center.y > BOARD_HEIGHT && graphic.tray.items.length < MAX_TRAY_CARDS
-      ? trayCardWidth(graphic.tray.items.length + 1)
+      ? trayCardWidth(graphic.tray.items.length + 1, TRAY_WIDTH, oneRowTray)
       : boardCardWidth;
 
   // Every card and where it's drawn: the board's, then the tray's
   const boardPlacements = type.layout(graphic);
   const trayPlacements = trayShown
-    ? layoutTray(graphic.tray).map((p) => ({
+    ? layoutTray(graphic.tray, TRAY_WIDTH, oneRowTray).map((p) => ({
         ...p,
-        x: p.x - boardLeft,
+        x: p.x - boardLeft - trayPan,
         y: p.y + trayTop,
       }))
     : [];
@@ -1420,7 +1447,7 @@ export default function Editor() {
         workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
       const outer = wide
         ? workspace.clientHeight
-        : page.clientHeight * BOARD_SHARE -
+        : page.clientHeight * (sidebarFolded ? BOARD_SHARE_COLLAPSED : BOARD_SHARE) -
           (workspace.getBoundingClientRect().top - page.getBoundingClientRect().top);
       const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       const around = board.offsetHeight - box.offsetHeight;
@@ -1439,7 +1466,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayOpen, shownTrayHeight, stageWidth]);
+  }, [wide, trayOpen, shownTrayHeight, stageWidth, sidebarFolded]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -1774,7 +1801,10 @@ export default function Editor() {
     dropped && dropped.point.y > BOARD_HEIGHT ? 'Add to card tray' : `Add to ${type.targetNoun}`;
 
   // A point on the board (design pixels from its corner) measured from the tray's corner
-  const inTray = (point: Point) => ({ x: point.x + boardLeft, y: point.y - trayTop });
+  // (and the one-row tray's scroll: its cards' own terms)
+  const inTray = (point: Point) => ({ x: point.x + boardLeft + trayPan, y: point.y - trayTop });
+  const dropIndex = (tray: Tray, id: string, point: Point) =>
+    trayDropIndex(tray, id, point, TRAY_WIDTH, oneRowTray);
 
   // Adds a card where it was dropped: in the card tray (or the gap above it) by position,
   // or where the graphic puts it
@@ -1782,7 +1812,7 @@ export default function Editor() {
     trayShown && point.y > BOARD_HEIGHT
       ? withTray(
           graphic,
-          insertTrayCard(graphic.tray, item, trayDropIndex(graphic.tray, '', inTray(point)))
+          insertTrayCard(graphic.tray, item, dropIndex(graphic.tray, '', inTray(point)))
         )
       : type.dropCard(graphic, item, point);
 
@@ -1827,7 +1857,7 @@ export default function Editor() {
     const point = inTray({ x: x + place.width / 2, y: y + place.height / 2 });
     const placed = withTray(
       typeOf(graphic.kind).mapCards(graphic, (i) => (i.id === id ? null : i)),
-      insertTrayCard(graphic.tray, place.item, trayDropIndex(graphic.tray, '', point))
+      insertTrayCard(graphic.tray, place.item, dropIndex(graphic.tray, '', point))
     );
     applyPlaced(placed);
     return true;
@@ -1843,7 +1873,7 @@ export default function Editor() {
       const point = inTray(center);
       setGraphic((g) => ({
         ...g,
-        tray: moveTrayCard(g.tray, id, trayDropIndex(g.tray, id, point)),
+        tray: moveTrayCard(g.tray, id, dropIndex(g.tray, id, point)),
       }));
       return;
     }
@@ -2461,6 +2491,14 @@ export default function Editor() {
       if (exportTray) {
         const tray = stage.findOne<Konva.Group>('.tray');
         set(tray, { x: 0, y: BOARD_HEIGHT });
+        // Its cards unclipped and unscrolled (the one-row tray on phones), in its two rows
+        set(stage.findOne('.trayClip'), {
+          clipX: undefined,
+          clipY: undefined,
+          clipWidth: undefined,
+          clipHeight: undefined,
+        });
+        set(stage.findOne('.trayCards'), { x: 0 });
         set(stage.findOne('.trayBox'), {
           width,
           height: trayHeight(graphic.tray.items.length, width),
@@ -2618,31 +2656,53 @@ export default function Editor() {
           className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
           inert={viewing !== null}
         >
-          <header className={styles.top}>
+          <header className={`${styles.top} ${sidebarFolded ? styles.topFolded : ''}`}>
             <Link href="/" className={styles.brand}>
               <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
             </Link>
           </header>
           <SidebarHandle />
           <aside className={`${styles.side} flex flex-col flex-1 min-w-0 min-h-0`}>
-            <div className={styles.sideHead}>
-              <RadioBar
-                label="Editor sections"
-                options={TABS}
-                value={tab}
-                onChange={(next, clicked) => {
-                  // Add Cards clicked or tapped: straight to the search, showing its panel
-                  // first (in this click, so a phone brings up its keyboard). The arrow
-                  // keys only move between tabs.
-                  if (next === 'add' && clicked) {
-                    flushSync(() => setTab(next));
-                    searchInputRef.current?.focus();
-                    return;
-                  }
-                  setTab(next);
-                }}
-                onFullWidth={fitSidebarToNav}
-              />
+            <div className={`${styles.sideHead} flex gap-2 items-start`}>
+              <div className="flex-1 min-w-0">
+                <RadioBar
+                  label="Editor sections"
+                  options={TABS}
+                  value={tab}
+                  onChange={(next, clicked) => {
+                    // Picking a tab, even the one showing, opens a folded sidebar
+                    setSidebarFolded(false);
+                    // Add Cards clicked or tapped: straight to the search, showing its panel
+                    // first (in this click, so a phone brings up its keyboard). The arrow
+                    // keys only move between tabs.
+                    if (next === 'add' && clicked) {
+                      flushSync(() => setTab(next));
+                      searchInputRef.current?.focus();
+                      return;
+                    }
+                    setTab(next);
+                  }}
+                  onFullWidth={fitSidebarToNav}
+                />
+              </div>
+              {/* On phones and tablets: the sidebar folds down to its nav under a bigger
+              board, and back */}
+              {!wide && (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  className={styles.foldButton}
+                  aria-label={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
+                  title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
+                  aria-expanded={!sidebarFolded}
+                  onClick={() => setSidebarFolded((f) => !f)}
+                >
+                  <span
+                    aria-hidden
+                    className={`${styles.foldIcon} ${sidebarFolded ? styles.foldIconUp : ''}`}
+                  />
+                </Button>
+              )}
             </div>
 
             {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
@@ -3295,7 +3355,7 @@ export default function Editor() {
           ref={workspaceRef}
           // With the sidebar hidden, more room at the left, so the board stays clear of the show
           // button at the bottom left
-          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${sidebarFolded ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
           inert={viewing !== null}
         >
           {/* Under b8 the toolbar takes the page's width, so a board narrowed to fit its height
@@ -3369,6 +3429,9 @@ export default function Editor() {
                     onCardDrop={trayCardDrop}
                     onPick={() => pickTargetOnBoard(boardTargets.length)}
                     selectedId={selectedId}
+                    oneRow={oneRowTray}
+                    pan={trayPan}
+                    onPan={setTrayPan}
                     onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
                     boardCardWidth={boardCardWidth}
                     hintFont={interfaceFont}
