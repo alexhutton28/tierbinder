@@ -52,6 +52,7 @@ import { parseImport } from './importText';
 import { MAX_SHARED_CARDS, isShareHash, readShareHash, shareLink, sharedCards } from './share';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
+import Segmented from './ui/Segmented';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
@@ -256,8 +257,19 @@ const SEARCH_DELAY = 300;
 // they fly, where the browser doesn't say when the scroll is over
 const SCROLL_WAIT = 800;
 
-// Placeholders shown while a search is under way: enough to fill the results at most sizes
-const SKELETON_TILES = 18;
+// The search results' thumbnail sizes (Small, Medium, Large: --tb-thumb-small, -width and
+// -large), saved per device; Medium is the size they always were
+type ResultSize = 'small' | 'medium' | 'large';
+const RESULT_SIZES = [
+  { value: 'small', short: 'S', label: 'Small thumbnails' },
+  { value: 'medium', short: 'M', label: 'Medium thumbnails' },
+  { value: 'large', short: 'L', label: 'Large thumbnails' },
+] as const satisfies readonly { value: ResultSize; short: string; label: string }[];
+const RESULT_SIZE_KEY = 'tierbinder-result-size';
+
+// Placeholders shown while a search is under way: enough to fill the results at most
+// sidebar heights at each size
+const SKELETON_TILES: Record<ResultSize, number> = { small: 30, medium: 18, large: 12 };
 
 // Results drawn at a time (about 20 rows), and how far below the list's visible end the
 // next page starts drawing
@@ -518,6 +530,23 @@ export default function Editor() {
   // The results are scrolled, so a shade shows they go on under the controls above
   const [resultsScrolled, setResultsScrolled] = React.useState(false);
   const sortDirection = sortLabel(searchOptions);
+  // How big the results' thumbnails are, remembered on this device
+  const [resultSize, setResultSize] = React.useState<ResultSize>(() => {
+    try {
+      const saved = localStorage.getItem(RESULT_SIZE_KEY);
+      return RESULT_SIZES.find((s) => s.value === saved)?.value ?? 'medium';
+    } catch {
+      return 'medium';
+    }
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(RESULT_SIZE_KEY, resultSize);
+    } catch {}
+  }, [resultSize]);
+  // Large thumbnails load the board's image (TCGdex's high.webp), which stays sharp at that
+  // size; the others the small one
+  const resultSrc = (card: CardResult) => (resultSize === 'large' ? card.image : card.thumb);
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -2724,12 +2753,24 @@ export default function Editor() {
                       />
                     )}
                   </div>
+                  {/* The thumbnails' size, while there are results to show */}
+                  {searchShown && shownResults.length > 0 && (
+                    <div className="ml-auto">
+                      <Segmented
+                        compact
+                        label="Thumbnail size"
+                        value={resultSize}
+                        options={RESULT_SIZES}
+                        onChange={setResultSize}
+                      />
+                    </div>
+                  )}
                   {/* Flips the order: newest or oldest set first, and each set's numbers */}
                   {searchShown && (
                     <Button
                       type="button"
                       variant="icon"
-                      className="ml-auto"
+                      className={shownResults.length > 0 ? undefined : 'ml-auto'}
                       aria-label={`Sort: ${sortDirection}`}
                       title={`Sort: ${sortDirection}`}
                       onClick={() =>
@@ -2803,7 +2844,7 @@ export default function Editor() {
                       : ''}
                 </p>
                 {(showingResults || showingSkeleton) && (
-                  <div className={`${styles.resultsBox} flex-1`}>
+                  <div className={`${styles.resultsBox} flex-1`} data-size={resultSize}>
                     <div
                       ref={resultsRef}
                       className={`${styles.results} overflow-y-auto overflow-x-hidden`}
@@ -2813,7 +2854,7 @@ export default function Editor() {
                       onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
                     >
                       {showingSkeleton
-                        ? Array.from({ length: SKELETON_TILES }, (_, i) => (
+                        ? Array.from({ length: SKELETON_TILES[resultSize] }, (_, i) => (
                             <span key={i} aria-hidden className={styles.resultThumb} />
                           ))
                         : visibleResults.map((card) => (
@@ -2886,7 +2927,7 @@ export default function Editor() {
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
                               <img
-                                src={card.thumb}
+                                src={resultSrc(card)}
                                 alt={`${card.name} (${card.set} ${card.number})`}
                                 className={`${styles.resultThumb} object-contain`}
                                 // Shimmers until it's loaded (Editor.module.css)
@@ -2898,7 +2939,7 @@ export default function Editor() {
                                 // The CDN occasionally fails a load; retry once through the image
                                 // proxy, and hide the result if that fails too
                                 onError={(e) => {
-                                  const proxy = proxied(card.thumb);
+                                  const proxy = proxied(resultSrc(card));
                                   if (!e.currentTarget.src.endsWith(proxy)) {
                                     e.currentTarget.src = proxy;
                                     return;

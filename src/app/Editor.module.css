@@ -523,7 +523,7 @@
    tooltip), filling the sidebar's height and scrolling */
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--result-width), 1fr));
   align-content: start;
   gap: var(--spacing-2);
 }
@@ -532,10 +532,21 @@
    narrowest (most of a row, as tiles stretch to fill their columns): past that, the panel
    scrolls instead */
 .resultsBox {
+  --result-width: var(--tb-thumb-width);
+
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: var(--tb-thumb-height);
+  min-height: calc(var(--result-width) * var(--tb-thumb-ratio));
+}
+
+/* The thumbnail size picked beside the sort button (Medium, the default, above) */
+.resultsBox[data-size='small'] {
+  --result-width: var(--tb-thumb-small);
+}
+
+.resultsBox[data-size='large'] {
+  --result-width: var(--tb-thumb-large);
 }
 
 .resultsBox > .results {
@@ -655,7 +666,8 @@
    their place (and each one's real size once it has been drawn) */
 .resultTile {
   content-visibility: auto;
-  contain-intrinsic-size: auto var(--tb-thumb-width) auto var(--tb-thumb-height);
+  contain-intrinsic-size: auto var(--result-width) auto
+    calc(var(--result-width) * var(--tb-thumb-ratio));
 }
 
 /* A long press opens the result's menu (Editor.tsx), not iOS's own image callout */
@@ -664,7 +676,7 @@
   -webkit-touch-callout: none;
 }
 
-/* A result fills its column (at least --tb-thumb-width wide, stretching to share the
+/* A result fills its column (at least --result-width wide, stretching to share the
    row), at the card's shape, so the cards sit 4px apart both ways */
 .resultThumb {
   width: 100%;

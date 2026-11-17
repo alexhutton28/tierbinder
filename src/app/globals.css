@@ -136,9 +136,14 @@ body {
   --tb-handle-line: 2px;
   --tb-handle-hover-delay: 150ms;
 
-  /* Image sizes, chosen by eye (see Exceptions) */
+  /* Image sizes, chosen by eye (see Exceptions): search results' thumbnails at their
+     smallest width, Medium (--tb-thumb-width, the default) and Small and Large, their
+     height in the cards' shape */
   --tb-thumb-width: 80px;
-  --tb-thumb-height: 111px;
+  --tb-thumb-small: 60px;
+  --tb-thumb-large: 120px;
+  --tb-thumb-ratio: calc(111 / 80);
+  --tb-thumb-height: calc(var(--tb-thumb-width) * var(--tb-thumb-ratio));
 
   background: var(--tb-page);
 }
