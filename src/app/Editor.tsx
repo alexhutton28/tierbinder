@@ -120,6 +120,9 @@ const POOL_ACTIONS = {
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
 const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
 
+// Presentation mode's card menu row that moves the card (shown as "Move to Tier", or "Add
+// to Tier" for a tray card: moveLabel), opening a flyout of the places it can go
+const MOVE_TO = 'Move to';
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
 const TRAY_MENU = 'tray';
 
@@ -714,8 +717,7 @@ export default function Editor() {
   const trayFlyoutRowRef = React.useRef<HTMLButtonElement>(null);
   // It opens to the row's right, or its left when that wouldn't fit in the window, EDGE in
   // (measured from layout sizes, from the board's box, since the menu opens stretching from
-  // a scale; the flyout's own offset includes its gap). It never needs to move up: its one
-  // row lines up with the menu's last.
+  // a scale; the flyout's own offset includes its gap).
   React.useLayoutEffect(() => {
     const menu = cardMenuRef.current;
     const row = trayFlyoutRowRef.current;
@@ -730,6 +732,18 @@ export default function Editor() {
       flyout.offsetLeft +
       flyout.offsetWidth;
     if (right > window.innerWidth - EDGE) flyout.dataset.side = 'left';
+    // Presentation mode's Add to flyout is a list of every place, from a row that isn't the
+    // menu's last: it moves up to end EDGE above the window's foot when it would pass it,
+    // as the result menu's does
+    const bottom =
+      box.getBoundingClientRect().top +
+      menu.offsetTop +
+      menu.clientTop +
+      row.offsetTop +
+      flyout.offsetTop +
+      flyout.offsetHeight;
+    const over = bottom - (window.innerHeight - EDGE);
+    if (over > 0) flyout.style.translate = `0 ${-over}px`;
   }, [trayFlyout]);
   // A menu that would run past the window's foot moves up just enough to end EDGE above it
   // (by its key), but no higher than EDGE under the window's top: under b8 the board's foot
@@ -833,6 +847,9 @@ export default function Editor() {
   const foldReveal = useReveal(sidebarFolded && !wide, wide);
   const fold = wide ? 0 : foldReveal.value;
   const folded = fold === 1;
+  // Presentation mode: the sidebar folded on a phone, the board taking the page. The card
+  // menu keeps only what doesn't need the sidebar (View, Add to, Remove Card).
+  const presenting = sidebarFolded && !wide;
   const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0 });
   const foldSidebar = () => {
     const side = sideRef.current;
@@ -1897,6 +1914,16 @@ export default function Editor() {
       ? inTrayNow
       : !inTrayNow && 'tierIndex' in place && place.tierIndex === index;
     if (pressMenuOpen.current && ownPlace) return;
+    moveCardToTarget(id, index);
+  }
+
+  // Moves a card on the board or in the tray to the end of a target (the card tray last),
+  // keeping it selected: a tier clicked with it selected, or presentation mode's Add to
+  function moveCardToTarget(id: string, index: number) {
+    const place = placements.find((p) => p.item.id === id);
+    if (!place) return;
+    const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    const toTray = index === boardTargets.length;
     let placed: Placed<Graphic> | null = null;
     if (toTray && inTrayNow) {
       // Already last: nothing to move
@@ -1953,6 +1980,23 @@ export default function Editor() {
     applyPlaced(type.dropCard(without, place.item, center));
   };
 
+  // The targets a card can move to from its menu (by index in `targets`): every one, but
+  // not the tray it's already in, and not the board's own for a board card on a graphic
+  // whose cards have no place in a target (the blank canvas)
+  const moveChoices = (id: string) => {
+    const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    return targets
+      .map((_, i) => i)
+      .filter((i) =>
+        i === boardTargets.length ? !inTrayNow : inTrayNow || type.moveCardTo !== undefined
+      );
+  };
+
+  // Its row's name: a card already on the board moves ("Move to Tier"); one in the tray is
+  // added, as a search result is ("Add to Tier")
+  const moveLabel = (id: string) =>
+    `${trayPlacements.some((p) => p.item.id === id) ? 'Add' : 'Move'} to ${type.targetNoun}`;
+
   // The card menu's items: the tray's own menu, a clicked card's (a tray card's ending with
   // Clear Card Tray, a row opening a flyout), or a search result's dropped on a card
   const cardMenuItems = (menu: CardMenu) => {
@@ -1967,6 +2011,11 @@ export default function Editor() {
         ? ['Replace top half', 'Replace bottom half', addToTarget(menu)]
         : ['Add as split card', addToTarget(menu)];
     }
+    // Presentation mode (the sidebar folded on a phone): only what doesn't need the
+    // sidebar, moving the card through a flyout of the places it can go
+    if (presenting) {
+      return moveChoices(id).length ? ['View', MOVE_TO, 'Remove card'] : ['View', 'Remove card'];
+    }
     const items = split
       ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
       : ['View', 'Remove card', 'Replace card', 'Make split card'];
@@ -1979,9 +2028,14 @@ export default function Editor() {
   // Clear Card Tray's flyout says how many it clears, kept up to date if cards come or go
   // meanwhile (a pool's still flying in), and closes if its row goes (the tray emptied, or
   // down to the menu's own card)
+  // (Presentation mode's Add to row opens the menu's other flyout, which closes as its row
+  // goes, too)
   if (cardMenu?.flyout) {
     const n = graphic.tray.items.length;
-    if (!cardMenuItems(cardMenu).includes('Clear card tray')) {
+    const items = cardMenuItems(cardMenu);
+    if (items.includes(MOVE_TO)) {
+      // (its flyout's `flyout` is just whether it's open)
+    } else if (!items.includes('Clear card tray')) {
       setCardMenu({ ...cardMenu, flyout: undefined });
     } else if (cardMenu.flyout !== n) {
       setCardMenu({ ...cardMenu, flyout: n });
@@ -2010,7 +2064,7 @@ export default function Editor() {
     }
     if (e.key === 'ArrowRight' && target.hasAttribute('aria-haspopup') && !cardMenu.flyout) {
       e.preventDefault();
-      toggleTrayFlyout(cardMenu);
+      toggleTrayFlyout(cardMenu, target.dataset.row === MOVE_TO);
     }
     if (e.key === 'ArrowLeft' && flyout) {
       e.preventDefault();
@@ -2022,13 +2076,22 @@ export default function Editor() {
   // Clear Card Tray's row opens its flyout ("Clear N Cards"), focusing that, or closes it,
   // as the search result menu's Add to row does: a second step, so a click (or Enter
   // twice) never clears the tray by itself
-  function toggleTrayFlyout(menu: CardMenu) {
+  // (Presentation mode's Add to row opens its own the same way: `move`)
+  function toggleTrayFlyout(menu: CardMenu, move = false) {
     if (menu.flyout) {
       setCardMenu({ ...menu, flyout: undefined });
       return;
     }
-    flushSync(() => setCardMenu({ ...menu, flyout: graphic.tray.items.length }));
+    flushSync(() => setCardMenu({ ...menu, flyout: move ? 1 : graphic.tray.items.length }));
     cardMenuRef.current?.querySelector<HTMLElement>('[data-flyout] [role=menuitem]')?.focus();
+  }
+
+  // Presentation mode's Add to flyout: the card moves there, and focus goes to the board,
+  // not lost with the menu
+  function moveFromMenu(id: string, index: number) {
+    setCardMenu(null);
+    moveCardToTarget(id, index);
+    boardBoxRef.current?.focus({ preventScroll: true });
   }
 
   // Runs a menu item. Hiding or clearing the tray moves what the menu was anchored to, so it
@@ -3647,7 +3710,7 @@ export default function Editor() {
                     }}
                   >
                     {cardMenuItems(shownMenu).map((label) =>
-                      label === 'Clear card tray' ? (
+                      label === 'Clear card tray' || label === MOVE_TO ? (
                         // Opens on a click (or Enter), not on hover; a second click closes it.
                         // Escape in it goes back to the row.
                         <div key={label} className={styles.flyoutAnchor}>
@@ -3656,17 +3719,29 @@ export default function Editor() {
                             role="menuitem"
                             aria-haspopup="menu"
                             aria-expanded={!!shownMenu.flyout}
+                            data-row={label}
                             className={`tierbinder-option ${styles.flyoutItem}`}
-                            onClick={() => toggleTrayFlyout(shownMenu)}
+                            onClick={() => toggleTrayFlyout(shownMenu, label === MOVE_TO)}
                           >
-                            {titleCase(label)}
+                            {titleCase(label === MOVE_TO ? moveLabel(shownMenu.id) : label)}
                             <span aria-hidden className={styles.menuChevron} />
                           </button>
                           {shownTrayFlyout !== null && (
                             <div
                               data-flyout
                               role="menu"
-                              aria-label="Clear card tray"
+                              aria-label={
+                                label === MOVE_TO ? moveLabel(shownMenu.id) : 'Clear card tray'
+                              }
+                              // Add to's choices, by their index in `targets` (one handler
+                              // here rather than one per choice)
+                              onClick={(e) => {
+                                const choice = (e.target as HTMLElement).closest<HTMLElement>(
+                                  '[data-target]'
+                                );
+                                if (choice)
+                                  moveFromMenu(shownMenu.id, Number(choice.dataset.target));
+                              }}
                               onKeyDown={(e) => {
                                 if (e.key !== 'Escape') return;
                                 // Not the page's Escape, which would close the whole menu
@@ -3677,19 +3752,38 @@ export default function Editor() {
                               }}
                               className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${trayFlyoutClosing ? 'closing pointer-events-none' : ''}`}
                             >
-                              <button
-                                role="menuitem"
-                                className="tierbinder-option whitespace-nowrap"
-                                onClick={() => {
-                                  clearTray();
-                                  setShownMenu(null);
-                                  setCardMenu(null);
-                                  // The menu is gone: focus goes to the board, not lost
-                                  boardBoxRef.current?.focus({ preventScroll: true });
-                                }}
-                              >
-                                {`Clear ${cardCount(shownTrayFlyout)}`}
-                              </button>
+                              {label === MOVE_TO ? (
+                                // Every place the card can go, with its swatch, as the
+                                // result menu's Add to has
+                                moveChoices(shownMenu.id).map((i) => (
+                                  <button
+                                    key={i}
+                                    role="menuitem"
+                                    className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
+                                    data-target={i}
+                                  >
+                                    <Swatch
+                                      color={targets[i].color}
+                                      outlined={'outlined' in targets[i] && targets[i].outlined}
+                                    />
+                                    {targets[i].name.replaceAll('\n', ' ')}
+                                  </button>
+                                ))
+                              ) : (
+                                <button
+                                  role="menuitem"
+                                  className="tierbinder-option whitespace-nowrap"
+                                  onClick={() => {
+                                    clearTray();
+                                    setShownMenu(null);
+                                    setCardMenu(null);
+                                    // The menu is gone: focus goes to the board, not lost
+                                    boardBoxRef.current?.focus({ preventScroll: true });
+                                  }}
+                                >
+                                  {`Clear ${cardCount(shownTrayFlyout)}`}
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
