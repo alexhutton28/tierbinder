@@ -26,6 +26,8 @@ export default function Dropdown<T extends string | number>({
   options,
   current,
   onChange,
+  variant,
+  buttonClassName = '',
 }: {
   label: string;
   hideLabel?: boolean;
@@ -38,6 +40,10 @@ export default function Dropdown<T extends string | number>({
   options: ({ value: T; label: string } & Look)[];
   current?: { label: string } & Look;
   onChange: (value: T) => void;
+  // Its button's look (a box, by default) and any classes it adds: the color picker's
+  // format, a `text` button inside its field
+  variant?: React.ComponentProps<typeof Button>['variant'];
+  buttonClassName?: string;
 }) {
   const id = React.useId();
   const labelId = `${id}-label`;
@@ -94,7 +100,8 @@ export default function Dropdown<T extends string | number>({
           aria-expanded={open}
           aria-labelledby={`${labelId} ${id}-button`}
           title={hideLabel ? label : undefined}
-          className="flex gap-2 items-center max-w-full"
+          variant={variant}
+          className={`flex gap-2 items-center max-w-full ${buttonClassName}`}
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

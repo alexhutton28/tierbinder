@@ -20,7 +20,9 @@ export default function Segmented<T extends string | number>({
 }: {
   label: string;
   value: T;
-  options: readonly { value: T; label: string; short?: string }[];
+  // `icon`: a 16px SVG in public/, drawn in the text color, in place of the words (the
+  // color picker's views), its label the tooltip and what screen readers hear
+  options: readonly { value: T; label: string; short?: string; icon?: string }[];
   onChange: (value: T) => void;
   compact?: boolean;
 }) {
@@ -41,7 +43,15 @@ export default function Segmented<T extends string | number>({
             checked={option.value === value}
             onChange={() => onChange(option.value)}
           />
-          <span aria-hidden>{option.short ?? option.label}</span>
+          {option.icon ? (
+            <span
+              aria-hidden
+              className={styles.icon}
+              style={{ maskImage: `url('${option.icon}')` } as React.CSSProperties}
+            />
+          ) : (
+            <span aria-hidden>{option.short ?? option.label}</span>
+          )}
           <span className="sr-only">{option.label}</span>
         </label>
       ))}

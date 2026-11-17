@@ -4,6 +4,7 @@ import React from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { useAnchored, usePopup } from './anchored';
 import styles from './ColorField.module.css';
+import Dropdown from './Dropdown';
 import Segmented from './Segmented';
 import { SWATCHES, SWATCH_COLUMNS, SWATCH_ROWS } from './swatches';
 
@@ -30,9 +31,9 @@ function normalize(text: string) {
 
 type View = 'swatches' | 'custom';
 const VIEWS = [
-  { value: 'swatches', label: 'Swatches' },
-  { value: 'custom', label: 'Custom' },
-] as const satisfies readonly { value: View; label: string }[];
+  { value: 'swatches', label: 'Swatches', icon: '/grid.svg' },
+  { value: 'custom', label: 'Custom', icon: '/droplet.svg' },
+] as const satisfies readonly { value: View; label: string; icon: string }[];
 
 // How the color is typed: a hex code, or its red, green and blue, or its hue, saturation
 // and lightness
@@ -111,18 +112,16 @@ function fromHsl([h, sat, l]: number[]) {
   const f = (n: number) => l1 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
   return fromRgb([f(0), f(8), f(4)].map((c) => c * 255));
 }
-// Each format's channels: their names (for screen readers), short names, and ranges
+// Each format's channels: their names (for screen readers and tooltips) and ranges
 const CHANNELS = {
   rgb: {
     names: ['Red', 'Green', 'Blue'],
-    short: ['R', 'G', 'B'],
     max: [255, 255, 255],
     read: toRgb,
     write: fromRgb,
   },
   hsl: {
     names: ['Hue', 'Saturation', 'Lightness'],
-    short: ['H', 'S', 'L'],
     max: [360, 100, 100],
     read: toHsl,
     write: fromHsl,
@@ -265,8 +264,12 @@ export default function ColorField({
           }}
           className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored ${styles.popup} ${popup.closing ? 'closing pointer-events-none' : ''}`}
         >
-          {/* Sized to its two choices, at the left */}
-          <div className="flex">
+          {/* The view's name, muted at the left on the switch's foot, and the switch
+          between them, as icons, at the right */}
+          <div className={styles.viewHead}>
+            <span aria-hidden className="tierbinder-caption">
+              {VIEWS.find((v) => v.value === view)?.label}
+            </span>
             <Segmented
               compact
               label="Picker"
@@ -299,13 +302,16 @@ export default function ColorField({
               />
             </div>
           </div>
-          {/* The color typed in: as a hex code, or its channels */}
-          <div className={styles.formatBox}>
-            <Segmented
-              compact
+          {/* The color typed in, one field: its format (Hex, RGB, HSL) a menu at its left
+          edge, then the hex code or the three channels */}
+          <div className={styles.colorField}>
+            <Dropdown
               label="Color format"
+              hideLabel
+              variant="text"
+              buttonClassName={styles.formatButton}
               value={format}
-              options={FORMATS}
+              options={[...FORMATS]}
               onChange={formatChoice.set}
             />
             {format === 'hex' ? (
@@ -404,8 +410,9 @@ function Swatches({
   );
 }
 
-// The color's channels, three number fields with their short names over them (R, G, B; or
-// H, S, L): typing applies once all three are whole numbers in range; leaving one shows
+// The color's channels, three number fields side by side in the color field (red, green
+// and blue; or hue, saturation and lightness, as the format says; each its tooltip):
+// typing applies once all three are whole numbers in range; leaving one shows
 // the color in use. A color it sent itself doesn't reset the fields, so HSL's rounding
 // doesn't change the other two while one is typed.
 function ChannelInputs({
@@ -429,12 +436,9 @@ function ChannelInputs({
   return (
     <div className={styles.channels}>
       {channels.names.map((name, i) => (
-        <label key={name} className={styles.channel}>
-          <span aria-hidden className="tierbinder-caption">
-            {channels.short[i]}
-          </span>
+        <label key={name} className={styles.channel} title={name}>
           <input
-            className={`tierbinder-field ${styles.channelField} font-mono`}
+            className={`${styles.bare} font-mono`}
             aria-label={name}
             inputMode="numeric"
             spellCheck={false}
@@ -474,7 +478,7 @@ function HexInput({ value, onChange }: { value: string; onChange: (color: string
   }
   return (
     <input
-      className={`tierbinder-field ${styles.hex} font-mono`}
+      className={`${styles.bare} font-mono`}
       aria-label="Hex"
       spellCheck={false}
       autoComplete="off"

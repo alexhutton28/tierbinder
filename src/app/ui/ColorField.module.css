@@ -1,7 +1,4 @@
-/* Fits #RRGGBB in the monospace font, plus its padding and border */
-.hex {
-  width: calc(7ch + 2 * var(--spacing-3) + 2 * var(--tb-line-width));
-}
+@reference "../globals.css";
 
 /* A named color: a setting's row (as .tierbinder-prop), its name muted at the left and
    the swatch at the right, all one button that opens the picker, lighting up like a list
@@ -168,33 +165,68 @@
   }
 }
 
-/* The format switch (Hex, RGB, HSL) over its field or fields, at the left */
-.formatBox {
+/* The view's name and the switch: the name muted at the left, on the switch's foot */
+.viewHead {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-2);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--spacing-3);
 }
 
-/* RGB's or HSL's three fields across the picker, 8px apart, each with its short name over
-   it */
-.channels {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-3);
+/* The color typed in: one field across the picker, its format (Hex, RGB, HSL) a text
+   button at its left edge, a hairline after it, then the hex code or three channels, each
+   after a hairline */
+.colorField {
+  display: flex;
   width: var(--tb-picker-width);
+  height: var(--tb-control-height);
+  border: var(--tb-line-width) solid var(--tb-field-border);
+  border-radius: var(--tb-radius);
+  background: var(--tb-field);
+  transition: border-color var(--duration-fade) ease-out;
+
+  &:has(input:focus-visible) {
+    border-color: var(--color-storm-600);
+  }
+}
+
+.formatButton {
+  flex: none;
+  height: 100%;
+  padding-inline: var(--spacing-3);
+  border-inline-end: var(--tb-line-width) solid var(--tb-field-border);
+  border-radius: 0;
+  font-size: var(--text-caption);
+}
+
+/* RGB's or HSL's three fields share the color field's row */
+.channels {
+  display: contents;
 }
 
 .channel {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
+  flex: 1;
   min-width: 0;
+
+  & + & {
+    border-inline-start: var(--tb-line-width) solid var(--tb-field-border);
+  }
 }
 
-.channelField {
-  width: 100%;
+/* A field inside the color field: no box of its own */
+.bare {
+  flex: 1;
   min-width: 0;
+  padding-inline: var(--spacing-3);
+  background: transparent;
+  color: var(--tb-text);
+  outline: none;
+  font-size: var(--text-field);
+
+  @variant b7 {
+    font-size: var(--text-body);
+  }
 }
 
 /* react-colorful's parts, in the design system's look: the square fills the picker's
