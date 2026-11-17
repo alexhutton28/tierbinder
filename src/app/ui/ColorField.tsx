@@ -32,7 +32,7 @@ function normalize(text: string) {
 type View = 'swatches' | 'custom';
 const VIEWS = [
   { value: 'swatches', label: 'Swatches', icon: '/grid.svg' },
-  { value: 'custom', label: 'Custom', icon: '/droplet.svg' },
+  { value: 'custom', label: 'Spectrum', icon: '/droplet.svg' },
 ] as const satisfies readonly { value: View; label: string; icon: string }[];
 
 // How the color is typed: a hex code, or its red, green and blue, or its hue, saturation

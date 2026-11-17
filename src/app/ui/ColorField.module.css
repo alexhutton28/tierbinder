@@ -191,12 +191,23 @@
   }
 }
 
+/* The format menu fills the field's height, a full-height hairline after it (its
+   Dropdown's own boxes stretched to it) */
+.colorField > :first-child,
+.colorField > :first-child > div {
+  display: flex;
+  align-items: stretch;
+}
+
+.colorField > :first-child {
+  border-inline-end: var(--tb-line-width) solid var(--tb-field-border);
+}
+
 /* (inside the field, so it outranks the button's own look) */
 .colorField .formatButton {
   flex: none;
-  height: 100%;
+  height: auto;
   padding-inline: var(--spacing-3);
-  border-inline-end: var(--tb-line-width) solid var(--tb-field-border);
   border-radius: 0;
   color: var(--tb-muted);
   font-size: var(--text-caption);
@@ -218,8 +229,19 @@
   flex: 1;
   min-width: 0;
 
+  /* Between the three numbers, a shorter hairline, 8px in from the field's top and foot,
+     so they read as parts of one value */
   & + & {
-    border-inline-start: var(--tb-line-width) solid var(--tb-field-border);
+    position: relative;
+  }
+
+  & + &::before {
+    position: absolute;
+    inset-block: var(--spacing-3);
+    inset-inline-start: 0;
+    width: var(--tb-line-width);
+    background: var(--tb-field-border);
+    content: '';
   }
 }
 
