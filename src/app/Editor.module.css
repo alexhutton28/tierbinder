@@ -527,11 +527,14 @@
   }
 }
 
-/* No padding below: the panel's own 16px top padding is the gap to the content. Its
-   scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
-   before it folds (.sideFolded) */
+/* A true header over the tab panel, which scrolls under it: 8px around the nav and a
+   hairline below, so what scrolls up disappears at the line rather than beside the nav.
+   Its scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can
+   read before it folds (.sideFolded) */
 .sideHead {
-  padding: var(--spacing-3) var(--spacing-3) 0;
+  flex: none;
+  padding: var(--spacing-3);
+  border-bottom: var(--tb-line-width) solid var(--tb-line);
   scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
 }
 
@@ -546,6 +549,7 @@
 
   & > .sideHead {
     padding-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+    border-bottom: 0;
     cursor: pointer;
   }
 }

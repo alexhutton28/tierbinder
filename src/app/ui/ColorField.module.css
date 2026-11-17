@@ -215,8 +215,11 @@
 
 /* On touch screens it takes presses 44px tall, reaching above and below the field */
 @media (pointer: coarse) {
+  /* (the field's height, not a text button's 44px, which would push its words down and
+     out of the field: the press area below gives the 44px instead) */
   .colorField .formatButton {
     position: relative;
+    min-height: 0;
   }
 
   .colorField .formatButton::after {
