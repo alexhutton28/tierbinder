@@ -897,6 +897,14 @@ export default function Editor() {
   // The sidebar's height while it folds or opens
   const foldingSideHeight =
     fold > 0 && !folded ? foldHeights.open + (foldHeights.bar - foldHeights.open) * fold : null;
+  // The header's line shows only while the tab panel under it is scrolled from its top
+  // (each tab keeping its own scroll, so its own flag)
+  const [scrolledTabs, setScrolledTabs] = React.useState<Partial<Record<Tab, boolean>>>({});
+  const panelScrolled = !!scrolledTabs[tab];
+  const onPanelScroll = (panelTab: Tab) => (e: React.UIEvent<HTMLElement>) => {
+    const scrolled = e.currentTarget.scrollTop > 0;
+    setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
+  };
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
@@ -2874,6 +2882,7 @@ export default function Editor() {
             <div
               ref={sideHeadRef}
               className={`${styles.sideHead} flex gap-2 items-center`}
+              data-scrolled={panelScrolled || undefined}
               // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
               // is the one keyboards and screen readers get)
               onClick={(e) => {
@@ -2956,6 +2965,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'add'}
+              onScroll={onPanelScroll('add')}
               className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Grows to fill the sidebar while it shows search results */}
@@ -3429,6 +3439,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
+              onScroll={onPanelScroll('customize')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
@@ -3534,6 +3545,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
+              onScroll={onPanelScroll('save')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Sections as in Customize, a hairline between them and each setting a row: the

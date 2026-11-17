@@ -528,14 +528,20 @@
 }
 
 /* A true header over the tab panel, which scrolls under it: 8px around the nav and a
-   hairline below, so what scrolls up disappears at the line rather than beside the nav.
-   Its scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can
-   read before it folds (.sideFolded) */
+   hairline below once the panel is scrolled from its top (data-scrolled), fading in, so
+   what scrolls up disappears at the line rather than beside the nav. Its
+   scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
+   before it folds (.sideFolded) */
 .sideHead {
   flex: none;
   padding: var(--spacing-3);
-  border-bottom: var(--tb-line-width) solid var(--tb-line);
+  border-bottom: var(--tb-line-width) solid transparent;
   scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+  transition: border-color var(--duration-fade) ease-out;
+
+  &[data-scrolled] {
+    border-bottom-color: var(--tb-line);
+  }
 }
 
 /* Folded (under b8): only its head, a bar of the light logo and the button that opens it,
