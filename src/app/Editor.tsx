@@ -2750,7 +2750,15 @@ export default function Editor() {
                   />
                 </div>
               )}
-              <div className="flex-1 min-w-0" hidden={folded}>
+              <div
+                className="flex-1 min-w-0"
+                hidden={folded}
+                // Folding, the nav fades out over the slide's last part, gone as it ends (then
+                // the logo fades in); opening, it fades back in over the first
+                style={
+                  fold > 0 ? { opacity: Math.min(1, (1 - fold) / (fadeShare || 1)) } : undefined
+                }
+              >
                 <RadioBar
                   label="Editor sections"
                   options={TABS}
