@@ -3,7 +3,7 @@ import { TIER_COLORS } from '../graphics/tier-list/model';
 // The color picker's Swatches: recommended colors for the board, a column per hue, each
 // from palest to deepest: red, orange, yellow, green and blue, Storm, purple and pink,
 // then Petrel. The tiers' colors are the middle of their columns,
-// their other shades mixed toward white and black; Storm and Petrel are the design
+// two shades either side of them mixed toward white and black; Storm and Petrel are the design
 // system's own shades. They're suggestions for the user's own colors
 // (see Exceptions in the design system), not interface colors.
 
@@ -11,8 +11,9 @@ export type Swatch = { name: string; color: string };
 
 // How far each shade is mixed toward white (positive) or black (negative), palest first;
 // 0 is the hue itself
-const SHADE_MIX = [0.45, 0.2, 0, -0.25];
-const SHADE_NAMES = ['Pale', 'Light', '', 'Dark'];
+// (the tiers' own colors in the middle, two lighter and two darker)
+const SHADE_MIX = [0.45, 0.2, 0, -0.25, -0.5];
+const SHADE_NAMES = ['Pale', 'Light', '', 'Dark', 'Deep'];
 
 function mix(hex: string, amount: number) {
   const toward = amount > 0 ? 255 : 0;
@@ -48,9 +49,11 @@ const COLUMNS: Swatch[][] = [
     [300, '#9cc0d4'],
     [400, '#78a5bd'],
     [600, '#466e85'],
+    [800, '#2a4352'],
   ]),
   ...TIER_HUES.slice(5, 7).map((hue, i) => shaded(hue, TIER_COLORS[i + 5])),
   fixed('Petrel', [
+    [100, '#e3e8eb'],
     [300, '#b3bec4'],
     [500, '#6c7d88'],
     [700, '#3e4b53'],
