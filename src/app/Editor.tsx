@@ -857,11 +857,20 @@ export default function Editor() {
   // Presentation mode: the sidebar folded on a phone, the board taking the page. The card
   // menu keeps only what doesn't need the sidebar (View, Add to, Remove Card).
   const presenting = sidebarFolded && !wide;
+  // Entering or leaving it changes a card's menu (and which flyout its open one is), so an
+  // open menu closes
+  const [wasPresenting, setWasPresenting] = React.useState(presenting);
+  if (wasPresenting !== presenting) {
+    setWasPresenting(presenting);
+    if (cardMenu) setCardMenu(null);
+  }
   const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0 });
   const foldSidebar = () => {
     const side = sideRef.current;
     const head = sideHeadRef.current;
-    if (!sidebarFolded && side && head) {
+    // (measured only from fully open: a reverse mid-slide keeps the last measure, not the
+    // height it's passing through)
+    if (!sidebarFolded && fold === 0 && side && head) {
       const style = getComputedStyle(head);
       // The folded bar's row: the light logo and the button, not the nav it replaces, which
       // is taller, so the slide ends at the bar's own height instead of popping down to it
@@ -2004,12 +2013,17 @@ export default function Editor() {
   // The targets a card can move to from its menu (by index in `targets`): every one, but
   // not the tray it's already in, and not the board's own for a board card on a graphic
   // whose cards have no place in a target (the blank canvas)
+  // (nor the tier it's already in)
   const moveChoices = (id: string) => {
     const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    const place = placements.find((p) => p.item.id === id);
+    const ownTier = !inTrayNow && place && 'tierIndex' in place ? place.tierIndex : -1;
     return targets
       .map((_, i) => i)
       .filter((i) =>
-        i === boardTargets.length ? !inTrayNow : inTrayNow || type.moveCardTo !== undefined
+        i === boardTargets.length
+          ? !inTrayNow
+          : i !== ownTier && (inTrayNow || type.moveCardTo !== undefined)
       );
   };
 
@@ -2111,6 +2125,8 @@ export default function Editor() {
   // Presentation mode's Add to flyout: the card moves there, and focus goes to the board,
   // not lost with the menu
   function moveFromMenu(id: string, index: number) {
+    // (gone at once, as Hide and Clear's are: the card it was on is moving away)
+    setShownMenu(null);
     setCardMenu(null);
     moveCardToTarget(id, index);
     boardBoxRef.current?.focus({ preventScroll: true });

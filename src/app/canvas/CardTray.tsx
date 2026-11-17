@@ -377,6 +377,8 @@ export default function CardTray({
         }}
         onWheel={(e) => {
           if (!maxPan) return;
+          // (a wheel takes over from an arrow's scroll)
+          cancelAnimationFrame(scrollFrame.current);
           // (Firefox reports a mouse wheel in lines, about 16 pixels each)
           const lines = e.evt.deltaMode === WheelEvent.DOM_DELTA_LINE ? WHEEL_LINE : 1;
           const delta = (e.evt.deltaX || (e.evt.shiftKey ? e.evt.deltaY : 0)) * lines;

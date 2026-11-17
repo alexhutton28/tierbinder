@@ -161,7 +161,14 @@ export default function ColorField({
     const box = viewsRef.current;
     const shown = box?.querySelector<HTMLElement>('[data-active]');
     if (!box || !shown) return;
-    box.style.height = `${shown.offsetHeight}px`;
+    const fit = () => {
+      box.style.height = `${shown.offsetHeight}px`;
+    };
+    fit();
+    // (and again if the shown view's own height changes while it's open)
+    const observer = new ResizeObserver(fit);
+    observer.observe(shown);
+    return () => observer.disconnect();
   }, [view, popup.shown]);
 
   // The picker reports every pointer move; the board (and its autosave) takes the latest
