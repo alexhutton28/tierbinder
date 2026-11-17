@@ -4,11 +4,15 @@ import React from 'react';
 import { HexColorPicker } from 'react-colorful';
 import { useAnchored, usePopup } from './anchored';
 import styles from './ColorField.module.css';
+import Segmented from './Segmented';
+import { SWATCHES, SWATCH_COLUMNS, SWATCH_ROWS } from './swatches';
 
 // A color as a swatch that opens our own picker in a popup like a dropdown's, floating over
-// the board: react-colorful's saturation and brightness square over a hue bar (restyled in
-// ColorField.module.css, its handles kept inside them), then the board's own colors to pick
-// in one click (BoardColors, given by the editor), then its hex field. With a `name`, it's a
+// the board: a switch between two views, Swatches (a grid of recommended colors, ui/swatches.ts)
+// and Custom (react-colorful's saturation and brightness square over a hue bar, restyled in
+// ColorField.module.css, its handles kept inside them), the last one used remembered on the
+// device; then the board's own colors to pick in one click (BoardColors, given by the
+// editor), then its hex field. With a `name`, it's a
 // setting's row, the name at the left and the swatch at the right, that opens it (the
 // Customize tab's colors); without, the swatch alone (a tier's, beside its name field; the
 // pen's).
@@ -26,6 +30,24 @@ function normalize(text: string) {
 }
 
 export type BoardColor = { name: string; color: string };
+
+type View = 'swatches' | 'custom';
+const VIEWS = [
+  { value: 'swatches', label: 'Swatches' },
+  { value: 'custom', label: 'Custom' },
+] as const satisfies readonly { value: View; label: string }[];
+const VIEW_KEY = 'tierbinder-color-view';
+// Swatches' columns on touch screens, where ten would be too small to tap: the hues in two
+// blocks of five
+const TOUCH_COLUMNS = 5;
+
+function savedView(): View {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'custom' ? 'custom' : 'swatches';
+  } catch {
+    return 'swatches';
+  }
+}
 
 // The board's colors (its tiers', background, border and card tray's, and white), one of
 // each, for every color field on the page
@@ -66,6 +88,13 @@ export default function ColorField({
   const boardNow = React.useContext(BoardColors);
   const [presets, setPresets] = React.useState(boardNow);
   const current = normalize(value);
+  const [view, setView] = React.useState<View>(savedView);
+  const changeView = (next: View) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {}
+  };
 
   // The picker reports every pointer move; the board (and its autosave) takes the latest
   // color once a frame
@@ -93,14 +122,17 @@ export default function ColorField({
     });
   };
 
-  // Opening focuses the square, whose arrow keys move the color, except on touch screens,
-  // where the popup itself takes focus (as the Sets popup does), so screen readers move
-  // into it and Escape closes it
+  // Opening focuses the view's own control: the swatch in use (or the first), or the square,
+  // whose arrow keys move the color; except on touch screens, where the popup itself takes
+  // focus (as the Sets popup does), so screen readers move into it and Escape closes it
   React.useEffect(() => {
     if (!popup.open) return;
-    const square = popupRef.current?.querySelector<HTMLElement>('[role="slider"]');
-    if (matchMedia('(pointer: fine)').matches && square) square.focus();
+    const start = popupRef.current?.querySelector<HTMLElement>(
+      '[data-swatches] [tabindex="0"], [role="slider"]'
+    );
+    if (matchMedia('(pointer: fine)').matches && start) start.focus();
     else popupRef.current?.focus({ preventScroll: true });
+    // Only as it opens, not when the view switches
   }, [popup.open]);
 
   return (
@@ -165,14 +197,22 @@ export default function ColorField({
           }}
           className={`tierbinder-menu dropdown tierbinder-popup tierbinder-anchored ${styles.popup} ${popup.closing ? 'closing pointer-events-none' : ''}`}
         >
-          <HexColorPicker
-            className={styles.picker}
-            color={value}
-            onChange={(color) => {
-              const next = normalize(color);
-              if (next && next !== value) pick(next);
-            }}
-          />
+          {/* Sized to its two choices, at the left */}
+          <div className="flex">
+            <Segmented compact label="Picker" value={view} options={VIEWS} onChange={changeView} />
+          </div>
+          {view === 'swatches' ? (
+            <Swatches current={current} label={label} onPick={apply} />
+          ) : (
+            <HexColorPicker
+              className={styles.picker}
+              color={value}
+              onChange={(color) => {
+                const next = normalize(color);
+                if (next && next !== value) pick(next);
+              }}
+            />
+          )}
           {presets.length > 0 && (
             <div className={styles.presetsBox}>
               <span id={`${id}-presets`} className="tierbinder-caption">
@@ -204,6 +244,90 @@ export default function ColorField({
         </div>
       )}
     </span>
+  );
+}
+
+// The Swatches view: a grid of recommended colors, a column per hue, palest at the top. A
+// radio group with one Tab stop (the color in use, else the first), the arrows moving
+// through it as laid out and Enter, Space or a click picking, which keeps the popup open.
+// The color in use is ringed.
+function Swatches({
+  current,
+  label,
+  onPick,
+}: {
+  current: string | null;
+  label: string;
+  onPick: (color: string) => void;
+}) {
+  const chosen = SWATCHES.findIndex((s) => s.color === current);
+  const [focused, setFocused] = React.useState(Math.max(0, chosen));
+  const refs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const at = (column: number, row: number) =>
+    SWATCHES.findIndex((s) => s.column === column && s.row === row);
+  const move = (index: number) => {
+    setFocused(index);
+    refs.current[index]?.focus();
+  };
+  const onKeyDown = (e: React.KeyboardEvent, i: number) => {
+    const { column, row } = SWATCHES[i];
+    const step: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, -1],
+      ArrowDown: [0, 1],
+    };
+    if (e.key in step) {
+      e.preventDefault();
+      const [dx, dy] = step[e.key];
+      const next = at(
+        Math.min(SWATCH_COLUMNS - 1, Math.max(0, column + dx)),
+        Math.min(SWATCH_ROWS - 1, Math.max(0, row + dy))
+      );
+      if (next >= 0) move(next);
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      move(e.key === 'Home' ? 0 : SWATCHES.length - 1);
+    }
+  };
+  return (
+    <div
+      role="radiogroup"
+      aria-label={`${label}: swatches`}
+      className={styles.swatches}
+      data-swatches
+    >
+      {SWATCHES.map((s, i) => (
+        <button
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          type="button"
+          role="radio"
+          aria-checked={i === chosen}
+          aria-label={s.name}
+          title={s.name}
+          tabIndex={i === (chosen >= 0 ? chosen : focused) ? 0 : -1}
+          className={styles.preset}
+          style={
+            {
+              background: s.color,
+              // Its place: as listed, or on touch screens in two blocks of five hues
+              '--column': s.column + 1,
+              '--row': s.row + 1,
+              '--touch-column': (s.column % TOUCH_COLUMNS) + 1,
+              '--touch-row': s.row + 1 + Math.floor(s.column / TOUCH_COLUMNS) * SWATCH_ROWS,
+            } as React.CSSProperties
+          }
+          onFocus={() => setFocused(i)}
+          onKeyDown={(e) => onKeyDown(e, i)}
+          onClick={() => {
+            if (s.color !== current) onPick(s.color);
+          }}
+        />
+      ))}
+    </div>
   );
 }
 

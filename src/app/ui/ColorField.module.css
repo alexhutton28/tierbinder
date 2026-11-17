@@ -124,10 +124,39 @@
   box-shadow: inset 0 0 0 var(--tb-line-width) var(--tb-field-border-hover);
 }
 
-.preset[aria-pressed='true'] {
+.preset[aria-pressed='true'],
+.preset[aria-checked='true'] {
   box-shadow:
     inset 0 0 0 calc(2 * var(--tb-line-width)) var(--tb-picker-handle),
     inset 0 0 0 calc(3 * var(--tb-line-width)) var(--tb-handle-edge);
+}
+
+/* The Swatches view: a column per hue, palest at the top, across the picker's width, 2px
+   apart; on touch screens the hues in two blocks of five (placed from ColorField.tsx), so
+   each is nearer a touch target */
+.swatches {
+  --columns: 10;
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 1fr);
+  gap: var(--spacing-1);
+  width: var(--tb-picker-width);
+
+  & > .preset {
+    grid-row: var(--row);
+    grid-column: var(--column);
+  }
+
+  @media (pointer: coarse) {
+    --columns: 5;
+
+    gap: var(--spacing-2);
+
+    & > .preset {
+      grid-row: var(--touch-row);
+      grid-column: var(--touch-column);
+    }
+  }
 }
 
 /* Its caption over the field, as Board Colors' is over theirs */
