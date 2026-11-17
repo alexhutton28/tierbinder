@@ -13,7 +13,8 @@
 
 /* Under b8 with the sidebar folded, the board takes the whole page but the sidebar's bar
    at its foot (.sideFolded): the top bar goes, and the workspace fills the rest, the board
-   centered in it, keeping the status bar's inset where the top bar was */
+   centered in it, taking the status bar's inset where the top bar was (set in Editor.tsx,
+   which slides all of it: the top bar's margin, the sidebar's height and that inset) */
 .topFolded {
   display: none;
 }
@@ -21,7 +22,6 @@
 .canvasFolded {
   flex: 1 1 auto;
   justify-content: center;
-  padding-top: calc(var(--spacing-4) + env(safe-area-inset-top));
 }
 
 .brand {
@@ -527,9 +527,12 @@
   }
 }
 
-/* No padding below: the panel's own 16px top padding is the gap to the content */
+/* No padding below: the panel's own 16px top padding is the gap to the content. Its
+   scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
+   before it folds (.sideFolded) */
 .sideHead {
   padding: var(--spacing-3) var(--spacing-3) 0;
+  scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
 }
 
 /* Folded (under b8): only its head, a bar of the light logo and the button that opens it,
@@ -542,7 +545,24 @@
   }
 
   & > .sideHead {
-    padding-block: var(--spacing-3) calc(var(--spacing-3) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+  }
+}
+
+/* The light logo fades in once the sidebar is down */
+.foldedBrand {
+  animation: folded-brand var(--duration-fade) ease-out;
+}
+
+@keyframes folded-brand {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foldedBrand {
+    animation: none;
   }
 }
 

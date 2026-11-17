@@ -818,6 +818,36 @@ export default function Editor() {
   const [sidebarFolded, setSidebarFolded] = React.useState(false);
   // The sidebar, whose height (folded, just its bar) the board leaves room for
   const sideRef = React.useRef<HTMLElement>(null);
+  const sideHeadRef = React.useRef<HTMLDivElement>(null);
+  // Folding slides (useReveal, 0 open to 1 folded): the top bar rises away, the sidebar
+  // shrinks from its open height to its bar's (measured as it starts folding), and the board
+  // grows into the room, centered; only once it's all the way down does the bar swap the
+  // nav for the logo (`folded`), and opening swaps them back first
+  const foldReveal = useReveal(sidebarFolded && !wide, wide);
+  const fold = wide ? 0 : foldReveal.value;
+  const folded = fold === 1;
+  const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0 });
+  const foldSidebar = () => {
+    const side = sideRef.current;
+    const head = sideHeadRef.current;
+    if (!sidebarFolded && side && head) {
+      const style = getComputedStyle(head);
+      setFoldHeights({
+        open: side.offsetHeight,
+        // Its head with the bar's padding below (kept as its scroll-margin-bottom, which
+        // resolves the safe area's inset to pixels)
+        bar:
+          head.offsetHeight -
+          parseFloat(style.paddingBottom) +
+          parseFloat(style.scrollMarginBottom) +
+          (side.offsetHeight - side.clientHeight),
+      });
+    }
+    setSidebarFolded((f) => !f);
+  };
+  // The sidebar's height while it folds or opens
+  const foldingSideHeight =
+    fold > 0 && !folded ? foldHeights.open + (foldHeights.bar - foldHeights.open) * fold : null;
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
@@ -1447,8 +1477,8 @@ export default function Editor() {
       const above = workspace.getBoundingClientRect().top - page.getBoundingClientRect().top;
       const outer = wide
         ? workspace.clientHeight
-        : sidebarFolded
-          ? // Folded: everything but the bar at the page's foot
+        : fold > 0
+          ? // Folded, or on the way: everything but the sidebar as it is
             page.clientHeight - (sideRef.current?.offsetHeight ?? 0) - above
           : page.clientHeight * BOARD_SHARE - above;
       const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
@@ -1468,7 +1498,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayOpen, shownTrayHeight, stageWidth, sidebarFolded]);
+  }, [wide, trayOpen, shownTrayHeight, stageWidth, fold]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -2683,7 +2713,17 @@ export default function Editor() {
           className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
           inert={viewing !== null}
         >
-          <header className={`${styles.top} ${sidebarFolded ? styles.topFolded : ''}`}>
+          <header
+            className={`${styles.top} ${folded ? styles.topFolded : ''}`}
+            // Rising away as the sidebar folds
+            style={
+              fold > 0 && !folded
+                ? {
+                    marginTop: `calc((var(--tb-top-height) + env(safe-area-inset-top)) * ${-fold})`,
+                  }
+                : undefined
+            }
+          >
             <Link href="/" className={styles.brand}>
               <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
             </Link>
@@ -2692,13 +2732,16 @@ export default function Editor() {
           <aside
             id="sidebar"
             ref={sideRef}
-            className={`${styles.side} ${sidebarFolded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+            className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+            style={
+              foldingSideHeight !== null ? { flex: 'none', height: foldingSideHeight } : undefined
+            }
           >
-            <div className={`${styles.sideHead} flex gap-2 items-center`}>
+            <div ref={sideHeadRef} className={`${styles.sideHead} flex gap-2 items-center`}>
               {/* Folded on a phone: a bar at the page's foot, the light logo at its left and
               the button to open it again at its right; the nav stays mounted, hidden */}
-              {sidebarFolded && (
-                <div className="flex flex-1 min-w-0">
+              {folded && (
+                <div className={`${styles.foldedBrand} flex flex-1 min-w-0`}>
                   <Image
                     src="/tierbinder-combined-light.svg"
                     alt="TierBinder"
@@ -2707,7 +2750,7 @@ export default function Editor() {
                   />
                 </div>
               )}
-              <div className="flex-1 min-w-0" hidden={sidebarFolded}>
+              <div className="flex-1 min-w-0" hidden={folded}>
                 <RadioBar
                   label="Editor sections"
                   options={TABS}
@@ -2740,7 +2783,7 @@ export default function Editor() {
                   aria-controls="sidebar"
                   title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
                   aria-expanded={!sidebarFolded}
-                  onClick={() => setSidebarFolded((f) => !f)}
+                  onClick={foldSidebar}
                 >
                   <span
                     aria-hidden
@@ -3408,7 +3451,13 @@ export default function Editor() {
           ref={workspaceRef}
           // With the sidebar hidden, more room at the left, so the board stays clear of the show
           // button at the bottom left
-          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${sidebarFolded ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          // Folding, it takes over the status bar's inset from the rising top bar
+          style={
+            fold > 0
+              ? { paddingTop: `calc(var(--spacing-4) + env(safe-area-inset-top) * ${fold})` }
+              : undefined
+          }
           inert={viewing !== null}
         >
           {/* Under b8 the toolbar takes the page's width, so a board narrowed to fit its height
