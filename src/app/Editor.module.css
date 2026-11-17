@@ -11,13 +11,16 @@
   background: var(--tb-top);
 }
 
-/* Under b8 with the sidebar folded, the board takes the top bar's room too; the workspace
-   keeps the status bar's inset in its place (.canvasFolded) */
+/* Under b8 with the sidebar folded, the board takes the whole page but the sidebar's bar
+   at its foot (.sideFolded): the top bar goes, and the workspace fills the rest, the board
+   centered in it, keeping the status bar's inset where the top bar was */
 .topFolded {
   display: none;
 }
 
 .canvasFolded {
+  flex: 1 1 auto;
+  justify-content: center;
   padding-top: calc(var(--spacing-4) + env(safe-area-inset-top));
 }
 
@@ -527,6 +530,20 @@
 /* No padding below: the panel's own 16px top padding is the gap to the content */
 .sideHead {
   padding: var(--spacing-3) var(--spacing-3) 0;
+}
+
+/* Folded (under b8): only its head, a bar of the light logo and the button that opens it,
+   above the home indicator */
+.sideFolded {
+  flex: none;
+
+  & > :not(.sideHead) {
+    display: none;
+  }
+
+  & > .sideHead {
+    padding-block: var(--spacing-3) calc(var(--spacing-3) + env(safe-area-inset-bottom));
+  }
 }
 
 /* Under b8, the button folding the sidebar down under a bigger board: Feather's

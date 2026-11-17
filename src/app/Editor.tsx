@@ -59,7 +59,7 @@ import { TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
-import ColorField, { BoardColors, boardColors } from './ui/ColorField';
+import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
@@ -135,9 +135,6 @@ const LONG_PRESS = 500;
 // its own: they take at most this share of the page's height (top bar included), leaving
 // the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
 const BOARD_SHARE = 0.6;
-// The same while the sidebar is collapsed on a phone (its button at the top of the
-// sidebar): the board takes most of the page, the sidebar its nav and a peek of its panel
-const BOARD_SHARE_COLLAPSED = 0.85;
 
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
@@ -819,6 +816,8 @@ export default function Editor() {
   // Under b8, the sidebar collapsed under a bigger board (and the top bar hidden), by the
   // button at the sidebar's top; a tab picked (by any means) opens it again. Not saved.
   const [sidebarFolded, setSidebarFolded] = React.useState(false);
+  // The sidebar, whose height (folded, just its bar) the board leaves room for
+  const sideRef = React.useRef<HTMLElement>(null);
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
@@ -1156,23 +1155,6 @@ export default function Editor() {
   // without them
   const targetColors = boardTargets.flatMap((t) => (t.color ? [t.color] : []));
   const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
-  // Every color field's Board Colors: the tiers', then the board's own, and white
-  const colorChoices = boardColors([
-    // Named after their tiers, on one line, or "Tier 2" for a tier with no name
-    ...boardTargets.flatMap((t, i) =>
-      t.color
-        ? [{ name: t.name.replace(/\s+/g, ' ').trim() || `Tier ${i + 1}`, color: t.color }]
-        : []
-    ),
-    { name: 'Background', color: graphic.background },
-    // Named as Customize names it
-    {
-      name: graphic.kind === 'tier-list' ? 'Tier dividers' : 'Split card border',
-      color: graphic.border,
-    },
-    { name: 'Card tray', color: graphic.tray.color },
-    { name: 'White', color: '#ffffff' },
-  ]);
   const targetIndex = Math.min(target, targets.length - 1);
   // The Add to choice stays on its target as the others come and go (a tier added or
   // removed, or put back by undo): it follows its target's id to its new place, takes the
@@ -1462,10 +1444,13 @@ export default function Editor() {
       const style = getComputedStyle(workspace);
       const room =
         workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const above = workspace.getBoundingClientRect().top - page.getBoundingClientRect().top;
       const outer = wide
         ? workspace.clientHeight
-        : page.clientHeight * (sidebarFolded ? BOARD_SHARE_COLLAPSED : BOARD_SHARE) -
-          (workspace.getBoundingClientRect().top - page.getBoundingClientRect().top);
+        : sidebarFolded
+          ? // Folded: everything but the bar at the page's foot
+            page.clientHeight - (sideRef.current?.offsetHeight ?? 0) - above
+          : page.clientHeight * BOARD_SHARE - above;
       const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       const around = board.offsetHeight - box.offsetHeight;
       // The card tray and the gap above it, when it shows
@@ -2600,7 +2585,7 @@ export default function Editor() {
     // narrow screens the column dissolves (Editor.module.css): the header stays at the top,
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
-    <BoardColors value={colorChoices}>
+    <>
       <div
         ref={pageRef}
         className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
@@ -2704,9 +2689,25 @@ export default function Editor() {
             </Link>
           </header>
           <SidebarHandle />
-          <aside id="sidebar" className={`${styles.side} flex flex-col flex-1 min-w-0 min-h-0`}>
+          <aside
+            id="sidebar"
+            ref={sideRef}
+            className={`${styles.side} ${sidebarFolded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+          >
             <div className={`${styles.sideHead} flex gap-2 items-center`}>
-              <div className="flex-1 min-w-0">
+              {/* Folded on a phone: a bar at the page's foot, the light logo at its left and
+              the button to open it again at its right; the nav stays mounted, hidden */}
+              {sidebarFolded && (
+                <div className="flex flex-1 min-w-0">
+                  <Image
+                    src="/tierbinder-combined-light.svg"
+                    alt="TierBinder"
+                    width={114}
+                    height={25}
+                  />
+                </div>
+              )}
+              <div className="flex-1 min-w-0" hidden={sidebarFolded}>
                 <RadioBar
                   label="Editor sections"
                   options={TABS}
@@ -3776,6 +3777,6 @@ export default function Editor() {
           />
         )}
       </div>
-    </BoardColors>
+    </>
   );
 }

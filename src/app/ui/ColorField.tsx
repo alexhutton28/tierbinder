@@ -11,8 +11,7 @@ import { SWATCHES, SWATCH_COLUMNS, SWATCH_ROWS } from './swatches';
 // the board: a switch between two views, Swatches (a grid of recommended colors, ui/swatches.ts)
 // and Custom (react-colorful's saturation and brightness square over a hue bar, restyled in
 // ColorField.module.css, its handles kept inside them), the last one used remembered on the
-// device; then the board's own colors to pick in one click (BoardColors, given by the
-// editor), then its hex field. With a `name`, it's a
+// device; then its hex field. With a `name`, it's a
 // setting's row, the name at the left and the swatch at the right, that opens it (the
 // Customize tab's colors); without, the swatch alone (a tier's, beside its name field; the
 // pen's).
@@ -29,17 +28,12 @@ function normalize(text: string) {
   return `#${digits.toLowerCase()}`;
 }
 
-export type BoardColor = { name: string; color: string };
-
 type View = 'swatches' | 'custom';
 const VIEWS = [
   { value: 'swatches', label: 'Swatches' },
   { value: 'custom', label: 'Custom' },
 ] as const satisfies readonly { value: View; label: string }[];
 const VIEW_KEY = 'tierbinder-color-view';
-// Swatches' columns on touch screens, where ten would be too small to tap: the hues in
-// blocks of four, so each is a 44px touch target across the picker
-const TOUCH_COLUMNS = 4;
 
 // The view in use, shared by every color field on the page (switching in one switches the
 // others) and saved on the device
@@ -66,20 +60,6 @@ function subscribeView(listener: () => void) {
   return () => viewListeners.delete(listener);
 }
 
-// The board's colors (its tiers', background, border and card tray's, and white), one of
-// each, for every color field on the page
-export const BoardColors = React.createContext<BoardColor[]>([]);
-
-export function boardColors(colors: BoardColor[]): BoardColor[] {
-  const seen = new Set<string>();
-  return colors.flatMap(({ name, color }) => {
-    const hex = normalize(color);
-    if (!hex || seen.has(hex)) return [];
-    seen.add(hex);
-    return [{ name, color: hex }];
-  });
-}
-
 export default function ColorField({
   value,
   onChange,
@@ -100,10 +80,6 @@ export default function ColorField({
   // Placed from the swatch, not a named row (as wide as the sidebar, which would stretch
   // the popup), so every picker opens the same size from its swatch
   useAnchored(popup.shown, name ? swatchRef : buttonRef, popupRef);
-  // The board's colors as they were when the picker opened, so they hold still while a
-  // drag changes this field's own (which stays one click away)
-  const boardNow = React.useContext(BoardColors);
-  const [presets, setPresets] = React.useState(boardNow);
   const current = normalize(value);
   const view = React.useSyncExternalStore(subscribeView, currentView, () => 'swatches' as View);
   const changeView = setSharedView;
@@ -169,7 +145,6 @@ export default function ColorField({
         aria-expanded={popup.open}
         aria-controls={popup.shown ? `${id}-picker` : undefined}
         onClick={() => {
-          if (!popup.open) setPresets(boardNow);
           popup.setOpen(!popup.open);
         }}
       >
@@ -224,30 +199,6 @@ export default function ColorField({
                 if (next && next !== value) pick(next);
               }}
             />
-          )}
-          {presets.length > 0 && (
-            <div className={styles.presetsBox}>
-              <span id={`${id}-presets`} className="tierbinder-caption">
-                Board Colors
-              </span>
-              <div role="group" aria-labelledby={`${id}-presets`} className={styles.presets}>
-                {/* Two tiers can share a name; the list holds still while it's open */}
-                {presets.map((p, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={styles.preset}
-                    style={{ background: p.color }}
-                    aria-label={p.name}
-                    title={p.name}
-                    aria-pressed={p.color === current}
-                    onClick={() => {
-                      if (p.color !== current) apply(p.color);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
           )}
           <label className={styles.hexBox}>
             <span className="tierbinder-caption">Hex</span>
@@ -308,9 +259,7 @@ function Swatches({
       role="radiogroup"
       aria-label={`${label}: swatches`}
       className={styles.swatches}
-      style={
-        { '--columns': SWATCH_COLUMNS, '--touch-columns': TOUCH_COLUMNS } as React.CSSProperties
-      }
+      style={{ '--columns': SWATCH_COLUMNS } as React.CSSProperties}
       data-swatches
     >
       {SWATCHES.map((s, i) => (
@@ -329,11 +278,9 @@ function Swatches({
           style={
             {
               background: s.color,
-              // Its place: as listed, or on touch screens in blocks of TOUCH_COLUMNS hues
+              // Its place: a column per hue, palest at the top
               '--column': s.column + 1,
               '--row': s.row + 1,
-              '--touch-column': (s.column % TOUCH_COLUMNS) + 1,
-              '--touch-row': s.row + 1 + Math.floor(s.column / TOUCH_COLUMNS) * SWATCH_ROWS,
             } as React.CSSProperties
           }
           onFocus={() => setFocused(i)}
@@ -352,7 +299,7 @@ function Swatches({
 function HexInput({ value, onChange }: { value: string; onChange: (color: string) => void }) {
   const [draft, setDraft] = React.useState(value);
   const [shown, setShown] = React.useState(value);
-  // Follow changes from outside (the picker, a board color) without losing typing
+  // Follow changes from outside (the picker, a swatch) without losing typing
   if (value !== shown) {
     setShown(value);
     setDraft(value);
