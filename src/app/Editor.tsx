@@ -2039,7 +2039,8 @@ export default function Editor() {
     }
     const items = split
       ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
-      : ['View', 'Remove card', 'Replace card', 'Make split card'];
+      : // (Replace Card is out for now; a split card's halves can still be replaced)
+        ['View', 'Remove card', 'Make split card'];
     // A card in the tray can clear the whole tray, last (not the tray's only card, where
     // Remove Card does the same)
     const inTray = trayPlacements.some((p) => p.item.id === id);
@@ -2144,7 +2145,7 @@ export default function Editor() {
       if (item) setViewing({ id, faces: item.split ? [faceOf(item), item.split] : [faceOf(item)] });
     }
     if (label === 'Remove card') removeCard(id);
-    if (label === 'Replace card' || label === 'Replace top half') startPicking(id, 'top');
+    if (label === 'Replace top half') startPicking(id, 'top');
     if (label === 'Make split card' || label === 'Replace bottom half') startPicking(id, 'bottom');
     if (label === 'Swap halves') {
       updateCard(id, (i) => (i.split ? { ...i, ...i.split, split: faceOf(i) } : i));
