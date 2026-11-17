@@ -1,6 +1,7 @@
 // The blank canvas graphic: cards placed anywhere on a plain background.
 
-import type { CardItem } from '../../cards';
+import { newId, parseCardItem, type CardItem } from '../../cards';
+import { parseColor } from '../../color';
 import { cardBox } from '../../canvas/CardNode';
 import {
   BOARD_HEIGHT,
@@ -61,13 +62,15 @@ const DEFAULT_DRAWING = {
 // A step darker than the white background: Petrel 100 (design/theme.css; canvas colors
 // can't read the CSS variables)
 const DEFAULT_TRAY_COLOR = '#e3e8eb';
+const DEFAULT_BACKGROUND = '#ffffff';
+const DEFAULT_BORDER = '#16303c';
 
 export function defaultBlankCanvas(): BlankCanvas {
   return {
     kind: 'blank',
     shape: DEFAULT_SHAPE,
-    background: '#ffffff',
-    border: '#16303c',
+    background: DEFAULT_BACKGROUND,
+    border: DEFAULT_BORDER,
     cardWidth: CARD_WIDTH,
     topHalf: false,
     items: [],
@@ -166,33 +169,65 @@ export function setCardShape(
   return { ...next, items: next.items.map((i) => ({ ...i, ...clamp(next, i, i.x, i.y) })) };
 }
 
+// A pen or eraser width from a saved or shared board, in range
+const parseWidth = (value: unknown, fallback: number) =>
+  typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(MIN_STROKE_WIDTH, Math.min(MAX_STROKE_WIDTH, value))
+    : fallback;
+
+// A stroke from a saved or shared board, or none: a tool, and an even run of numbers
+function parseStroke(value: unknown): Stroke[] {
+  const stroke = value as Partial<Stroke> | null | undefined;
+  if (
+    (stroke?.tool !== 'pen' && stroke?.tool !== 'eraser') ||
+    !Array.isArray(stroke.points) ||
+    stroke.points.length % 2 !== 0 ||
+    !stroke.points.every(Number.isFinite)
+  )
+    return [];
+  return [
+    {
+      id: typeof stroke.id === 'string' && stroke.id ? stroke.id : newId(),
+      tool: stroke.tool,
+      color: parseColor(stroke.color, DEFAULT_DRAWING.penColor),
+      width: parseWidth(stroke.width, DEFAULT_DRAWING.penWidth),
+      points: stroke.points,
+    },
+  ];
+}
+
 export function parseBlankCanvas(value: unknown): BlankCanvas | null {
   const canvas = value as BlankCanvas | null;
-  if (
-    canvas?.kind !== 'blank' ||
-    typeof canvas.background !== 'string' ||
-    typeof canvas.border !== 'string' ||
-    !Array.isArray(canvas.items) ||
-    !canvas.items.every((i) => typeof i.x === 'number' && typeof i.y === 'number')
-  ) {
+  if (canvas?.kind !== 'blank' || !Array.isArray(canvas.items)) {
     return null;
   }
-  // Settings added after blank canvases first shipped take their defaults
-  return {
-    ...canvas,
-    shape: parseShape(canvas.shape),
-    cardWidth:
-      typeof canvas.cardWidth === 'number'
-        ? Math.max(MIN_CARD_WIDTH, Math.min(MAX_CARD_WIDTH, canvas.cardWidth))
-        : CARD_WIDTH,
-    topHalf: canvas.topHalf === true,
-    strokes: Array.isArray(canvas.strokes)
-      ? canvas.strokes.filter((s) => Array.isArray(s?.points))
-      : DEFAULT_DRAWING.strokes,
-    penColor: typeof canvas.penColor === 'string' ? canvas.penColor : DEFAULT_DRAWING.penColor,
-    penWidth: typeof canvas.penWidth === 'number' ? canvas.penWidth : DEFAULT_DRAWING.penWidth,
-    eraserWidth:
-      typeof canvas.eraserWidth === 'number' ? canvas.eraserWidth : DEFAULT_DRAWING.eraserWidth,
-    tray: parseTray(canvas.tray, DEFAULT_TRAY_COLOR),
-  };
+  // Settings added after blank canvases first shipped take their defaults. Only what a
+  // canvas holds is kept, each card and stroke checked (a shared board comes from anywhere),
+  // and its cards moved onto the board and their size capped to it, as a new shape does.
+  return setCardShape(
+    {
+      kind: 'blank',
+      shape: parseShape(canvas.shape),
+      background: parseColor(canvas.background, DEFAULT_BACKGROUND),
+      border: parseColor(canvas.border, DEFAULT_BORDER),
+      items: canvas.items.flatMap((value) => {
+        const item = parseCardItem(value);
+        const { x, y } = value as Partial<Point>;
+        return item && Number.isFinite(x) && Number.isFinite(y) ? [{ ...item, x: x!, y: y! }] : [];
+      }),
+      cardWidth:
+        typeof canvas.cardWidth === 'number'
+          ? Math.max(MIN_CARD_WIDTH, Math.min(MAX_CARD_WIDTH, canvas.cardWidth))
+          : CARD_WIDTH,
+      topHalf: canvas.topHalf === true,
+      strokes: Array.isArray(canvas.strokes)
+        ? canvas.strokes.flatMap(parseStroke)
+        : DEFAULT_DRAWING.strokes,
+      penColor: parseColor(canvas.penColor, DEFAULT_DRAWING.penColor),
+      penWidth: parseWidth(canvas.penWidth, DEFAULT_DRAWING.penWidth),
+      eraserWidth: parseWidth(canvas.eraserWidth, DEFAULT_DRAWING.eraserWidth),
+      tray: parseTray(canvas.tray, DEFAULT_TRAY_COLOR),
+    },
+    {}
+  );
 }

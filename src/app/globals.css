@@ -100,6 +100,10 @@ body {
 
   /* The smallest comfortable thing to tap (Apple's guideline) */
   --tb-touch-target: 44px;
+
+  /* A dialog's width (the shared-board dialog): chosen by eye, room for its question on
+     two lines and its buttons in a row */
+  --tb-dialog-width: 352px;
   --tb-swatch: 24px;
 
   /* A settings toggle's track (ui/Toggle.tsx): as tall as an icon, wide enough for its

@@ -331,6 +331,44 @@
   }
 }
 
+/* Feather's link, before Copy Link's words */
+.linkIcon {
+  flex: none;
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/link.svg') center / contain no-repeat;
+}
+
+/* The shared-board dialog: a popup in the middle of the window over the dimmed page,
+   --tb-dialog-width wide (narrower on a phone, 16px from its edges), 16px inside it */
+.sharedDialog {
+  width: min(var(--tb-dialog-width), 100% - 2 * var(--spacing-4));
+  max-width: none;
+  margin: auto;
+  padding: var(--spacing-4);
+  overflow: auto;
+  color: var(--tb-text);
+}
+
+/* It and the dimming fade in, as View's do; answering closes it at once (the board it
+   opens is the answer to see) */
+.sharedDialog[open],
+.sharedDialog[open]::backdrop {
+  animation: view-fade var(--duration-fade) ease-out;
+}
+
+.sharedDialog::backdrop {
+  background: var(--tb-view-backdrop);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sharedDialog[open],
+  .sharedDialog[open]::backdrop {
+    animation: none;
+  }
+}
+
 .sidebarIcon {
   width: var(--tb-icon);
   height: var(--tb-icon);

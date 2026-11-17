@@ -49,6 +49,7 @@ import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphic
 import { DEFAULT_TIERS } from './graphics/tier-list/model';
 import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
+import { MAX_SHARED_CARDS, isShareHash, readShareHash, shareLink, sharedCards } from './share';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
@@ -69,6 +70,9 @@ import { titleCase, cardCount } from './text';
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+// The most characters a Discord message holds: a longer share link gets a note that it won't
+// fit in one
+const DISCORD_MESSAGE_LIMIT = 2000;
 
 // The Add to picker's swatch while a split card is being made: a white card
 const SPLIT_SWATCH = '#ffffff';
@@ -1191,6 +1195,127 @@ export default function Editor() {
     setPicking(null);
     setTarget(0);
     setTool(DEFAULT_TOOL);
+  }
+
+  // Shows a shared board in place of this device's board of its type, which it replaces,
+  // with a toast offering Undo (⌘Z too, while the visit lasts). Switching types isn't a
+  // step, so it switches first, on its own, and then replaces the board: a step undo can
+  // take back.
+  function openShared(shared: Graphic) {
+    // (making that type's board if it's never been used here, as showBoard does)
+    if (docRef.current.kind !== shared.kind)
+      flushSync(() =>
+        setDoc((d) => ({
+          ...d,
+          kind: shared.kind,
+          graphics: {
+            ...d.graphics,
+            [shared.kind]: d.graphics[shared.kind] ?? typeOf(shared.kind).create(),
+          },
+        }))
+      );
+    setDoc((d) => ({ ...d, graphics: { ...d.graphics, [shared.kind]: shared } }));
+    setSelectedId(null);
+    setCardMenu(null);
+    setPicking(null);
+    setTarget(0);
+    setTool(DEFAULT_TOOL);
+    showToast('Shared Board Opened', { undo: true });
+  }
+
+  // A share link opened, waiting on whether to replace this device's board of its type
+  // with it (the dialog), until it's answered
+  const [sharedBoard, setSharedBoard] = React.useState<Graphic | null>(null);
+  const sharedDialogRef = React.useRef<HTMLDialogElement>(null);
+  // The link's done with once it's answered (or opened, or unreadable): a reload doesn't
+  // ask again
+  const clearShareHash = () => {
+    if (isShareHash(window.location.hash))
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+  };
+  // A share link opens on load, or when one is pasted into this tab (only its hash changes).
+  // It opens at once when this device's board of its type has nothing on it; otherwise it
+  // asks first.
+  React.useEffect(() => {
+    let current = true;
+    // Each read's number: a slower earlier one (two links pasted quickly) is dropped
+    let reads = 0;
+    const check = async () => {
+      if (!isShareHash(window.location.hash)) return;
+      const read = ++reads;
+      const shared = await readShareHash(window.location.hash);
+      if (!current || read !== reads) return;
+      if (!shared) {
+        clearShareHash();
+        showToast("Couldn't Open This Link");
+        return;
+      }
+      const mine = docRef.current.graphics[shared.kind];
+      if (!mine || (!typeOf(mine.kind).hasContents(mine) && !mine.tray.items.length)) {
+        clearShareHash();
+        openShared(shared);
+      } else {
+        // The dialog's modal, and View would keep its keys
+        setViewing(null);
+        setSharedBoard(shared);
+      }
+    };
+    check();
+    window.addEventListener('hashchange', check);
+    return () => {
+      current = false;
+      window.removeEventListener('hashchange', check);
+    };
+    // Once, on load; openShared and showToast only set state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  React.useEffect(() => {
+    const dialog = sharedDialogRef.current;
+    if (!sharedBoard || !dialog) return;
+    if (!dialog.open) dialog.showModal();
+    // It's modal: the page's shortcuts (Delete, ⌘Z, Ctrl+\) are on the window, so keys
+    // stop here even when focus has fallen to the page's body, as View's do. Escape still
+    // reaches the dialog itself (it's the dialog's own cancel).
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.target instanceof Node && dialog.contains(e.target))) e.stopImmediatePropagation();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [sharedBoard]);
+  // Either way focus goes to the board, as it does when View closes
+  const answerShared = (open: boolean) => {
+    sharedDialogRef.current?.close();
+    clearShareHash();
+    if (open && sharedBoard) openShared(sharedBoard);
+    setSharedBoard(null);
+    boardBoxRef.current?.focus({ preventScroll: true });
+  };
+
+  // Copies a link to the board showing, card tray and all
+  // (one too big for a link to open isn't made). The clipboard gets the link as a promise
+  // inside the click, since Safari refuses a write made after an await.
+  async function copyLink() {
+    if (sharedCards(graphic) > MAX_SHARED_CARDS) {
+      showToast(`Too Many Cards to Share (${MAX_SHARED_CARDS} at Most)`);
+      return;
+    }
+    const link = shareLink(graphic);
+    try {
+      if (typeof ClipboardItem === 'undefined') await navigator.clipboard.writeText(await link);
+      else
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': link.then((text) => new Blob([text], { type: 'text/plain' })),
+          }),
+        ]);
+      showToast(
+        (await link).length > DISCORD_MESSAGE_LIMIT
+          ? 'Link Copied\nToo Long for a Discord Message'
+          : 'Link Copied'
+      );
+    } catch {
+      showToast("Couldn't Copy the Link");
+    }
   }
 
   // Applies a placed card, or shows why it couldn't be placed
@@ -2963,8 +3088,10 @@ export default function Editor() {
               hidden={tab !== 'save'}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
             >
-              {/* Sections as in Add Cards and Customize; its buttons act on the image, so they
-              sit in its section, as Import does in Advanced */}
+              {/* Sections as in Customize, a hairline between them and each setting a row: the
+              image (its size and format, whether the card tray goes in it, and exporting
+              or copying it), then the share link. Each section's buttons act on it, so they
+              sit in it, as Import does in Advanced. */}
               <div className="flex flex-col gap-3">
                 <h3 className="tierbinder-heading">Image</h3>
                 <div className="tierbinder-prop">
@@ -2988,6 +3115,19 @@ export default function Editor() {
                   </Button>
                   <Button onClick={copyPng} disabled={busy}>
                     Copy PNG
+                  </Button>
+                </div>
+              </div>
+              {/* A link that opens this board, card tray and all, on anyone's device */}
+              <div className="flex flex-col gap-3">
+                <h3 className="tierbinder-heading">Link</h3>
+                <p className="text-(--tb-muted) text-pretty">
+                  Opens this board and its card tray for anyone you send it to.
+                </p>
+                <div className="flex">
+                  <Button onClick={copyLink} className="flex gap-2 items-center">
+                    <span aria-hidden className={styles.linkIcon} />
+                    Copy Link
                   </Button>
                 </div>
               </div>
@@ -3273,6 +3413,41 @@ export default function Editor() {
             </div>
           </div>
         )}
+
+        {/* A share link opened over a board with something on it: replace that board with
+            the shared one, or keep it. A modal dialog (the page behind it is inert);
+            Escape keeps theirs. Keys stop at it, so none reach the board. */}
+        <dialog
+          ref={sharedDialogRef}
+          aria-labelledby="shared-title"
+          aria-describedby="shared-description"
+          className={`${styles.sharedDialog} tierbinder-popup`}
+          onCancel={(e) => {
+            e.preventDefault();
+            answerShared(false);
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+          // However it closes, nothing's left waiting on it
+          onClose={() => setSharedBoard(null)}
+        >
+          {sharedBoard && (
+            <div className="flex flex-col gap-4">
+              <h2 id="shared-title" className="tierbinder-heading">
+                Open Shared {typeOf(sharedBoard.kind).label}?
+              </h2>
+              <p id="shared-description" className="text-(--tb-muted)">
+                It replaces the {typeOf(sharedBoard.kind).label.toLowerCase()} on this device, card
+                tray and all.
+              </p>
+              <div className="flex flex-wrap gap-3 justify-end">
+                <Button onClick={() => answerShared(false)}>Keep Mine</Button>
+                <Button variant="primary" onClick={() => answerShared(true)}>
+                  Open Shared Board
+                </Button>
+              </div>
+            </div>
+          )}
+        </dialog>
 
         {shownView && (
           <div

@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Figtree, Inter } from 'next/font/google';
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { ReactNode } from 'react';
 import './globals.css';
+import Measure from './Measure';
 
 // Tier labels: Inter Black
 const inter = Inter({
@@ -39,8 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <main className="flex justify-center items-start overflow-y-auto h-dvh pb-[env(safe-area-inset-bottom)]">
           {children}
         </main>
-        <Analytics />
-        <SpeedInsights />
+        <Measure />
       </body>
     </html>
   );

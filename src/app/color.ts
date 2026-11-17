@@ -4,6 +4,13 @@
 // can't reach: canvas text, and SVG checkmarks used as backgrounds
 export const PETREL_950 = '#12171a';
 
+// A color from a saved or shared board: only #rrggbb (all the picker writes) is kept,
+// anything else is `fallback`. Colors reach CSS backgrounds, so a link can't slip in a
+// url() that loads from another host.
+export function parseColor(value: unknown, fallback: string) {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
 // WCAG's relative luminance of a #rrggbb color
 export function luminance(hex: string) {
   const [r, g, b] = [1, 3, 5].map((i) => {

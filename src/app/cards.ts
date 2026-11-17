@@ -25,6 +25,37 @@ export function faceOf({ name, set, number, image }: CardFace): CardFace {
   return { name, set, number, image };
 }
 
+const isText = (value: unknown): value is string => typeof value === 'string';
+
+// A card face from a saved or shared board, or null when it isn't one: a name and an image
+// are required, its set and number kept when they're text
+export function parseCardFace(value: unknown): CardFace | null {
+  const face = value as Partial<CardFace> | null | undefined;
+  if (!isText(face?.name) || !isText(face.image)) return null;
+  return {
+    name: face.name,
+    ...(isText(face.set) && { set: face.set }),
+    ...(isText(face.number) && { number: face.number }),
+    image: face.image,
+  };
+}
+
+// A card on a board, or null: its face, its bottom half's when it's a split card (both must
+// parse), and its id, or a new one (a shared board's cards travel without theirs)
+export function parseCardItem(value: unknown): CardItem | null {
+  const face = parseCardFace(value);
+  if (!face) return null;
+  const item = value as Partial<CardItem>;
+  const split = item.split === undefined ? undefined : parseCardFace(item.split);
+  if (split === null) return null;
+  return {
+    ...face,
+    id: isText(item.id) && item.id ? item.id : newId(),
+    kind: 'card',
+    ...(split && { split }),
+  };
+}
+
 // Ids for cards and the other parts of a document
 export function newId() {
   return Math.random().toString(36).slice(2, 10);
