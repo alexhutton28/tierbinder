@@ -41,7 +41,7 @@ export default function TierListCanvas({
     const stage = e.target.getStage();
     const pointer = stage?.getPointerPosition();
     if (!pointer || e.target.findAncestor('.card')) return;
-    onPickTarget(tierAt(list, pointer.y / stage!.scaleY()));
+    onPickTarget(tierAt(list, pointer.y / stage!.scaleY()), e.target.hasName('background'));
   };
 
   return (

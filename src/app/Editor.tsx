@@ -1832,8 +1832,8 @@ export default function Editor() {
   // A tier (or the card tray, the last target) clicked on the board: it's the Add to choice
   // from then on, and with a card selected, the card moves to its end and stays selected.
   // The blank canvas's cards have no place in a target, so they only move into the tray.
-  function pickTargetOnBoard(index: number) {
-    const id = pressSelection.current;
+  function pickTargetOnBoard(index: number, emptySpace: boolean) {
+    const id = emptySpace ? pressSelection.current : null;
     pressSelection.current = null;
     setTarget(index);
     const place = id ? placements.find((p) => p.item.id === id) : undefined;
@@ -3426,7 +3426,7 @@ export default function Editor() {
                   onCardDrop={boardCardDrop}
                   cardDragWidth={cardDragWidth}
                   arriving={arriving}
-                  onPickTarget={(i) => pickTargetOnBoard(i)}
+                  onPickTarget={(i, emptySpace) => pickTargetOnBoard(i, emptySpace)}
                   selectedId={selectedId}
                   onEditSetting={(key) => {
                     setTab('customize');
@@ -3447,7 +3447,7 @@ export default function Editor() {
                     onSelect={setSelectedId}
                     onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                     onCardDrop={trayCardDrop}
-                    onPick={() => pickTargetOnBoard(boardTargets.length)}
+                    onPick={() => pickTargetOnBoard(boardTargets.length, true)}
                     selectedId={selectedId}
                     oneRow={oneRowTray}
                     pan={trayPan}

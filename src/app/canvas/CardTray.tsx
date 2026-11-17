@@ -158,15 +158,18 @@ export default function CardTray({
   const maxPan = oneRow ? Math.max(0, trayRowWidth(tray.items.length) - width) : 0;
   const clampPan = (next: number) => Math.min(maxPan, Math.max(0, next));
 
-  // A touch in the one-row tray: once it has moved TOUCH_SLOP, sideways pans the tray and
-  // up or down drags the card it started on (cards don't start their own drags there, or a
-  // swipe along the row would pick one up). A tap that panned doesn't open a card's menu.
+  // A touch in the one-row tray on a touch screen: once it has moved TOUCH_SLOP, sideways
+  // pans the tray and up or down drags the card it started on (cards don't start their own
+  // drags there, or a swipe along the row would pick one up); a pen or mouse there drags
+  // the card either way. A tap that panned doesn't open a card's menu.
   const gesture = React.useRef<{
     id: number;
     x: number;
     y: number;
     pan: number;
     card: Konva.Node | null;
+    // Only a finger pans; a pen or mouse past the slop drags the card in any direction
+    pans: boolean;
     mode: 'wait' | 'pan' | 'done';
   } | null>(null);
   const panned = React.useRef(false);
@@ -184,7 +187,7 @@ export default function CardTray({
       const dx = e.clientX - g.x;
       const dy = e.clientY - g.y;
       if (g.mode === 'wait' && Math.hypot(dx, dy) > TOUCH_SLOP) {
-        if (Math.abs(dx) > Math.abs(dy)) {
+        if (g.pans && Math.abs(dx) > Math.abs(dy)) {
           g.mode = 'pan';
           panned.current = true;
         } else {
@@ -234,13 +237,14 @@ export default function CardTray({
         y={top}
         onPointerDown={(e) => {
           panned.current = false;
-          if (!touchPans || e.evt.pointerType !== 'touch') return;
+          if (!touchPans) return;
           gesture.current = {
             id: e.evt.pointerId,
             x: e.evt.clientX,
             y: e.evt.clientY,
             pan,
             card: e.target.findAncestor('.card') ?? null,
+            pans: e.evt.pointerType === 'touch',
             mode: 'wait',
           };
         }}

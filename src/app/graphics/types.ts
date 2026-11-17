@@ -38,7 +38,9 @@ export type CanvasProps<G> = {
   arriving: ReadonlySet<string>;
   // One of `targets` was clicked, making it where the next search result goes (and moving
   // the selected card there, through `moveCardTo`)
-  onPickTarget: (index: number) => void;
+  // `emptySpace`: pressed on nothing but the board (a tier's empty space), not a label,
+  // which only picks the target
+  onPickTarget: (index: number, emptySpace: boolean) => void;
   // The selected card, drawn last (over the others: `selectedLast`)
   selectedId: string | null;
   // Opens the Customize tab and focuses one of the graphic's settings (its own key)
