@@ -2553,11 +2553,14 @@ export default function Editor() {
                 label="Editor sections"
                 options={TABS}
                 value={tab}
-                onChange={(next) => {
-                  // Add Cards clicked while it's showing: straight to the search
-                  // (not on touch screens, where it would bring up the keyboard over the page)
-                  if (next === 'add' && tab === 'add' && !matchMedia('(pointer: coarse)').matches) {
+                onChange={(next, clicked) => {
+                  // Add Cards clicked or tapped: straight to the search, showing its panel
+                  // first (in this click, so a phone brings up its keyboard). The arrow
+                  // keys only move between tabs.
+                  if (next === 'add' && clicked) {
+                    flushSync(() => setTab(next));
                     searchInputRef.current?.focus();
+                    return;
                   }
                   setTab(next);
                 }}

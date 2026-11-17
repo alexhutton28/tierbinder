@@ -17,7 +17,8 @@ type Props<T extends string> = {
   label: string;
   options: readonly Option<T>[];
   value: T;
-  onChange: (value: T) => void;
+  // `clicked`: picked with a click or tap, not moved to with the arrow keys
+  onChange: (value: T, clicked: boolean) => void;
   // The width the bar needs to show every label, measured from its hidden copy (in whole
   // px, as the mode is chosen with), and again whenever that changes (as when the font
   // loads)
@@ -147,7 +148,7 @@ export default function RadioBar<T extends string>({
     const at = options.findIndex((option) => option.value === value);
     const step = e.key === 'ArrowRight' ? 1 : -1;
     const next = options[(at + step + options.length) % options.length];
-    onChange(next.value);
+    onChange(next.value, false);
     wordRefs.current.get(next.value)?.closest('button')?.focus();
   };
 
@@ -209,7 +210,7 @@ export default function RadioBar<T extends string>({
                 ? option.label
                 : undefined
             }
-            onClick={() => onChange(option.value)}
+            onClick={() => onChange(option.value, true)}
           >
             <span
               ref={(el) => {
