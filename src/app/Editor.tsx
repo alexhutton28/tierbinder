@@ -836,13 +836,17 @@ export default function Editor() {
     const head = sideHeadRef.current;
     if (!sidebarFolded && side && head) {
       const style = getComputedStyle(head);
+      // The folded bar's row: the light logo and the button, not the nav it replaces, which
+      // is taller, so the slide ends at the bar's own height instead of popping down to it
+      const button = head.querySelector<HTMLElement>(`.${styles.foldButton}`);
+      const row = Math.max(LOGO_HEIGHT, button?.offsetHeight ?? 0);
       setFoldHeights({
         open: side.offsetHeight,
-        // Its head with the bar's padding below (kept as its scroll-margin-bottom, which
-        // resolves the safe area's inset to pixels)
+        // The row with its padding above, and the bar's below (kept as its
+        // scroll-margin-bottom, which resolves the safe area's inset to pixels)
         bar:
-          head.offsetHeight -
-          parseFloat(style.paddingBottom) +
+          parseFloat(style.paddingTop) +
+          row +
           parseFloat(style.scrollMarginBottom) +
           (side.offsetHeight - side.clientHeight),
       });
