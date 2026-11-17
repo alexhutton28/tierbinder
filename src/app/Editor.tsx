@@ -136,6 +136,10 @@ const LONG_PRESS = 500;
 // the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
 const BOARD_SHARE = 0.6;
 
+// The search's sort button (newest or oldest first), hidden for now to keep the search row
+// clear on phones; results stay newest first
+const SORT_BUTTON = false;
+
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
 
@@ -2921,8 +2925,9 @@ export default function Editor() {
                       />
                     </div>
                   )}
-                  {/* Flips the order: newest or oldest set first, and each set's numbers */}
-                  {searchShown && (
+                  {/* Flips the order: newest or oldest set first, and each set's numbers
+                  (hidden for now: SORT_BUTTON) */}
+                  {SORT_BUTTON && searchShown && (
                     <Button
                       type="button"
                       variant="icon"
