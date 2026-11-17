@@ -37,9 +37,9 @@ const VIEWS = [
   { value: 'custom', label: 'Custom' },
 ] as const satisfies readonly { value: View; label: string }[];
 const VIEW_KEY = 'tierbinder-color-view';
-// Swatches' columns on touch screens, where ten would be too small to tap: the hues in two
-// blocks of five
-const TOUCH_COLUMNS = 5;
+// Swatches' columns on touch screens, where ten would be too small to tap: the hues in
+// blocks of four, so each is a 44px touch target across the picker
+const TOUCH_COLUMNS = 4;
 
 function savedView(): View {
   try {
@@ -295,6 +295,9 @@ function Swatches({
       role="radiogroup"
       aria-label={`${label}: swatches`}
       className={styles.swatches}
+      style={
+        { '--columns': SWATCH_COLUMNS, '--touch-columns': TOUCH_COLUMNS } as React.CSSProperties
+      }
       data-swatches
     >
       {SWATCHES.map((s, i) => (

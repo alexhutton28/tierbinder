@@ -132,11 +132,9 @@
 }
 
 /* The Swatches view: a column per hue, palest at the top, across the picker's width, 2px
-   apart; on touch screens the hues in two blocks of five (placed from ColorField.tsx), so
-   each is nearer a touch target */
+   apart; on touch screens the hues in blocks of four, 4px apart, so each is a touch target
+   (the counts and places come from ColorField.tsx: --columns, --touch-columns) */
 .swatches {
-  --columns: 10;
-
   display: grid;
   grid-template-columns: repeat(var(--columns), 1fr);
   gap: var(--spacing-1);
@@ -148,8 +146,7 @@
   }
 
   @media (pointer: coarse) {
-    --columns: 5;
-
+    grid-template-columns: repeat(var(--touch-columns), 1fr);
     gap: var(--spacing-2);
 
     & > .preset {

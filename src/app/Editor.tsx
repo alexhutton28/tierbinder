@@ -2662,8 +2662,8 @@ export default function Editor() {
             </Link>
           </header>
           <SidebarHandle />
-          <aside className={`${styles.side} flex flex-col flex-1 min-w-0 min-h-0`}>
-            <div className={`${styles.sideHead} flex gap-2 items-start`}>
+          <aside id="sidebar" className={`${styles.side} flex flex-col flex-1 min-w-0 min-h-0`}>
+            <div className={`${styles.sideHead} flex gap-2 items-center`}>
               <div className="flex-1 min-w-0">
                 <RadioBar
                   label="Editor sections"
@@ -2692,7 +2692,9 @@ export default function Editor() {
                   type="button"
                   variant="quiet"
                   className={styles.foldButton}
-                  aria-label={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
+                  // One name; aria-expanded says which way it is
+                  aria-label="Sidebar"
+                  aria-controls="sidebar"
                   title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
                   aria-expanded={!sidebarFolded}
                   onClick={() => setSidebarFolded((f) => !f)}

@@ -142,6 +142,8 @@ body {
   --tb-thumb-width: 80px;
   --tb-thumb-small: 60px;
   --tb-thumb-large: 120px;
+
+  /* 111px tall at 80 wide, picked by eye with the width (a little under the cards' 1.4) */
   --tb-thumb-ratio: calc(111 / 80);
   --tb-thumb-height: calc(var(--tb-thumb-width) * var(--tb-thumb-ratio));
 

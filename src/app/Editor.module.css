@@ -535,6 +535,19 @@
   flex: none;
 }
 
+/* On touch screens it takes presses as a 44px target around it, as a tier's remove does */
+@media (pointer: coarse) {
+  .foldButton {
+    position: relative;
+  }
+
+  .foldButton::after {
+    position: absolute;
+    inset: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
 .foldIcon {
   width: var(--tb-icon);
   height: var(--tb-icon);
