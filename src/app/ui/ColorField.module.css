@@ -75,8 +75,11 @@
 }
 
 /* 16px around the picker, its parts 8px apart, as the Sets popup has; placed by
-   .tierbinder-anchored, and scrolling if the window is too short for it */
+   .tierbinder-anchored, and scrolling if the window is too short for it. --view-shrunk:
+   how small a view shrinks to as it goes. */
 .popup {
+  --view-shrunk: 0.92;
+
   display: flex;
   flex-direction: column;
   gap: var(--spacing-3);
@@ -126,30 +129,42 @@
   }
 }
 
-/* The view under the switch: its height eases between the views' (set from
-   ColorField.tsx while it changes), the new one fading in */
+/* The views under the switch, stacked in one cell: the box takes the shown one's height
+   (set from ColorField.tsx), easing between them, while the shown one grows in from its
+   top and the other shrinks away, its height kept out of the box's */
 .views {
+  display: grid;
   overflow: clip;
   transition: height var(--duration-move) var(--ease-slide);
 }
 
 .view {
-  animation: view-in var(--duration-fade) ease-out;
-}
+  grid-area: 1 / 1;
+  align-self: start;
+  transform-origin: top center;
+  opacity: 0;
+  scale: var(--view-shrunk);
+  visibility: hidden;
+  transition:
+    opacity var(--duration-move) var(--ease-slide),
+    scale var(--duration-move) var(--ease-slide),
+    visibility 0s var(--duration-move);
 
-@keyframes view-in {
-  from {
-    opacity: 0;
+  &[data-active] {
+    opacity: 1;
+    scale: 1;
+    visibility: visible;
+    transition:
+      opacity var(--duration-move) var(--ease-slide),
+      scale var(--duration-move) var(--ease-slide);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .views {
+  .views,
+  .view,
+  .view[data-active] {
     transition: none;
-  }
-
-  .view {
-    animation: none;
   }
 }
 

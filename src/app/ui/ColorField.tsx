@@ -5,7 +5,6 @@ import { HexColorPicker } from 'react-colorful';
 import { useAnchored, usePopup } from './anchored';
 import styles from './ColorField.module.css';
 import Segmented from './Segmented';
-import { readDuration } from './motion';
 import { SWATCHES, SWATCH_COLUMNS, SWATCH_ROWS } from './swatches';
 
 // A color as a swatch that opens our own picker in a popup like a dropdown's, floating over
@@ -154,37 +153,16 @@ export default function ColorField({
   const view = useChoice(viewChoice);
   const format = useChoice(formatChoice);
 
-  // Switching views eases the picker's height from the last view's to the new one's (over
-  // --duration-move, on --ease-slide), the new view fading in (.view); at once under
-  // reduced motion
+  // Switching views grows or shrinks the picker: both views stay mounted, stacked, the
+  // box easing from one's height to the other's (over --duration-move, on --ease-slide) as
+  // the new one grows in from its top and the old one shrinks away (.view, data-active);
+  // at once under reduced motion. The box keeps the shown view's height, measured here.
   const viewsRef = React.useRef<HTMLDivElement>(null);
-  const viewHeight = React.useRef(0);
   React.useLayoutEffect(() => {
     const box = viewsRef.current;
-    const shown = box?.firstElementChild as HTMLElement | null | undefined;
-    // (a popup opening again starts at its view's height, not easing from the last one)
-    if (!box || !shown) {
-      viewHeight.current = 0;
-      return;
-    }
-    const from = viewHeight.current;
-    const to = shown.offsetHeight;
-    viewHeight.current = to;
-    if (!from || from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    box.style.height = `${from}px`;
-    // (read, so the browser takes the start height before the end one)
-    void box.offsetHeight;
-    box.style.height = `${to}px`;
-    const done = () => {
-      box.style.height = '';
-    };
-    box.addEventListener('transitionend', done, { once: true });
-    // (and after it, in case transitionend doesn't come: a tab that isn't painting)
-    const timer = setTimeout(done, readDuration('--duration-move'));
-    return () => {
-      box.removeEventListener('transitionend', done);
-      clearTimeout(timer);
-    };
+    const shown = box?.querySelector<HTMLElement>('[data-active]');
+    if (!box || !shown) return;
+    box.style.height = `${shown.offsetHeight}px`;
   }, [view, popup.shown]);
 
   // The picker reports every pointer move; the board (and its autosave) takes the latest
@@ -219,7 +197,7 @@ export default function ColorField({
   React.useEffect(() => {
     if (!popup.open) return;
     const start = popupRef.current?.querySelector<HTMLElement>(
-      '[data-swatches] [tabindex="0"], [role="slider"]'
+      '[data-active] [data-swatches] [tabindex="0"], [data-active] [role="slider"]'
     );
     if (matchMedia('(pointer: fine)').matches && start) start.focus();
     else popupRef.current?.focus({ preventScroll: true });
@@ -298,20 +276,27 @@ export default function ColorField({
             />
           </div>
           <div ref={viewsRef} className={styles.views}>
-            {/* Keyed, so the new view fades in */}
-            <div key={view} className={styles.view}>
-              {view === 'swatches' ? (
-                <Swatches current={current} label={label} onPick={apply} />
-              ) : (
-                <HexColorPicker
-                  className={styles.picker}
-                  color={value}
-                  onChange={(color) => {
-                    const next = normalize(color);
-                    if (next && next !== value) pick(next);
-                  }}
-                />
-              )}
+            {/* The view not in use is kept, unseen and out of reach (inert), to shrink away */}
+            <div
+              className={styles.view}
+              data-active={view === 'swatches' || undefined}
+              inert={view !== 'swatches'}
+            >
+              <Swatches current={current} label={label} onPick={apply} />
+            </div>
+            <div
+              className={styles.view}
+              data-active={view === 'custom' || undefined}
+              inert={view !== 'custom'}
+            >
+              <HexColorPicker
+                className={styles.picker}
+                color={value}
+                onChange={(color) => {
+                  const next = normalize(color);
+                  if (next && next !== value) pick(next);
+                }}
+              />
             </div>
           </div>
           {/* The color typed in: as a hex code, or its channels */}
