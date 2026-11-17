@@ -48,7 +48,7 @@ import {
 import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './document';
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TIERS } from './graphics/tier-list/model';
-import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
+import { DEFAULT_TOOL, selectedLast, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { MAX_SHARED_CARDS, isShareHash, readShareHash, shareLink, sharedCards } from './share';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
@@ -996,6 +996,9 @@ export default function Editor() {
     if (trayEnd.kind !== graphic.kind) setTrayPan(0);
     else if (trayCount > trayEnd.count && lastTrayId !== trayEnd.last) setTrayPan(maxTrayPan);
   }
+  // Kept within the row, so a pan asked past its end (or a row that shrank) doesn't snap a
+  // later insert to the end
+  if (trayPanAsked > maxTrayPan) setTrayPan(maxTrayPan);
   // The tray's height follows its cards; while it slides in or out, the share of it shown
   const shownTrayHeight = trayDrawn ? trayHeight(trayCount, TRAY_WIDTH, oneRowTray) * trayOpen : 0;
   // The image's size in its own pixels. An included card tray goes under the board at the
@@ -1031,9 +1034,13 @@ export default function Editor() {
   // so it follows the board as it rescales or the page scrolls
   const [arriving, setArriving] = React.useState<ReadonlySet<string>>(new Set());
   const landingRef = React.useRef({ placements, scale, boardLeft });
+  // Whether the tray is still sliding in (the board's scale and the tray's spots not yet
+  // where they settle)
+  const trayRevealingRef = React.useRef(false);
   // Before the browser's next frame, so the flights' first frame sees the cards just added
   React.useLayoutEffect(() => {
     landingRef.current = { placements, scale, boardLeft };
+    trayRevealingRef.current = trayShown && trayOpen < 1;
   });
   const stopFlights = React.useRef(new Set<() => void>());
   React.useEffect(() => {
@@ -2062,6 +2069,19 @@ export default function Editor() {
       land(ids);
     };
     stopFlights.current.add(waiting);
+    // Once React has drawn the new cards (the next task) and any tray they turned on has slid
+    // in, so where they land, and whether it's on screen, is measured where it settles
+    const afterTrayReveal = (then: () => void) => {
+      const check = window.setTimeout(() => {
+        if (!trayRevealingRef.current) {
+          then();
+          return;
+        }
+        const wait = window.setTimeout(then, readDuration('--duration-move'));
+        cleanUp = () => clearTimeout(wait);
+      });
+      cleanUp = () => clearTimeout(check);
+    };
     const launch = () => {
       if (!stopFlights.current.delete(waiting)) return;
       cleanUp();
@@ -2099,12 +2119,12 @@ export default function Editor() {
       stopFlights.current.add(stop);
     };
     if (!pool) {
-      launch();
+      afterTrayReveal(launch);
       return;
     }
     // Scrolls the board's foot, the tray, into view if any of it is off screen (beside the
     // sidebar, where the workspace scrolls), and flies them when the scroll is over
-    const start = window.setTimeout(() => {
+    afterTrayReveal(() => {
       if (!trayHidden()) {
         launch();
         return;
@@ -2122,7 +2142,6 @@ export default function Editor() {
       };
       boardBoxRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
     });
-    cleanUp = () => clearTimeout(start);
   }
 
   // Adds a search result to one of the Add to choices (the graphic's, or the card tray),
@@ -2412,8 +2431,9 @@ export default function Editor() {
     };
     // Beside a narrower board, over nothing (the stage is as wide as the card tray)
     if (point.y <= BOARD_HEIGHT && (point.x < 0 || point.x > width)) return;
-    // Later cards overlap earlier ones, so the last card under the pointer is the top one
-    const under = placements.findLast(
+    // Later cards overlap earlier ones, and the selected card is drawn over them all, so
+    // the last card under the pointer in that order is the top one
+    const under = selectedLast(placements, selectedId).findLast(
       (p) =>
         point.x >= p.x && point.x <= p.x + p.width && point.y >= p.y && point.y <= p.y + p.height
     );
@@ -3004,6 +3024,8 @@ export default function Editor() {
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
                               <img
+                                // A new size is a new image, shimmering until it loads
+                                key={resultSize}
                                 src={resultSrc(card)}
                                 alt={`${card.name} (${card.set} ${card.number})`}
                                 className={`${styles.resultThumb} object-contain`}
@@ -3014,11 +3036,17 @@ export default function Editor() {
                                 loading="lazy"
                                 draggable={false}
                                 // The CDN occasionally fails a load; retry once through the image
-                                // proxy, and hide the result if that fails too
+                                // proxy (then a Large one's small image, both ways), and hide
+                                // the result if that fails too
                                 onError={(e) => {
-                                  const proxy = proxied(resultSrc(card));
-                                  if (!e.currentTarget.src.endsWith(proxy)) {
-                                    e.currentTarget.src = proxy;
+                                  const tries = [...new Set([resultSrc(card), card.thumb])].flatMap(
+                                    (src) => [src, proxied(src)]
+                                  );
+                                  const now = tries.findLastIndex((src) =>
+                                    e.currentTarget.src.endsWith(src)
+                                  );
+                                  if (now < tries.length - 1) {
+                                    e.currentTarget.src = tries[now + 1];
                                     return;
                                   }
                                   const key = `${card.set} ${card.number}`;
@@ -3403,7 +3431,10 @@ export default function Editor() {
                 // card selected moves the card there (pickTargetOnBoard)
                 // (not while a replacement is being picked, which keeps its card selected)
                 onPointerDown={() => {
-                  pressSelection.current = selectedShown && !picking ? selectedId : null;
+                  // A press while the card's menu is open only closes it (on a phone that's
+                  // the way to dismiss it, and a move there would have no undo in reach)
+                  pressSelection.current =
+                    selectedShown && !picking && !cardMenu ? selectedId : null;
                 }}
                 onMouseDown={(e) => {
                   // A double click's second press (a tier label opening its name) moves nothing

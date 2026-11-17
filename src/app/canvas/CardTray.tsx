@@ -88,6 +88,9 @@ function TrayHint({
 // its cards. The group is named `tray` and its box `trayBox`, so the export can set it
 // flush and square under the board.
 
+// A wheel's line, in pixels, for wheels that scroll by lines
+const WHEEL_LINE = 16;
+
 export default function CardTray({
   tray,
   width,
@@ -196,10 +199,14 @@ export default function CardTray({
           if (card) {
             card.draggable(true);
             card.startDrag();
-            card.on('dragend.trayPan', () => {
+            const settle = () => {
               card.off('dragend.trayPan');
               card.draggable(false);
-            });
+            };
+            // (a drag that didn't start, with no pointer known to the stage or the card
+            // still flying in, leaves it as it was, so later swipes on it still pan)
+            if (card.isDragging()) card.on('dragend.trayPan', settle);
+            else settle();
           }
         }
       }
@@ -250,7 +257,9 @@ export default function CardTray({
         }}
         onWheel={(e) => {
           if (!maxPan) return;
-          const delta = e.evt.deltaX || (e.evt.shiftKey ? e.evt.deltaY : 0);
+          // (Firefox reports a mouse wheel in lines, about 16 pixels each)
+          const lines = e.evt.deltaMode === WheelEvent.DOM_DELTA_LINE ? WHEEL_LINE : 1;
+          const delta = (e.evt.deltaX || (e.evt.shiftKey ? e.evt.deltaY : 0)) * lines;
           if (!delta) return;
           e.evt.preventDefault();
           onPan(clampPan(pan + delta / (scale || 1)));

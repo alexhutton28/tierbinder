@@ -33,11 +33,9 @@ const shaded = (hue: string, base: string): Swatch[] =>
     color: mix(base, amount),
   }));
 
-const fixed = (hue: string, colors: string[]): Swatch[] =>
-  colors.map((color, i) => ({
-    name: SHADE_NAMES[i] ? `${SHADE_NAMES[i]} ${hue.toLowerCase()}` : hue,
-    color,
-  }));
+// The design system's own shades, named as it names them ("Petrel 500")
+const fixed = (hue: string, shades: [number, string][]): Swatch[] =>
+  shades.map(([shade, color]) => ({ name: `${hue} ${shade}`, color }));
 
 // The tiers' first seven colors' names (TIER_COLORS); its gray gives way to Petrel's
 const TIER_HUES = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink'];
@@ -45,11 +43,23 @@ const TIER_HUES = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple', 'Pink']
 // Columns, left to right
 const COLUMNS: Swatch[][] = [
   ...TIER_HUES.slice(0, 5).map((hue, i) => shaded(hue, TIER_COLORS[i])),
-  // Storm 100, 200, 300, 400, 600 and 800
-  fixed('Storm', ['#dceaf1', '#bfd7e4', '#9cc0d4', '#78a5bd', '#466e85', '#2a4352']),
+  fixed('Storm', [
+    [100, '#dceaf1'],
+    [200, '#bfd7e4'],
+    [300, '#9cc0d4'],
+    [400, '#78a5bd'],
+    [600, '#466e85'],
+    [800, '#2a4352'],
+  ]),
   ...TIER_HUES.slice(5, 7).map((hue, i) => shaded(hue, TIER_COLORS[i + 5])),
-  // Petrel 100, 300, 500, 700, 850 and 950
-  fixed('Petrel', ['#e3e8eb', '#b3bec4', '#6c7d88', '#3e4b53', '#232b30', '#12171a']),
+  fixed('Petrel', [
+    [100, '#e3e8eb'],
+    [300, '#b3bec4'],
+    [500, '#6c7d88'],
+    [700, '#3e4b53'],
+    [850, '#232b30'],
+    [950, '#12171a'],
+  ]),
   // White to the pen's near black
   [
     { name: 'White', color: '#ffffff' },
