@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.25 · November 16, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.26 · November 16, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -251,7 +251,7 @@ Treat responsive design as a boon, not a limitation. Each window size is a chanc
 
 - An optional box under the board, turned on in Customize (Card Tray's heading is its toggle, with "Tray Color" under it), for holding cards that aren't ranked yet. As wide as the board and as tall as its cards with 15px padding around them (a full-size row makes it about a tier tall), `space-4` (16px on screen) between the board and it, with `radius-medium` corners, in its own color: by default Petrel 850 on the tier list, a step darker than its Storm 800 board, or Petrel 100 on the white blank canvas. Empty, it says "Send Cards to Card Tray to Hold Them" in its middle, after Feather's `info` icon at the text's size and 4px before it: 14px Figtree, faint (45% white, or 60% Petrel 950 on a light tray), on screen only, never in the export, and not read out. Once a card has been in a tray, the hint stays hidden for the rest of the tab's session.
 - Clear Card Tray empties the tray, keeping it on: Clear Board's "Clear Card Tray" in Customize (see Clear buttons), or Clear Card Tray at the foot of a tray card's menu (while the tray holds more than that card), or (with a mouse only) right-clicking the tray's empty space, which opens the card menu with Hide Card Tray (turning it off, its cards kept, with a toast saying it can be turned on again in Customize) and, while it holds cards, Clear Card Tray; in either menu Clear Card Tray is a row with Feather's `chevron-right` that opens a flyout holding "Clear N Cards" beside it, as the search result menu's Add to row does: on a click, Enter or the right arrow, not on hover; a second click closes it, Escape or the left arrow goes back to the row; to the left when it wouldn't fit. On touch screens the card menu's rows are 44px tall.
-- Up to 48 cards, each row filled left to right before the next: full size in one row up to 10, then shrinking to fit the row down to 75% (14 cards), then a second row at 75%, then both rows shrinking to fit. The tray grows and shrinks to hug them, and the board rescales to make room.
+- Up to 48 cards, each row filled left to right before the next: full size in one row up to 10, then shrinking to fit the row down to 75% (14 cards), then a second row at 75%, then both rows shrinking to fit. The tray grows and shrinks to hug them, and the board rescales to make room. Turning it on slides it in under the board on `ease-slide` over `duration-move`, the board rescaling smoothly to make room as the tray is uncovered, its contents fading in over `duration-fade`; turning it off slides it back out the same way. Reduced motion: at once.
 - A dragged card moves over the board and the tray, under the selection outline, then back into its place. A card dragged out of the tray grows to the board's card size as it crosses onto the board, and a board card dragged over the tray shrinks to the tray's, over `duration-drop` easing out, staying centered under the pointer.
 - It acts like a tier: "Card Tray" is always the last Add to choice, even while the tray is off, and adding a card to it turns it on; cards drag in, out and within it, and the card menu opens upward on it, since it's at the board's foot.
 - It keeps a 16:9 board's width and its two rows whatever the board's shape, with a narrower board centered over it. At every width: on phones and tablets it's under the board, scaled with it, both staying on screen above the sidebar.
@@ -328,6 +328,8 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 | `themeColor` in metadata                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Hex matching the top bar        | Browsers read it as a plain value                                                                            |
 
 ## 15. Changelog
+
+- **November 16, 2026 · v1.26:** From a user test: the card tray slides in and out under the board as it's turned on and off.
 
 - **November 16, 2026 · v1.25:** On phones and tablets the board and its card tray stay on screen, with the sidebar scrolling under them, instead of the whole page scrolling; the board and the top bar take at most 60% of the window's height. The top bar no longer slides away, since the page doesn't scroll. Below `b8` the credits show only under Save & Share. The page is inset from the notch or Dynamic Island in landscape.
 

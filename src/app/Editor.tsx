@@ -54,6 +54,7 @@ import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from '
 import Button from './ui/Button';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
 import { followOpen, revealBelow } from './ui/reveal';
+import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
 import ColorField, { BoardColors, boardColors } from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
@@ -62,7 +63,7 @@ import SearchFilters from './ui/SearchFilters';
 import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
-import { FOLD_CLEARANCE } from './ui/motion';
+import { FOLD_CLEARANCE, readDuration } from './ui/motion';
 import { launchFlights, onScreen, wholeOnScreen, type Flight } from './ui/flights';
 import { titleCase, cardCount } from './text';
 
@@ -897,7 +898,18 @@ export default function Editor() {
   // The card tray keeps its own width whatever the board's shape, the board centered over
   // it. What the stage shows across, and how far in the board starts (the stage is shifted
   // by it, so the board's own left edge stays x = 0 for everything laid out on it)
-  const stageWidth = trayShown ? TRAY_WIDTH : width;
+  // Turning the tray on or off slides it in or out under the board (useReveal): the stage
+  // grows to the tray's width and height as it fades in, and back. Drawn while it's on or
+  // still leaving; a leaving tray takes no presses and isn't in `placements`.
+  const trayReveal = useReveal(trayShown, graphic.kind);
+  const trayOpen = trayReveal.value;
+  const trayDrawn = trayShown || trayOpen > 0;
+  // Its contents fade over --duration-fade, the first or last part of the slide
+  const [fadeShare] = React.useState(
+    () => readDuration('--duration-fade') / (readDuration('--duration-move') || 1)
+  );
+  const trayOpacity = Math.min(1, trayOpen / (fadeShare || 1));
+  const stageWidth = width + (Math.max(TRAY_WIDTH, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
@@ -919,8 +931,8 @@ export default function Editor() {
     } catch {}
   }, [trayHintSeen]);
   const exportTray = trayShown && includeTray;
-  // The tray's height follows its cards
-  const shownTrayHeight = trayShown ? trayHeight(graphic.tray.items.length) : 0;
+  // The tray's height follows its cards; while it slides in or out, the share of it shown
+  const shownTrayHeight = trayDrawn ? trayHeight(graphic.tray.items.length) * trayOpen : 0;
   // The image's size in its own pixels. An included card tray goes under the board at the
   // board's width, its cards laid out again to fit, so the image is one rectangle.
   const exported = exportSize(
@@ -1384,7 +1396,7 @@ export default function Editor() {
       const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       const around = board.offsetHeight - box.offsetHeight;
       // The card tray and the gap above it, when it shows
-      const tray = trayShown ? TRAY_GAP : 0;
+      const tray = TRAY_GAP * trayOpen;
       const designHeight = BOARD_HEIGHT + shownTrayHeight;
       const next = Math.min(room / stageWidth, (height - around - tray) / designHeight);
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
@@ -1398,7 +1410,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayShown, shownTrayHeight, stageWidth]);
+  }, [wide, trayOpen, shownTrayHeight, stageWidth]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -2354,6 +2366,8 @@ export default function Editor() {
     const stage = stageRef.current;
     if (!stage) return null;
     setSelectedId(null);
+    // A card tray sliding in or out finishes first, so none of it is half drawn
+    flushSync(trayReveal.finish);
     // Cards still flying in from the sidebar land now, so they're in the image
     stopFlights.current.forEach((stop) => stop());
     await Promise.allSettled(
@@ -3100,13 +3114,17 @@ export default function Editor() {
                     checked={graphic.tray.enabled}
                     onChange={(on) => {
                       showTray(on);
-                      // Its rows come into view once they and the tray are laid out (on
-                      // phones the tray under the board moves the sidebar down too)
+                      // Its rows come into view once they and the tray are laid out: on
+                      // phones the tray growing under the board moves the sidebar down too,
+                      // so once it has slid in
                       if (on)
-                        requestAnimationFrame(() =>
-                          requestAnimationFrame(() => {
+                        setTimeout(
+                          () => {
                             if (traySectionRef.current) revealBelow(traySectionRef.current);
-                          })
+                          },
+                          matchMedia('(prefers-reduced-motion: reduce)').matches
+                            ? 0
+                            : readDuration('--duration-move')
                         );
                     }}
                     heading
@@ -3226,7 +3244,7 @@ export default function Editor() {
                 width={stageWidth * scale}
                 // Shifted so the board, centered over a wider card tray, starts at x = 0
                 x={boardLeft * scale}
-                height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + shownTrayHeight * scale : 0)}
+                height={BOARD_HEIGHT * scale + TRAY_GAP * trayOpen + shownTrayHeight * scale}
                 scaleX={scale}
                 scaleY={scale}
                 onMouseDown={(e) => {
@@ -3256,7 +3274,7 @@ export default function Editor() {
                   }}
                   tool={tool}
                 />
-                {trayShown && (
+                {trayDrawn && (
                   <CardTray
                     tray={graphic.tray}
                     width={TRAY_WIDTH}
@@ -3274,8 +3292,10 @@ export default function Editor() {
                     hintFont={interfaceFont}
                     showHint={!trayHintSeen}
                     arriving={arriving}
-                    // Ignores presses while drawing (pen, eraser), as the board does
-                    listening={tool === DEFAULT_TOOL}
+                    // Ignores presses while drawing (pen, eraser), as the board does, and while
+                    // it slides away
+                    listening={trayShown && tool === DEFAULT_TOOL}
+                    opacity={trayOpacity}
                   />
                 )}
                 {/* Editor-only layer: hidden while exporting */}

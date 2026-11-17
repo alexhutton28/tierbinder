@@ -91,6 +91,7 @@ export default function CardTray({
   onPick,
   onTrayMenu,
   listening,
+  opacity,
   boardCardWidth,
   hintFont,
   showHint,
@@ -117,8 +118,10 @@ export default function CardTray({
   // The tray's own space was right-clicked: its menu (Hide Card Tray, and Clear Card Tray
   // while it holds cards), at x, y in the stage's on-screen pixels
   onTrayMenu: (x: number, y: number) => void;
-  // Off while a drawing tool is active
+  // Off while a drawing tool is active, and while it slides away
   listening: boolean;
+  // Faded while it slides in or out
+  opacity: number;
   // The board's card width: a card dragged out of the tray grows to it
   boardCardWidth: number;
   // The interface's font (Figtree), for the empty tray's hint
@@ -130,7 +133,7 @@ export default function CardTray({
 }) {
   const height = trayHeight(tray.items.length, width);
   return (
-    <Layer listening={listening}>
+    <Layer listening={listening} opacity={opacity}>
       <Group name="tray" x={left} y={top}>
         <Rect
           // `background`, so pressing it deselects, as the board's does
