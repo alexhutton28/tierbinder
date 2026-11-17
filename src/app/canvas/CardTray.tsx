@@ -4,6 +4,7 @@ import type Konva from 'konva';
 import React from 'react';
 import { Circle, Group, Layer, Line, Rect, Text } from 'react-konva';
 import { TOUCH_SLOP } from '../ui/pointer';
+import { readDuration } from '../ui/motion';
 import { PETREL_950, darkReadsBetter } from '../color';
 import { selectedLast } from '../graphics/types';
 import CardNode from './CardNode';
@@ -94,42 +95,86 @@ const WHEEL_LINE = 16;
 
 // A scrolling tray's edge shades, in on-screen pixels: how wide, and how far it scrolls
 // before one fades fully in; and how dark at the edge
-const SHADE_WIDTH = 24;
+const SHADE_WIDTH = 48;
 const SHADE_FADE = 24;
-const SHADE_COLOR = 'rgba(0, 0, 0, 0.45)';
+const SHADE_COLOR = 'rgba(0, 0, 0, 0.6)';
+// The arrow in each shade, in on-screen pixels: its round button's radius (a 32px circle,
+// taking taps as a 44px one: --tb-touch-target), its center from the tray's edge, and its
+// chevron's half size and line
+const ARROW_RADIUS = 16;
+const ARROW_HIT = 22;
+const ARROW_INSET = 24;
+const CHEVRON = 4;
+const CHEVRON_LINE = 2;
+// Tapping an arrow scrolls this share of the tray's width (over --duration-move)
+const ARROW_STEP = 0.75;
 
 // A shade inside one edge of the tray, dark at the edge and clear inward, rounded with the
-// tray's corners on that side
+// tray's corners on that side, with an arrow in it that scrolls that way when tapped or
+// clicked: there are more cards past that edge
 function EdgeShade({
   side,
   strength,
   trayWidth,
   height,
   scale,
+  onStep,
 }: {
   side: 'left' | 'right';
   strength: number;
   trayWidth: number;
   height: number;
   scale: number;
+  onStep: () => void;
 }) {
   if (strength <= 0) return null;
-  const width = SHADE_WIDTH / (scale || 1);
-  const radius = TRAY_RADIUS / (scale || 1);
+  const s = scale || 1;
+  const width = SHADE_WIDTH / s;
+  const radius = TRAY_RADIUS / s;
   const left = side === 'left';
+  const arrowX = left ? ARROW_INSET / s : trayWidth - ARROW_INSET / s;
+  const point = (CHEVRON / s) * (left ? -1 : 1);
   return (
-    <Rect
-      name="editor"
-      listening={false}
-      x={left ? 0 : trayWidth - width}
-      width={width}
-      height={height}
-      opacity={strength}
-      cornerRadius={left ? [radius, 0, 0, radius] : [0, radius, radius, 0]}
-      fillLinearGradientStartPoint={{ x: left ? 0 : width, y: 0 }}
-      fillLinearGradientEndPoint={{ x: left ? width : 0, y: 0 }}
-      fillLinearGradientColorStops={[0, SHADE_COLOR, 1, 'rgba(0, 0, 0, 0)']}
-    />
+    <Group name="editor" opacity={strength}>
+      <Rect
+        listening={false}
+        x={left ? 0 : trayWidth - width}
+        width={width}
+        height={height}
+        cornerRadius={left ? [radius, 0, 0, radius] : [0, radius, radius, 0]}
+        fillLinearGradientStartPoint={{ x: left ? 0 : width, y: 0 }}
+        fillLinearGradientEndPoint={{ x: left ? width : 0, y: 0 }}
+        fillLinearGradientColorStops={[0, SHADE_COLOR, 1, 'rgba(0, 0, 0, 0)']}
+      />
+      <Group
+        x={arrowX}
+        y={height / 2}
+        onClick={(e) => {
+          e.cancelBubble = true;
+          if (e.evt.button === 0) onStep();
+        }}
+        onTap={(e) => {
+          e.cancelBubble = true;
+          onStep();
+        }}
+        onPointerDown={(e) => {
+          // Not a pan or a card's drag
+          e.cancelBubble = true;
+        }}
+      >
+        {/* Its touch target, unseen */}
+        <Circle radius={ARROW_HIT / s} fill="transparent" />
+        <Circle radius={ARROW_RADIUS / s} fill={HINT_LIGHT} opacity={0.9} listening={false} />
+        <Line
+          points={[-point / 2, -CHEVRON / s, point / 2, 0, -point / 2, CHEVRON / s]}
+          stroke={HINT_DARK}
+          strokeWidth={CHEVRON_LINE / s}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
+      </Group>
+    </Group>
   );
 }
 
@@ -278,6 +323,27 @@ export default function CardTray({
       window.removeEventListener('pointercancel', end);
     };
   }, [isOneRow]);
+  // An arrow's scroll: most of the tray's width that way, easing out (at once under reduced
+  // motion); a swipe or another arrow takes over from it
+  const scrollFrame = React.useRef(0);
+  React.useEffect(() => () => cancelAnimationFrame(scrollFrame.current), []);
+  const scrollBy = (direction: 1 | -1) => {
+    cancelAnimationFrame(scrollFrame.current);
+    const from = pan;
+    const to = clampPan(pan + direction * width * ARROW_STEP);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onPan(to);
+      return;
+    }
+    const start = performance.now();
+    const duration = readDuration('--duration-move') || 1;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      latest.current.onPan(from + (to - from) * (1 - (1 - t) ** 3));
+      if (t < 1) scrollFrame.current = requestAnimationFrame(step);
+    };
+    scrollFrame.current = requestAnimationFrame(step);
+  };
   const touchPans = isOneRow && matchMedia('(pointer: coarse)').matches;
 
   return (
@@ -287,6 +353,7 @@ export default function CardTray({
         x={left}
         y={top}
         onPointerDown={(e) => {
+          cancelAnimationFrame(scrollFrame.current);
           panned.current = false;
           if (!touchPans) return;
           gesture.current = {
@@ -379,6 +446,7 @@ export default function CardTray({
               trayWidth={width}
               height={height}
               scale={scale}
+              onStep={() => scrollBy(-1)}
             />
             <EdgeShade
               side="right"
@@ -386,6 +454,7 @@ export default function CardTray({
               trayWidth={width}
               height={height}
               scale={scale}
+              onStep={() => scrollBy(1)}
             />
           </>
         )}

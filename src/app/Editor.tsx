@@ -160,7 +160,7 @@ type ResultMenu = {
 const LOGO_HEIGHT = 25;
 // Under b8, with the sidebar folded, the one-row card tray's cards are this many times
 // full size (the board gives up a little height for them)
-const FOLDED_TRAY_SCALE = 1.5;
+const FOLDED_TRAY_SCALE = 1.3;
 const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
 const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
 const LOGO_CLEARANCE = 8;

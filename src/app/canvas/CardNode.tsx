@@ -149,8 +149,8 @@ export default function CardNode({
   onDragEnd: (x: number, y: number) => void;
   // The width to show at while dragged with its center at `center` (design pixels from
   // the stage's corner, which is left of the board's when the board is centered over a
-  // wider card tray: only its `y` is the board's): the card grows or shrinks to it, keeping its center under the same spot
-  // of the pointer. Without it, it keeps its size.
+  // wider card tray: only its `y` is the board's): the card grows or shrinks to it, keeping the spot it was picked up by under
+  // the pointer. Without it, it keeps its size.
   dragWidth?: (center: Point) => number;
   // Not drawn yet, while a copy of it flies in from the sidebar (Editor's flyIn)
   hidden?: boolean;
@@ -172,8 +172,9 @@ export default function CardNode({
       unmounting.current = true;
     };
   }, []);
-  // While dragged with dragWidth: the card's center from the pointer, its scale, and the
-  // resize under way
+  // While dragged with dragWidth: the card's center from the pointer at full size (scaled
+  // with the card, so it grows and shrinks around the pointer, the spot it was picked up by
+  // staying under it), its scale, and the resize under way
   const drag = React.useRef<{
     offset: Point;
     scale: number;
@@ -191,8 +192,8 @@ export default function CardNode({
     if (!pointer || !drag.current) return null;
     const stageScale = stage.scaleX();
     return {
-      x: pointer.x / stageScale + drag.current.offset.x,
-      y: pointer.y / stageScale + drag.current.offset.y,
+      x: pointer.x / stageScale + drag.current.offset.x * drag.current.scale,
+      y: pointer.y / stageScale + drag.current.offset.y * drag.current.scale,
     };
   };
 
@@ -215,10 +216,12 @@ export default function CardNode({
     const start = performance.now();
     const step = (now: number) => {
       const stage = node.getStage();
-      const center = stage && dragCenter(stage);
-      if (!stage || !center || drag.current !== state) return;
+      if (!stage || drag.current !== state) return;
       const t = reduce || !duration ? 1 : Math.min(1, (now - start) / duration);
       state.scale = from + (target - from) * easeOut(t);
+      // (its center at the new scale, so the card grows around the pointer)
+      const center = dragCenter(stage);
+      if (!center) return;
       node.scale({ x: state.scale, y: state.scale });
       node.absolutePosition(cornerAt(stage, center, state.scale));
       // Moves the selection outline with it, as dragging does
@@ -249,7 +252,7 @@ export default function CardNode({
         Konva.Util.drawRoundedRectPath(ctx, CARD_WIDTH, height, CARD_CORNER_RADIUS)
       }
       draggable={draggable}
-      // Keeps a resizing card's center under the same spot of the pointer
+      // Keeps the spot a resizing card was picked up by under the pointer
       dragBoundFunc={function (this: Konva.Node, pos) {
         const stage = this.getStage();
         const center = stage && dragCenter(stage);
@@ -293,8 +296,8 @@ export default function CardNode({
         const stageScale = stage.scaleX();
         drag.current = {
           offset: {
-            x: (corner.x - pointer.x) / stageScale + (CARD_WIDTH * scale) / 2,
-            y: (corner.y - pointer.y) / stageScale + (height * scale) / 2,
+            x: ((corner.x - pointer.x) / stageScale + (CARD_WIDTH * scale) / 2) / scale,
+            y: ((corner.y - pointer.y) / stageScale + (height * scale) / 2) / scale,
           },
           scale,
           target: scale,
