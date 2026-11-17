@@ -37,6 +37,7 @@ import {
   insertTrayCard,
   layoutTray,
   trayRowWidth,
+  rowCardWidthFor,
   mapTray,
   TRAY_WIDTH,
   trayCardWidth,
@@ -164,6 +165,10 @@ const LOGO_HEIGHT = 25;
 // Under b8, with the sidebar folded, the one-row card tray's cards are this many times
 // full size (the board gives up a little height for them)
 const FOLDED_TRAY_SCALE = 1.3;
+// ...and bigger still where the board can't use the height (a Wide board, limited by the
+// page's width): filling what's left under it, but never so big that fewer than this many
+// show across the tray
+const FOLDED_TRAY_VISIBLE = 3;
 const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
 const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
 const LOGO_CLEARANCE = 8;
@@ -1043,7 +1048,10 @@ export default function Editor() {
   // design pixels, kept within what the row overhangs); the image keeps its two rows
   // (its cards FOLDED_TRAY_SCALE times full size while the sidebar is folded, growing with
   // the fold's slide, so they're easier to see and pick up)
-  const oneRowTray = wide ? false : CARD_WIDTH * (1 + (FOLDED_TRAY_SCALE - 1) * fold);
+  // (trayFill: the folded tray's cards filling the height the board leaves, from the fit)
+  const [trayFill, setTrayFill] = React.useState(0);
+  const foldedTrayCard = Math.max(CARD_WIDTH * FOLDED_TRAY_SCALE, trayFill);
+  const oneRowTray = wide ? false : CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold;
   const trayCount = graphic.tray.items.length;
   const maxTrayPan = oneRowTray
     ? Math.max(0, trayRowWidth(trayCount, oneRowTray) - shownTrayWidth)
@@ -1532,6 +1540,14 @@ export default function Editor() {
         (height - around - tray) / designHeight
       );
       setTrayRoom(Math.floor(room));
+      // Folded on a phone, a board limited by the width leaves height under it: the tray's
+      // cards fill it (at the width-limited scale, which the tray doesn't change), as wide as
+      // FOLDED_TRAY_VISIBLE of them across allows; rounded, so the fit settles
+      const widthScale = room / (width || 1);
+      const fillHeight = (height - around - TRAY_GAP) / widthScale - BOARD_HEIGHT;
+      setTrayFill(
+        wide ? 0 : Math.floor(rowCardWidthFor(fillHeight, room / widthScale, FOLDED_TRAY_VISIBLE))
+      );
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
       setScale(Math.max(0, Math.floor(next * 1000) / 1000));
     };

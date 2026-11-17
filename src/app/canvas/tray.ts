@@ -118,6 +118,14 @@ export function trayCardWidth(count: number, trayWidth = TRAY_WIDTH, oneRow: One
   return grid(count, trayWidth, oneRow).width;
 }
 
+// The widest one-row cards a tray `trayHeight` tall holds (its padding taken off), but no
+// wider than lets `visible` of them show across a tray `trayWidth` wide
+export function rowCardWidthFor(trayHeight: number, trayWidth: number, visible: number) {
+  const tall = ((trayHeight - 2 * TRAY_PADDING) * CARD_WIDTH) / CARD_HEIGHT;
+  const across = (trayWidth - 2 * TRAY_PADDING) / (visible + (visible - 1) * GAP_SHARE);
+  return Math.max(0, Math.min(tall, across));
+}
+
 // How far a one-row tray's cards reach, padding included: wider than the tray once they
 // don't fit, when it scrolls sideways by the difference
 export function trayRowWidth(count: number, cardWidth: number) {
