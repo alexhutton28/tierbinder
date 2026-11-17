@@ -2747,7 +2747,15 @@ export default function Editor() {
               foldingSideHeight !== null ? { flex: 'none', height: foldingSideHeight } : undefined
             }
           >
-            <div ref={sideHeadRef} className={`${styles.sideHead} flex gap-2 items-center`}>
+            <div
+              ref={sideHeadRef}
+              className={`${styles.sideHead} flex gap-2 items-center`}
+              // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
+              // is the one keyboards and screen readers get)
+              onClick={(e) => {
+                if (folded && !(e.target as Element).closest('button')) foldSidebar();
+              }}
+            >
               {/* Folded on a phone: a bar at the page's foot, the light logo at its left and
               the button to open it again at its right; the nav stays mounted, hidden */}
               {folded && (

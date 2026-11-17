@@ -536,7 +536,7 @@
 }
 
 /* Folded (under b8): only its head, a bar of the light logo and the button that opens it,
-   above the home indicator */
+   above the home indicator; a press anywhere on it opens it */
 .sideFolded {
   flex: none;
 
@@ -546,6 +546,7 @@
 
   & > .sideHead {
     padding-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+    cursor: pointer;
   }
 }
 
