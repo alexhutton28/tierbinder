@@ -158,6 +158,9 @@ type ResultMenu = {
 // (25px), so it lands where the top bar's mark was; shown when it has this room around it
 // beside the board (space-3)
 const LOGO_HEIGHT = 25;
+// Under b8, with the sidebar folded, the one-row card tray's cards are this many times
+// full size (the board gives up a little height for them)
+const FOLDED_TRAY_SCALE = 1.5;
 const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
 const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
 const LOGO_CLEARANCE = 8;
@@ -1021,9 +1024,13 @@ export default function Editor() {
   const exportTray = trayShown && includeTray;
   // Under b8 the tray on screen is one row of full-size cards, scrolled sideways (trayPan,
   // design pixels, kept within what the row overhangs); the image keeps its two rows
-  const oneRowTray = !wide;
+  // (its cards FOLDED_TRAY_SCALE times full size while the sidebar is folded, growing with
+  // the fold's slide, so they're easier to see and pick up)
+  const oneRowTray = wide ? false : CARD_WIDTH * (1 + (FOLDED_TRAY_SCALE - 1) * fold);
   const trayCount = graphic.tray.items.length;
-  const maxTrayPan = oneRowTray ? Math.max(0, trayRowWidth(trayCount) - shownTrayWidth) : 0;
+  const maxTrayPan = oneRowTray
+    ? Math.max(0, trayRowWidth(trayCount, oneRowTray) - shownTrayWidth)
+    : 0;
   const [trayPanAsked, setTrayPan] = React.useState(0);
   const trayPan = Math.min(trayPanAsked, maxTrayPan);
   // A card added at the end scrolls the row to it, so it lands where it can be seen

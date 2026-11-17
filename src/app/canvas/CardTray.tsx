@@ -15,6 +15,7 @@ import {
   layoutTray,
   trayHeight,
   trayRowWidth,
+  type OneRow,
   type Tray,
 } from './tray';
 
@@ -91,6 +92,47 @@ function TrayHint({
 // A wheel's line, in pixels, for wheels that scroll by lines
 const WHEEL_LINE = 16;
 
+// A scrolling tray's edge shades, in on-screen pixels: how wide, and how far it scrolls
+// before one fades fully in; and how dark at the edge
+const SHADE_WIDTH = 24;
+const SHADE_FADE = 24;
+const SHADE_COLOR = 'rgba(0, 0, 0, 0.45)';
+
+// A shade inside one edge of the tray, dark at the edge and clear inward, rounded with the
+// tray's corners on that side
+function EdgeShade({
+  side,
+  strength,
+  trayWidth,
+  height,
+  scale,
+}: {
+  side: 'left' | 'right';
+  strength: number;
+  trayWidth: number;
+  height: number;
+  scale: number;
+}) {
+  if (strength <= 0) return null;
+  const width = SHADE_WIDTH / (scale || 1);
+  const radius = TRAY_RADIUS / (scale || 1);
+  const left = side === 'left';
+  return (
+    <Rect
+      name="editor"
+      listening={false}
+      x={left ? 0 : trayWidth - width}
+      width={width}
+      height={height}
+      opacity={strength}
+      cornerRadius={left ? [radius, 0, 0, radius] : [0, radius, radius, 0]}
+      fillLinearGradientStartPoint={{ x: left ? 0 : width, y: 0 }}
+      fillLinearGradientEndPoint={{ x: left ? width : 0, y: 0 }}
+      fillLinearGradientColorStops={[0, SHADE_COLOR, 1, 'rgba(0, 0, 0, 0)']}
+    />
+  );
+}
+
 export default function CardTray({
   tray,
   width,
@@ -150,16 +192,18 @@ export default function CardTray({
   arriving: ReadonlySet<string>;
   // The selected card, drawn over the others
   selectedId: string | null;
-  // Phones and tablets: every card in one row at full size, scrolled sideways by `pan`
+  // Phones and tablets: every card in one row at this width, scrolled sideways by `pan`
   // (design pixels) when they don't fit; a sideways swipe (or a wheel's sideways scroll)
   // asks for another through onPan
-  oneRow: boolean;
+  oneRow: OneRow;
   pan: number;
   onPan: (pan: number) => void;
 }) {
   const height = trayHeight(tray.items.length, width, oneRow);
-  const maxPan = oneRow ? Math.max(0, trayRowWidth(tray.items.length) - width) : 0;
+  const maxPan = oneRow ? Math.max(0, trayRowWidth(tray.items.length, oneRow) - width) : 0;
   const clampPan = (next: number) => Math.min(maxPan, Math.max(0, next));
+  // (its card width changes as the sidebar folds; the gestures only need whether it's a row)
+  const isOneRow = oneRow !== false;
 
   // A touch in the one-row tray on a touch screen: once it has moved TOUCH_SLOP, sideways
   // pans the tray and up or down drags the card it started on (cards don't start their own
@@ -181,7 +225,7 @@ export default function CardTray({
     latest.current = { scale, clampPan, onPan };
   });
   React.useEffect(() => {
-    if (!oneRow) return;
+    if (!isOneRow) return;
     let frame = 0;
     let pending: number | null = null;
     const move = (e: PointerEvent) => {
@@ -233,8 +277,8 @@ export default function CardTray({
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
     };
-  }, [oneRow]);
-  const touchPans = oneRow && matchMedia('(pointer: coarse)').matches;
+  }, [isOneRow]);
+  const touchPans = isOneRow && matchMedia('(pointer: coarse)').matches;
 
   return (
     <Layer listening={listening} opacity={opacity}>
@@ -325,6 +369,26 @@ export default function CardTray({
             )}
           </Group>
         </Group>
+        {/* A one-row tray that scrolls: a shade inside each edge with cards past it, fading
+        in over the first SHADE_FADE of the way (editor-only, left out of exports) */}
+        {maxPan > 0 && (
+          <>
+            <EdgeShade
+              side="left"
+              strength={Math.min(1, pan / (SHADE_FADE / (scale || 1)))}
+              trayWidth={width}
+              height={height}
+              scale={scale}
+            />
+            <EdgeShade
+              side="right"
+              strength={Math.min(1, (maxPan - pan) / (SHADE_FADE / (scale || 1)))}
+              trayWidth={width}
+              height={height}
+              scale={scale}
+            />
+          </>
+        )}
       </Group>
     </Layer>
   );
