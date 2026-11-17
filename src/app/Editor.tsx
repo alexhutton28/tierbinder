@@ -169,6 +169,8 @@ const FOLDED_TRAY_SCALE = 1.3;
 // page's width): filling what's left under it, but never so big that fewer than this many
 // show across the tray
 const FOLDED_TRAY_VISIBLE = 3;
+// ...and never wider than this on screen (CSS pixels)
+const FOLDED_TRAY_MAX = 100;
 const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
 const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
 const LOGO_CLEARANCE = 8;
@@ -1050,7 +1052,10 @@ export default function Editor() {
   // the fold's slide, so they're easier to see and pick up)
   // (trayFill: the folded tray's cards filling the height the board leaves, from the fit)
   const [trayFill, setTrayFill] = React.useState(0);
-  const foldedTrayCard = Math.max(CARD_WIDTH * FOLDED_TRAY_SCALE, trayFill);
+  const foldedTrayCard = Math.max(
+    CARD_WIDTH,
+    Math.min(Math.max(CARD_WIDTH * FOLDED_TRAY_SCALE, trayFill), FOLDED_TRAY_MAX / (scale || 1))
+  );
   const oneRowTray = wide ? false : CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold;
   const trayCount = graphic.tray.items.length;
   const maxTrayPan = oneRowTray
