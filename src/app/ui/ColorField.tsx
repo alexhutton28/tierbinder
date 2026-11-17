@@ -5,6 +5,7 @@ import { HexColorPicker } from 'react-colorful';
 import { useAnchored, usePopup } from './anchored';
 import styles from './ColorField.module.css';
 import Segmented from './Segmented';
+import { readDuration } from './motion';
 import { SWATCHES, SWATCH_COLUMNS, SWATCH_ROWS } from './swatches';
 
 // A color as a swatch that opens our own picker in a popup like a dropdown's, floating over
@@ -33,32 +34,101 @@ const VIEWS = [
   { value: 'swatches', label: 'Swatches' },
   { value: 'custom', label: 'Custom' },
 ] as const satisfies readonly { value: View; label: string }[];
-const VIEW_KEY = 'tierbinder-color-view';
 
-// The view in use, shared by every color field on the page (switching in one switches the
-// others) and saved on the device
-let sharedView: View | null = null;
-const viewListeners = new Set<() => void>();
-function currentView(): View {
-  if (sharedView) return sharedView;
-  try {
-    sharedView = localStorage.getItem(VIEW_KEY) === 'custom' ? 'custom' : 'swatches';
-  } catch {
-    sharedView = 'swatches';
+// How the color is typed: a hex code, or its red, green and blue, or its hue, saturation
+// and lightness
+type Format = 'hex' | 'rgb' | 'hsl';
+const FORMATS = [
+  { value: 'hex', label: 'Hex' },
+  { value: 'rgb', label: 'RGB' },
+  { value: 'hsl', label: 'HSL' },
+] as const satisfies readonly { value: Format; label: string }[];
+
+// A choice shared by every color field on the page (switching in one switches the others)
+// and saved on the device: the view, and the format
+function sharedChoice<T extends string>(key: string, choices: readonly T[], fallback: T) {
+  let value: T | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    get(): T {
+      if (value) return value;
+      try {
+        const saved = localStorage.getItem(key) as T | null;
+        value = saved && choices.includes(saved) ? saved : fallback;
+      } catch {
+        value = fallback;
+      }
+      return value;
+    },
+    set(next: T) {
+      value = next;
+      try {
+        localStorage.setItem(key, next);
+      } catch {}
+      listeners.forEach((listener) => listener());
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    fallback,
+  };
+}
+const viewChoice = sharedChoice<View>('tierbinder-color-view', ['swatches', 'custom'], 'swatches');
+const formatChoice = sharedChoice<Format>('tierbinder-color-format', ['hex', 'rgb', 'hsl'], 'hex');
+const useChoice = <T extends string>(choice: ReturnType<typeof sharedChoice<T>>) =>
+  React.useSyncExternalStore(choice.subscribe, choice.get, () => choice.fallback);
+
+// Converting between a #rrggbb color and its channels: red, green and blue (0-255), or hue
+// (0-360), saturation and lightness (0-100), rounded to whole numbers
+function toRgb(hex: string) {
+  return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+}
+function fromRgb([r, g, b]: number[]) {
+  return `#${[r, g, b].map((c) => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
+}
+function toHsl(hex: string) {
+  const [r, g, b] = toRgb(hex).map((c) => c / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
   }
-  return sharedView;
+  const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return [Math.round((h * 60 + 360) % 360), Math.round(sat * 100), Math.round(l * 100)];
 }
-function setSharedView(next: View) {
-  sharedView = next;
-  try {
-    localStorage.setItem(VIEW_KEY, next);
-  } catch {}
-  viewListeners.forEach((listener) => listener());
+function fromHsl([h, sat, l]: number[]) {
+  const s1 = sat / 100;
+  const l1 = l / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s1 * Math.min(l1, 1 - l1);
+  const f = (n: number) => l1 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return fromRgb([f(0), f(8), f(4)].map((c) => c * 255));
 }
-function subscribeView(listener: () => void) {
-  viewListeners.add(listener);
-  return () => viewListeners.delete(listener);
-}
+// Each format's channels: their names (for screen readers), short names, and ranges
+const CHANNELS = {
+  rgb: {
+    names: ['Red', 'Green', 'Blue'],
+    short: ['R', 'G', 'B'],
+    max: [255, 255, 255],
+    read: toRgb,
+    write: fromRgb,
+  },
+  hsl: {
+    names: ['Hue', 'Saturation', 'Lightness'],
+    short: ['H', 'S', 'L'],
+    max: [360, 100, 100],
+    read: toHsl,
+    write: fromHsl,
+  },
+};
 
 export default function ColorField({
   value,
@@ -81,8 +151,41 @@ export default function ColorField({
   // the popup), so every picker opens the same size from its swatch
   useAnchored(popup.shown, name ? swatchRef : buttonRef, popupRef);
   const current = normalize(value);
-  const view = React.useSyncExternalStore(subscribeView, currentView, () => 'swatches' as View);
-  const changeView = setSharedView;
+  const view = useChoice(viewChoice);
+  const format = useChoice(formatChoice);
+
+  // Switching views eases the picker's height from the last view's to the new one's (over
+  // --duration-move, on --ease-slide), the new view fading in (.view); at once under
+  // reduced motion
+  const viewsRef = React.useRef<HTMLDivElement>(null);
+  const viewHeight = React.useRef(0);
+  React.useLayoutEffect(() => {
+    const box = viewsRef.current;
+    const shown = box?.firstElementChild as HTMLElement | null | undefined;
+    // (a popup opening again starts at its view's height, not easing from the last one)
+    if (!box || !shown) {
+      viewHeight.current = 0;
+      return;
+    }
+    const from = viewHeight.current;
+    const to = shown.offsetHeight;
+    viewHeight.current = to;
+    if (!from || from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    box.style.height = `${from}px`;
+    // (read, so the browser takes the start height before the end one)
+    void box.offsetHeight;
+    box.style.height = `${to}px`;
+    const done = () => {
+      box.style.height = '';
+    };
+    box.addEventListener('transitionend', done, { once: true });
+    // (and after it, in case transitionend doesn't come: a tab that isn't painting)
+    const timer = setTimeout(done, readDuration('--duration-move'));
+    return () => {
+      box.removeEventListener('transitionend', done);
+      clearTimeout(timer);
+    };
+  }, [view, popup.shown]);
 
   // The picker reports every pointer move; the board (and its autosave) takes the latest
   // color once a frame
@@ -186,24 +289,46 @@ export default function ColorField({
         >
           {/* Sized to its two choices, at the left */}
           <div className="flex">
-            <Segmented compact label="Picker" value={view} options={VIEWS} onChange={changeView} />
-          </div>
-          {view === 'swatches' ? (
-            <Swatches current={current} label={label} onPick={apply} />
-          ) : (
-            <HexColorPicker
-              className={styles.picker}
-              color={value}
-              onChange={(color) => {
-                const next = normalize(color);
-                if (next && next !== value) pick(next);
-              }}
+            <Segmented
+              compact
+              label="Picker"
+              value={view}
+              options={VIEWS}
+              onChange={viewChoice.set}
             />
-          )}
-          <label className={styles.hexBox}>
-            <span className="tierbinder-caption">Hex</span>
-            <HexInput value={value} onChange={apply} />
-          </label>
+          </div>
+          <div ref={viewsRef} className={styles.views}>
+            {/* Keyed, so the new view fades in */}
+            <div key={view} className={styles.view}>
+              {view === 'swatches' ? (
+                <Swatches current={current} label={label} onPick={apply} />
+              ) : (
+                <HexColorPicker
+                  className={styles.picker}
+                  color={value}
+                  onChange={(color) => {
+                    const next = normalize(color);
+                    if (next && next !== value) pick(next);
+                  }}
+                />
+              )}
+            </div>
+          </div>
+          {/* The color typed in: as a hex code, or its channels */}
+          <div className={styles.formatBox}>
+            <Segmented
+              compact
+              label="Color format"
+              value={format}
+              options={FORMATS}
+              onChange={formatChoice.set}
+            />
+            {format === 'hex' ? (
+              <HexInput value={value} onChange={apply} />
+            ) : (
+              <ChannelInputs key={format} format={format} value={value} onChange={apply} />
+            )}
+          </div>
         </div>
       )}
     </span>
@@ -294,6 +419,64 @@ function Swatches({
   );
 }
 
+// The color's channels, three number fields with their short names over them (R, G, B; or
+// H, S, L): typing applies once all three are whole numbers in range; leaving one shows
+// the color in use. A color it sent itself doesn't reset the fields, so HSL's rounding
+// doesn't change the other two while one is typed.
+function ChannelInputs({
+  format,
+  value,
+  onChange,
+}: {
+  format: 'rgb' | 'hsl';
+  value: string;
+  onChange: (color: string) => void;
+}) {
+  const channels = CHANNELS[format];
+  const read = (color: string) => (normalize(color) ? channels.read(color).map(String) : []);
+  const [drafts, setDrafts] = React.useState(() => read(value));
+  const [shown, setShown] = React.useState(value);
+  const [sent, setSent] = React.useState<string | null>(null);
+  if (value !== shown) {
+    setShown(value);
+    if (value !== sent) setDrafts(read(value));
+  }
+  return (
+    <div className={styles.channels}>
+      {channels.names.map((name, i) => (
+        <label key={name} className={styles.channel}>
+          <span aria-hidden className="tierbinder-caption">
+            {channels.short[i]}
+          </span>
+          <input
+            className={`tierbinder-field ${styles.channelField} font-mono`}
+            aria-label={name}
+            inputMode="numeric"
+            spellCheck={false}
+            autoComplete="off"
+            value={drafts[i] ?? ''}
+            onChange={(e) => {
+              const next = drafts.map((d, j) => (j === i ? e.target.value : d));
+              setDrafts(next);
+              const numbers = next.map((d) => (/^\d+$/.test(d.trim()) ? Number(d) : NaN));
+              if (numbers.some((n, j) => !(n <= channels.max[j]))) return;
+              const color = channels.write(numbers);
+              if (color === value) return;
+              setSent(color);
+              setShown(color);
+              onChange(color);
+            }}
+            onBlur={() => {
+              setSent(null);
+              setDrafts(read(value));
+            }}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
+
 // The picker's hex text field: typing applies once it's a full hex color; leaving it shows
 // the color in use
 function HexInput({ value, onChange }: { value: string; onChange: (color: string) => void }) {
@@ -307,6 +490,7 @@ function HexInput({ value, onChange }: { value: string; onChange: (color: string
   return (
     <input
       className={`tierbinder-field ${styles.hex} font-mono`}
+      aria-label="Hex"
       spellCheck={false}
       autoComplete="off"
       value={draft}

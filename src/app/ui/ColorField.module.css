@@ -126,12 +126,60 @@
   }
 }
 
-/* Its caption over the field */
-.hexBox {
+/* The view under the switch: its height eases between the views' (set from
+   ColorField.tsx while it changes), the new one fading in */
+.views {
+  overflow: clip;
+  transition: height var(--duration-move) var(--ease-slide);
+}
+
+.view {
+  animation: view-in var(--duration-fade) ease-out;
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .views {
+    transition: none;
+  }
+
+  .view {
+    animation: none;
+  }
+}
+
+/* The format switch (Hex, RGB, HSL) over its field or fields, at the left */
+.formatBox {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--spacing-2);
+}
+
+/* RGB's or HSL's three fields across the picker, 8px apart, each with its short name over
+   it */
+.channels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-3);
+  width: var(--tb-picker-width);
+}
+
+.channel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  min-width: 0;
+}
+
+.channelField {
+  width: 100%;
+  min-width: 0;
 }
 
 /* react-colorful's parts, in the design system's look: the square fills the picker's
