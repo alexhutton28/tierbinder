@@ -864,7 +864,7 @@ export default function Editor() {
     setWasPresenting(presenting);
     if (cardMenu) setCardMenu(null);
   }
-  const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0 });
+  const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0, shift: 0 });
   const foldSidebar = () => {
     const side = sideRef.current;
     const head = sideHeadRef.current;
@@ -876,7 +876,12 @@ export default function Editor() {
       // is taller, so the slide ends at the bar's own height instead of popping down to it
       const button = head.querySelector<HTMLElement>(`.${styles.foldButton}`);
       const row = Math.max(LOGO_HEIGHT, button?.offsetHeight ?? 0);
+      // The nav's row, taller than the bar's: the button, centered on it, rises by half the
+      // difference as it folds, so it's already where the bar's row centers it at the end
+      const navRow =
+        head.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       setFoldHeights({
+        shift: Math.max(0, (navRow - row) / 2),
         open: side.offsetHeight,
         // The row with its padding above, and the bar's below (kept as its
         // scroll-margin-bottom, which resolves the safe area's inset to pixels)
@@ -2928,6 +2933,13 @@ export default function Editor() {
                   title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
                   aria-expanded={!sidebarFolded}
                   onClick={foldSidebar}
+                  // (rising with the slide to the folded bar's row, see foldHeights.shift; `translate`,
+                  // which the button doesn't transition, unlike its pressed `transform`)
+                  style={
+                    fold > 0 && !folded
+                      ? { translate: `0 ${-foldHeights.shift * fold}px` }
+                      : undefined
+                  }
                 >
                   <span
                     aria-hidden
