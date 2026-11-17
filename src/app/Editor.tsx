@@ -984,11 +984,15 @@ export default function Editor() {
     () => readDuration('--duration-fade') / (readDuration('--duration-move') || 1)
   );
   const trayOpacity = Math.min(1, trayOpen / (fadeShare || 1));
-  const stageWidth = width + (Math.max(TRAY_WIDTH, width) - width) * trayOpen;
+  // The tray on screen: a 16:9 board's width beside the sidebar; on phones and tablets the
+  // board's own, its one row scrolling sideways, so a narrow board isn't drawn smaller to
+  // fit a wider tray under it (the image's tray is always the board's width)
+  const shownTrayWidth = wide ? TRAY_WIDTH : width;
+  const stageWidth = width + (Math.max(shownTrayWidth, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
   // The tray's left edge from the board's: centered on the stage, also while the stage
   // widens to it as it slides in (so it opens from the middle, not wiped in from the left)
-  const trayLeft = -boardLeft - (Math.max(TRAY_WIDTH, width) - stageWidth) / 2;
+  const trayLeft = -boardLeft - (Math.max(shownTrayWidth, width) - stageWidth) / 2;
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
@@ -1013,7 +1017,7 @@ export default function Editor() {
   // design pixels, kept within what the row overhangs); the image keeps its two rows
   const oneRowTray = !wide;
   const trayCount = graphic.tray.items.length;
-  const maxTrayPan = oneRowTray ? Math.max(0, trayRowWidth(trayCount) - TRAY_WIDTH) : 0;
+  const maxTrayPan = oneRowTray ? Math.max(0, trayRowWidth(trayCount) - shownTrayWidth) : 0;
   const [trayPanAsked, setTrayPan] = React.useState(0);
   const trayPan = Math.min(trayPanAsked, maxTrayPan);
   // A card added at the end scrolls the row to it, so it lands where it can be seen
@@ -1033,7 +1037,9 @@ export default function Editor() {
   // later insert to the end
   if (trayPanAsked > maxTrayPan) setTrayPan(maxTrayPan);
   // The tray's height follows its cards; while it slides in or out, the share of it shown
-  const shownTrayHeight = trayDrawn ? trayHeight(trayCount, TRAY_WIDTH, oneRowTray) * trayOpen : 0;
+  const shownTrayHeight = trayDrawn
+    ? trayHeight(trayCount, shownTrayWidth, oneRowTray) * trayOpen
+    : 0;
   // The image's size in its own pixels. An included card tray goes under the board at the
   // board's width, its cards laid out again to fit, so the image is one rectangle.
   const exported = exportSize(
@@ -1047,13 +1053,13 @@ export default function Editor() {
   // (a full tray won't take it, so it keeps the board's size)
   const cardDragWidth = (center: Point) =>
     trayShown && center.y > BOARD_HEIGHT && graphic.tray.items.length < MAX_TRAY_CARDS
-      ? trayCardWidth(graphic.tray.items.length + 1, TRAY_WIDTH, oneRowTray)
+      ? trayCardWidth(graphic.tray.items.length + 1, shownTrayWidth, oneRowTray)
       : boardCardWidth;
 
   // Every card and where it's drawn: the board's, then the tray's
   const boardPlacements = type.layout(graphic);
   const trayPlacements = trayShown
-    ? layoutTray(graphic.tray, TRAY_WIDTH, oneRowTray).map((p) => ({
+    ? layoutTray(graphic.tray, shownTrayWidth, oneRowTray).map((p) => ({
         ...p,
         x: p.x + trayLeft - trayPan,
         y: p.y + trayTop,
@@ -1840,7 +1846,7 @@ export default function Editor() {
   // (and the one-row tray's scroll: its cards' own terms)
   const inTray = (point: Point) => ({ x: point.x - trayLeft + trayPan, y: point.y - trayTop });
   const dropIndex = (tray: Tray, id: string, point: Point) =>
-    trayDropIndex(tray, id, point, TRAY_WIDTH, oneRowTray);
+    trayDropIndex(tray, id, point, shownTrayWidth, oneRowTray);
 
   // Adds a card where it was dropped: in the card tray (or the gap above it) by position,
   // or where the graphic puts it
@@ -3537,7 +3543,7 @@ export default function Editor() {
                 {trayDrawn && (
                   <CardTray
                     tray={graphic.tray}
-                    width={TRAY_WIDTH}
+                    width={shownTrayWidth}
                     left={trayLeft}
                     top={trayTop}
                     scale={scale}
