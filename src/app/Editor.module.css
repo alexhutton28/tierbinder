@@ -11,18 +11,6 @@
   padding-top: env(safe-area-inset-top);
   padding-inline: var(--spacing-4);
   background: var(--tb-top);
-  transition:
-    translate var(--duration-drop) var(--ease-slide),
-    opacity var(--duration-fade) ease-out;
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: opacity var(--duration-fade) ease-out;
-  }
-
-  /* It only tucks under b8; widening the window doesn't slide it back in the sidebar */
-  @variant b8 {
-    transition: none;
-  }
 }
 
 .brand {
@@ -31,28 +19,13 @@
   transition: opacity var(--duration-fade) ease-out;
 }
 
-/* Under b8, while the page scrolls down (Editor.tsx): slid up by its own height, leaving
-   the status bar's strip in its color, with the logo faded so none of it shows there;
-   back while it holds keyboard focus. Reduced motion: it fades out in place instead. */
-.topTucked:not(:has(:focus-visible)) {
-  translate: 0 calc(-1 * var(--tb-top-height));
-
-  & .brand {
-    opacity: 0;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    translate: none;
-    opacity: 0;
-    pointer-events: none;
-  }
-}
-
-/* Beside the sidebar, the board stays centered. Editor.tsx sizes it to fill the
-   workspace. */
+/* The board stays centered: across the page under b8, where a tall shape is narrower than
+   it (its height is capped so the sidebar keeps room), and in the workspace beside the
+   sidebar. Editor.tsx sizes it to fill the workspace. */
 .canvas {
+  align-items: center;
+
   @variant b8 {
-    align-items: center;
     justify-content: center;
   }
 }
@@ -121,7 +94,7 @@
 .floatingBrand {
   position: fixed;
   top: 0;
-  left: 0;
+  left: env(safe-area-inset-left);
   z-index: 10;
   display: flex;
   align-items: center;
@@ -385,7 +358,7 @@
      line's capital height (at the credits' caption size) */
   bottom: calc(var(--spacing-4) + (1cap - var(--tb-icon)) / 2);
   font-size: var(--text-caption);
-  left: var(--spacing-3);
+  left: calc(var(--spacing-3) + env(safe-area-inset-left));
   z-index: 10;
   margin: 0;
   animation: view-fade var(--duration-fade) ease-out var(--duration-move) both;
@@ -399,7 +372,12 @@
   border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
 
+  /* At the window's foot under b8: the credits' 44px touch target reaches past it, which
+     would let the page scroll by the difference */
+  overflow-y: clip;
+
   @variant b8 {
+    overflow-y: visible;
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
   }
@@ -545,30 +523,21 @@
 }
 
 /* Search results: thumbnail tiles, as many per row as fit (the set and number are the
-   tooltip). On narrow screens the box shows 3 rows and scrolls; beside the board it
-   fills the sidebar. */
+   tooltip), filling the sidebar's height and scrolling */
 .results {
-  --rows-shown: 3;
-
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
   align-content: start;
   gap: var(--spacing-2);
-  max-height: calc(
-    var(--rows-shown) * var(--tb-thumb-height) + (var(--rows-shown) - 1) * var(--spacing-2)
-  );
-
-  @variant b8 {
-    max-height: none;
-  }
 }
 
-/* The results and the shade over their top */
+/* The results and the shade over their top, never shorter than a row of results: past
+   that, the panel scrolls instead */
 .resultsBox {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: var(--tb-thumb-height);
 }
 
 .resultsBox > .results {

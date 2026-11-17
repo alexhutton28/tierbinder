@@ -128,9 +128,10 @@ const MENU_WIDTH = 160;
 const LONG_PRESS = 500;
 const TOUCH_SLOP = 8;
 
-// Under b8 the top bar slides away as the page scrolls down and back as it scrolls up,
-// once the scroll has gone this far (px) one way, so small jitters don't toggle it
-const TOP_BAR_SCROLL = 8;
+// Under b8 the board and the card tray stay on screen above the sidebar, which scrolls on
+// its own: they take at most this share of the page's height (top bar included), leaving
+// the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
+const BOARD_SHARE = 0.6;
 
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
@@ -708,6 +709,8 @@ export default function Editor() {
 
   const stageRef = React.useRef<Konva.Stage | null>(null);
   const workspaceRef = React.useRef<HTMLDivElement>(null);
+  // The whole page: under b8, the board's height is a share of it (BOARD_SHARE)
+  const pageRef = React.useRef<HTMLDivElement>(null);
   // The sidebar's default width fits the main nav with every label showing and the same
   // 8px (.sideHead) on both sides, plus the sidebar's edge line. It's measured from the
   // nav, so it follows the labels and the font; a width the user dragged still wins.
@@ -766,34 +769,6 @@ export default function Editor() {
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
-  // Under b8, the top bar slides up out of the way while the page scrolls down, and back
-  // when it scrolls up or reaches the top (the page's scroll container is <main>, in
-  // layout.tsx)
-  const topRef = React.useRef<HTMLElement>(null);
-  const [topTucked, setTopTucked] = React.useState(false);
-  React.useEffect(() => {
-    const page = topRef.current?.closest('main');
-    if (wide || !page) {
-      setTopTucked(false);
-      return;
-    }
-    let last = page.scrollTop;
-    const onScroll = () => {
-      // Clamped to the page, so a bounce past either end (or the page getting shorter)
-      // doesn't read as scrolling back
-      const y = Math.min(Math.max(page.scrollTop, 0), page.scrollHeight - page.clientHeight);
-      const height = topRef.current?.offsetHeight ?? 0;
-      if (y <= height) {
-        setTopTucked(false);
-        last = y;
-      } else if (Math.abs(y - last) >= TOP_BAR_SCROLL) {
-        setTopTucked(y > last);
-        last = y;
-      }
-    };
-    page.addEventListener('scroll', onScroll, { passive: true });
-    return () => page.removeEventListener('scroll', onScroll);
-  }, [wide]);
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
   // was (the colored one goes with the sidebar), once the slide is over (`data-settled`),
   // as a button that brings the sidebar back; only when it clears the board (`data-size`,
@@ -821,6 +796,34 @@ export default function Editor() {
       logo.toggleAttribute('data-settled', false);
     };
   }, [sidebarCollapsed]);
+  // html and body don't scroll, but iOS Safari scrolls the window anyway to show a field
+  // under its keyboard, and can leave it scrolled once the keyboard closes: the page
+  // shifted up, with an empty strip under it. Put it back once no field has focus.
+  React.useEffect(() => {
+    const viewport = window.visualViewport;
+    let frame = 0;
+    const settle = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const field = document.activeElement?.matches(
+          'input:not([type=checkbox], [type=radio]), textarea, [contenteditable]:not([contenteditable=false])'
+        );
+        // Only once the keyboard has closed (the visual viewport is the window's height
+        // again), and never while zoomed in, where panning moves the window too
+        const keyboard = viewport && viewport.height < window.innerHeight - 1;
+        const zoomed = viewport && viewport.scale > 1;
+        if (field || keyboard || zoomed || !(window.scrollX || window.scrollY)) return;
+        window.scrollTo(0, 0);
+      });
+    };
+    window.addEventListener('focusout', settle);
+    viewport?.addEventListener('resize', settle);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('focusout', settle);
+      viewport?.removeEventListener('resize', settle);
+    };
+  }, []);
   React.useEffect(() => {
     const query = wideQuery();
     const update = () => {
@@ -1334,28 +1337,30 @@ export default function Editor() {
     } catch {}
   }, [doc]);
 
-  // The board fills the workspace: its width on narrow screens (where the page scrolls),
-  // and from b8 up as much as fits, leaving room for the toolbar
-  // around it. Exports are always full size.
+  // The board fills the workspace, leaving room for the toolbar around it: from b8 up as
+  // much as fits beside the sidebar, and under b8 its width, as long as the workspace stays
+  // within BOARD_SHARE of the page's height (measured from the page, never the workspace,
+  // whose height follows the board's). Exports are always full size.
   React.useEffect(() => {
     const workspace = workspaceRef.current;
     const board = boardRef.current;
     const box = boardBoxRef.current;
-    if (!workspace || !board || !box) return;
+    const page = pageRef.current;
+    if (!workspace || !board || !box || !page) return;
     const fit = () => {
       const style = getComputedStyle(workspace);
       const room =
         workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-      let next = room / stageWidth;
-      if (wide) {
-        const height =
-          workspace.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-        const around = board.offsetHeight - box.offsetHeight;
-        // The card tray and the gap above it, when it shows
-        const tray = trayShown ? TRAY_GAP : 0;
-        const designHeight = BOARD_HEIGHT + shownTrayHeight;
-        next = Math.min(next, (height - around - tray) / designHeight);
-      }
+      const outer = wide
+        ? workspace.clientHeight
+        : page.clientHeight * BOARD_SHARE -
+          (workspace.getBoundingClientRect().top - page.getBoundingClientRect().top);
+      const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const around = board.offsetHeight - box.offsetHeight;
+      // The card tray and the gap above it, when it shows
+      const tray = trayShown ? TRAY_GAP : 0;
+      const designHeight = BOARD_HEIGHT + shownTrayHeight;
+      const next = Math.min(room / stageWidth, (height - around - tray) / designHeight);
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
       setScale(Math.max(0, Math.floor(next * 1000) / 1000));
     };
@@ -1363,6 +1368,7 @@ export default function Editor() {
     const observer = new ResizeObserver(fit);
     observer.observe(workspace);
     observer.observe(board);
+    observer.observe(page);
     return () => {
       observer.disconnect();
     };
@@ -1950,22 +1956,23 @@ export default function Editor() {
       launch();
       return;
     }
-    // Scrolls the board's foot, the tray, into view if any of it is off screen, and flies
-    // them when the scroll is over: the page's (<main>, on phones) or the workspace's
+    // Scrolls the board's foot, the tray, into view if any of it is off screen (beside the
+    // sidebar, where the workspace scrolls), and flies them when the scroll is over
     const start = window.setTimeout(() => {
       if (!trayHidden()) {
         launch();
         return;
       }
-      const scrollers = [boardBoxRef.current?.closest('main'), workspaceRef.current].filter(
-        (el): el is HTMLElement => !!el
-      );
-      scrollers.forEach((el) => el.addEventListener('scrollend', launch));
+      const workspace = workspaceRef.current;
+      workspace?.addEventListener('scrollend', launch);
+      // On phones only iOS's keyboard scrolls the window, the one way the tray is off screen
+      window.addEventListener('scrollend', launch);
       // Where scrollend isn't fired (or the scroll is cut short)
       const timer = window.setTimeout(launch, SCROLL_WAIT);
       cleanUp = () => {
         clearTimeout(timer);
-        scrollers.forEach((el) => el.removeEventListener('scrollend', launch));
+        workspace?.removeEventListener('scrollend', launch);
+        window.removeEventListener('scrollend', launch);
       };
       boardBoxRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
     });
@@ -2410,7 +2417,10 @@ export default function Editor() {
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
     <BoardColors value={colorChoices}>
-      <div className="tierbinder-page w-full b8:h-full flex flex-col b8:flex-row text-body">
+      <div
+        ref={pageRef}
+        className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
+      >
         {logoMounted && (
           <button
             ref={floatingLogoRef}
@@ -2504,16 +2514,13 @@ export default function Editor() {
           className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
           inert={viewing !== null}
         >
-          <header
-            ref={topRef}
-            className={`${styles.top} ${!wide && topTucked ? styles.topTucked : ''}`}
-          >
+          <header className={styles.top}>
             <Link href="/" className={styles.brand}>
               <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
             </Link>
           </header>
           <SidebarHandle />
-          <aside className={`${styles.side} flex flex-col min-w-0 b8:flex-1 b8:min-h-0`}>
+          <aside className={`${styles.side} flex flex-col flex-1 min-w-0 min-h-0`}>
             <div className={styles.sideHead}>
               <RadioBar
                 label="Editor sections"
@@ -2538,11 +2545,11 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'add'}
-              className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+              className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Grows to fill the sidebar while it shows search results */}
               <div
-                className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
+                className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'flex-1 min-h-0' : ''}`}
               >
                 <h3 id="card-search-heading" className="tierbinder-heading">
                   Add a Card
@@ -2560,10 +2567,15 @@ export default function Editor() {
                       ref={searchInputRef}
                       className="tierbinder-field"
                       aria-labelledby="card-search-heading"
-                      // Card names aren't real words: don't let phones "fix" them
+                      // Card names aren't real words: don't let phones "fix" them. Nor
+                      // offer to fill them in: Safari reads "Card name" as a contact's
+                      // name and ignores autoComplete="off", but not a field named search
                       autoCorrect="off"
                       autoCapitalize="off"
+                      autoComplete="off"
+                      name="search"
                       spellCheck={false}
+                      enterKeyHint="search"
                       placeholder="Card name"
                       value={query}
                       onChange={(e) => {
@@ -2713,7 +2725,7 @@ export default function Editor() {
                       : ''}
                 </p>
                 {(showingResults || showingSkeleton) && (
-                  <div className={`${styles.resultsBox} b8:flex-1 b8:min-h-0`}>
+                  <div className={`${styles.resultsBox} flex-1`}>
                     <div
                       ref={resultsRef}
                       className={`${styles.results} overflow-y-auto overflow-x-hidden`}
@@ -2985,7 +2997,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
-              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
               hairline between sections (.tierbinder-sections), and every setting a row
@@ -3086,7 +3098,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
-              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0"
+              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Sections as in Customize, a hairline between them and each setting a row: the
               image (its size and format, whether the card tray goes in it, and exporting
@@ -3133,9 +3145,10 @@ export default function Editor() {
               </div>
             </section>
 
-            {/* At the sidebar's foot under every tab, until the credits find a better home */}
-            {/* The credits, and from b8 up the button that hides the sidebar at its other end */}
-            <footer className={styles.foot}>
+            {/* The credits, and from b8 up the button that hides the sidebar at its other end:
+            at the sidebar's foot under every tab beside the board, and under b8 only in
+            Save & Share, where the sidebar's height is too short to spend on them */}
+            <footer className={styles.foot} hidden={!wide && tab !== 'save'}>
               <Credits />
               {wide && (
                 <button
@@ -3159,11 +3172,23 @@ export default function Editor() {
           ref={workspaceRef}
           // With the sidebar hidden, more room at the left, so the board stays clear of the show
           // button at the bottom left
-          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
           inert={viewing !== null}
         >
-          <div ref={boardRef} className="flex flex-col gap-4" style={{ width: stageWidth * scale }}>
-            <div ref={boardBoxRef} tabIndex={-1} className={`${styles.boardBox} w-full relative`}>
+          {/* Under b8 the toolbar takes the page's width, so a board narrowed to fit its height
+          share doesn't wrap the toolbar (which would narrow the board further); beside the
+          sidebar it's the board's width */}
+          <div
+            ref={boardRef}
+            className="flex flex-col gap-4 self-stretch b8:self-auto"
+            style={wide ? { width: stageWidth * scale } : undefined}
+          >
+            <div
+              ref={boardBoxRef}
+              tabIndex={-1}
+              className={`${styles.boardBox} self-center relative`}
+              style={{ width: stageWidth * scale }}
+            >
               <Stage
                 ref={(stage) => {
                   stageRef.current = stage;
