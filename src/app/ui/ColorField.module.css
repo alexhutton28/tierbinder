@@ -213,6 +213,20 @@
   font-size: var(--text-caption);
 }
 
+/* On touch screens it takes presses 44px tall, reaching above and below the field */
+@media (pointer: coarse) {
+  .colorField .formatButton {
+    position: relative;
+  }
+
+  .colorField .formatButton::after {
+    position: absolute;
+    inset-block: calc(50% - var(--tb-touch-target) / 2);
+    inset-inline: 0;
+    content: '';
+  }
+}
+
 /* Plain :hover, so it also lights where hover is a tap */
 .colorField .formatButton:hover,
 .colorField .formatButton[aria-expanded='true'] {

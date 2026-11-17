@@ -273,7 +273,7 @@ export default function ColorField({
             <Segmented
               compact
               small
-              label="Picker"
+              label="Color view"
               value={view}
               options={VIEWS}
               onChange={viewChoice.set}

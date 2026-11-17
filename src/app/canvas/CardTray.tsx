@@ -5,7 +5,7 @@ import React from 'react';
 import { Circle, Group, Layer, Line, Rect, Text } from 'react-konva';
 import { TOUCH_SLOP } from '../ui/pointer';
 import { readDuration } from '../ui/motion';
-import { PETREL_950, darkReadsBetter } from '../color';
+import { PETREL_50, PETREL_950, darkReadsBetter } from '../color';
 import { selectedLast } from '../graphics/types';
 import CardNode from './CardNode';
 import { BOARD_HEIGHT } from './size';
@@ -97,11 +97,15 @@ const WHEEL_LINE = 16;
 // before one fades fully in; and how dark at the edge
 const SHADE_WIDTH = 48;
 const SHADE_FADE = 24;
-const SHADE_COLOR = 'rgba(0, 0, 0, 0.6)';
+// (Petrel 950 at 60%, as the page's scroll shade is, fading to nothing)
+const SHADE_COLOR = 'rgba(18, 23, 26, 0.6)';
+const SHADE_CLEAR = 'rgba(18, 23, 26, 0)';
 // The arrow in each shade, in on-screen pixels: its round button's radius (a 32px circle,
 // taking taps as a 44px one: --tb-touch-target), its center from the tray's edge, and its
 // chevron's half size and line
 const ARROW_RADIUS = 16;
+// (Petrel 50, a little see-through over the cards)
+const ARROW_OPACITY = 0.9;
 const ARROW_HIT = 22;
 const ARROW_INSET = 24;
 const CHEVRON = 4;
@@ -144,7 +148,7 @@ function EdgeShade({
         cornerRadius={left ? [radius, 0, 0, radius] : [0, radius, radius, 0]}
         fillLinearGradientStartPoint={{ x: left ? 0 : width, y: 0 }}
         fillLinearGradientEndPoint={{ x: left ? width : 0, y: 0 }}
-        fillLinearGradientColorStops={[0, SHADE_COLOR, 1, 'rgba(0, 0, 0, 0)']}
+        fillLinearGradientColorStops={[0, SHADE_COLOR, 1, SHADE_CLEAR]}
       />
       <Group
         x={arrowX}
@@ -164,7 +168,12 @@ function EdgeShade({
       >
         {/* Its touch target, unseen */}
         <Circle radius={ARROW_HIT / s} fill="transparent" />
-        <Circle radius={ARROW_RADIUS / s} fill={HINT_LIGHT} opacity={0.9} listening={false} />
+        <Circle
+          radius={ARROW_RADIUS / s}
+          fill={PETREL_50}
+          opacity={ARROW_OPACITY}
+          listening={false}
+        />
         <Line
           points={[-point / 2, -CHEVRON / s, point / 2, 0, -point / 2, CHEVRON / s]}
           stroke={HINT_DARK}

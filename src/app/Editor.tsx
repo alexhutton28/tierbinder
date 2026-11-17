@@ -2866,8 +2866,8 @@ export default function Editor() {
                   <Image
                     src="/tierbinder-combined-light.svg"
                     alt="TierBinder"
-                    width={114}
-                    height={25}
+                    width={LIGHT_LOGO_WIDTH}
+                    height={LOGO_HEIGHT}
                   />
                 </div>
               )}
