@@ -185,6 +185,7 @@
   background: var(--tb-field);
   transition: border-color var(--duration-fade) ease-out;
 
+  /* Focused, its edge turns Storm 600, as every text field's does */
   &:has(input:focus-visible) {
     border-color: var(--color-storm-600);
   }
@@ -237,6 +238,12 @@
   @variant b7 {
     font-size: var(--text-body);
   }
+}
+
+/* (without the page's focus ring, which outranks .bare's outline: none: the field's edge
+   shows focus instead) */
+.colorField .bare:focus-visible {
+  outline: none;
 }
 
 /* react-colorful's parts, in the design system's look: the square fills the picker's
