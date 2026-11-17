@@ -3,6 +3,7 @@
 import React from 'react';
 import { Circle, Group, Layer, Line, Rect, Text } from 'react-konva';
 import { PETREL_950, darkReadsBetter } from '../color';
+import { selectedLast } from '../graphics/types';
 import CardNode from './CardNode';
 import { BOARD_HEIGHT } from './size';
 import { TRAY_HINT, TRAY_HINT_SIZE, TRAY_RADIUS, layoutTray, trayHeight, type Tray } from './tray';
@@ -96,6 +97,7 @@ export default function CardTray({
   hintFont,
   showHint,
   arriving,
+  selectedId,
 }: {
   tray: Tray;
   // Its width in design pixels (TRAY_WIDTH), and its
@@ -130,6 +132,8 @@ export default function CardTray({
   showHint: boolean;
   // Cards not drawn yet: copies of them are flying in from the sidebar
   arriving: ReadonlySet<string>;
+  // The selected card, drawn over the others
+  selectedId: string | null;
 }) {
   const height = trayHeight(tray.items.length, width);
   return (
@@ -162,23 +166,25 @@ export default function CardTray({
             dark={darkReadsBetter(tray.color, HINT_DARK)}
           />
         )}
-        {layoutTray(tray, width).map(({ item, x, y, width: cardWidth }) => (
-          <CardNode
-            key={item.id}
-            item={item}
-            x={x}
-            y={y}
-            width={cardWidth}
-            fontFamily={fontFamily}
-            borderColor={item.split ? border : null}
-            dividerColor={border}
-            onSelect={() => onSelect(item.id)}
-            onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
-            hidden={arriving.has(item.id)}
-            dragWidth={(center) => (center.y > BOARD_HEIGHT ? cardWidth : boardCardWidth)}
-            onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX + left, cardY + top)}
-          />
-        ))}
+        {selectedLast(layoutTray(tray, width), selectedId).map(
+          ({ item, x, y, width: cardWidth }) => (
+            <CardNode
+              key={item.id}
+              item={item}
+              x={x}
+              y={y}
+              width={cardWidth}
+              fontFamily={fontFamily}
+              borderColor={item.split ? border : null}
+              dividerColor={border}
+              onSelect={() => onSelect(item.id)}
+              onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
+              hidden={arriving.has(item.id)}
+              dragWidth={(center) => (center.y > BOARD_HEIGHT ? cardWidth : boardCardWidth)}
+              onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX + left, cardY + top)}
+            />
+          )
+        )}
       </Group>
     </Layer>
   );

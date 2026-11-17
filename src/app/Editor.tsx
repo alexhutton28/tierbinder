@@ -1757,6 +1757,40 @@ export default function Editor() {
         )
       : type.dropCard(graphic, item, point);
 
+  // The selected card as a press on the board began (before the press deselected it)
+  const pressSelection = React.useRef<string | null>(null);
+
+  // A tier (or the card tray, the last target) clicked on the board: it's the Add to choice
+  // from then on, and with a card selected, the card moves to its end and stays selected.
+  // The blank canvas's cards have no place in a target, so they only move into the tray.
+  function pickTargetOnBoard(index: number) {
+    const id = pressSelection.current;
+    pressSelection.current = null;
+    setTarget(index);
+    const place = id ? placements.find((p) => p.item.id === id) : undefined;
+    if (!id || !place) return;
+    const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    const toTray = index === boardTargets.length;
+    let placed: Placed<Graphic> | null = null;
+    if (toTray && inTrayNow) {
+      placed = { ...graphic, tray: moveTrayCard(graphic.tray, id, graphic.tray.items.length - 1) };
+    } else if (toTray) {
+      placed = withTray(
+        type.mapCards(graphic, (i) => (i.id === id ? null : i)),
+        insertTrayCard(graphic.tray, place.item)
+      );
+    } else if (inTrayNow) {
+      const without = { ...graphic, tray: mapTray(graphic.tray, (i) => (i.id === id ? null : i)) };
+      placed = type.addCard(without, place.item, index);
+    } else if (type.moveCardTo) {
+      placed = type.moveCardTo(graphic, id, index);
+    }
+    if (!placed) return;
+    setCardMenu(null);
+    applyPlaced(placed);
+    if (!('error' in placed)) setSelectedId(id);
+  }
+
   // A board card dropped in the card tray moves there; the graphic moves it otherwise
   const boardCardDrop = (id: string, x: number, y: number) => {
     const place = boardPlacements.find((p) => p.item.id === id);
@@ -3247,6 +3281,11 @@ export default function Editor() {
                 height={BOARD_HEIGHT * scale + TRAY_GAP * trayOpen + shownTrayHeight * scale}
                 scaleX={scale}
                 scaleY={scale}
+                // Before the press below can deselect it: a tier or the tray clicked with a
+                // card selected moves the card there (pickTargetOnBoard)
+                onPointerDown={() => {
+                  pressSelection.current = selectedShown ? selectedId : null;
+                }}
                 onMouseDown={(e) => {
                   if (e.target === e.target.getStage() || e.target.hasName('background')) {
                     setSelectedId(null);
@@ -3266,7 +3305,8 @@ export default function Editor() {
                   onCardDrop={boardCardDrop}
                   cardDragWidth={cardDragWidth}
                   arriving={arriving}
-                  onPickTarget={setTarget}
+                  onPickTarget={(i) => pickTargetOnBoard(i)}
+                  selectedId={selectedId}
                   onEditSetting={(key) => {
                     setTab('customize');
                     setSidebarHidden(false);
@@ -3286,7 +3326,8 @@ export default function Editor() {
                     onSelect={setSelectedId}
                     onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                     onCardDrop={trayCardDrop}
-                    onPick={() => setTarget(boardTargets.length)}
+                    onPick={() => pickTargetOnBoard(boardTargets.length)}
+                    selectedId={selectedId}
                     onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
                     boardCardWidth={boardCardWidth}
                     hintFont={interfaceFont}

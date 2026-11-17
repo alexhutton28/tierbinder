@@ -5,7 +5,7 @@ import React from 'react';
 import { Group, Layer, Rect, Text } from 'react-konva';
 import CardNode from '../../canvas/CardNode';
 import { BOARD_HEIGHT, boardWidth } from '../../canvas/size';
-import type { CanvasProps } from '../types';
+import { selectedLast, type CanvasProps } from '../types';
 import {
   SEPARATOR_WIDTH,
   dropTarget,
@@ -29,6 +29,7 @@ export default function TierListCanvas({
   arriving,
   onPickTarget,
   onEditSetting,
+  selectedId,
 }: CanvasProps<TierList>) {
   const placements = layoutCards(list);
   const rowHeight = tierHeight(list);
@@ -73,7 +74,7 @@ export default function TierListCanvas({
           listening={false}
         />
       ))}
-      {placements.map(({ item, tierIndex, x, y, width, height }) => (
+      {selectedLast(placements, selectedId).map(({ item, tierIndex, x, y, width, height }) => (
         <CardNode
           key={item.id}
           item={item}
