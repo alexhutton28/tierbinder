@@ -41,12 +41,29 @@ const VIEW_KEY = 'tierbinder-color-view';
 // blocks of four, so each is a 44px touch target across the picker
 const TOUCH_COLUMNS = 4;
 
-function savedView(): View {
+// The view in use, shared by every color field on the page (switching in one switches the
+// others) and saved on the device
+let sharedView: View | null = null;
+const viewListeners = new Set<() => void>();
+function currentView(): View {
+  if (sharedView) return sharedView;
   try {
-    return localStorage.getItem(VIEW_KEY) === 'custom' ? 'custom' : 'swatches';
+    sharedView = localStorage.getItem(VIEW_KEY) === 'custom' ? 'custom' : 'swatches';
   } catch {
-    return 'swatches';
+    sharedView = 'swatches';
   }
+  return sharedView;
+}
+function setSharedView(next: View) {
+  sharedView = next;
+  try {
+    localStorage.setItem(VIEW_KEY, next);
+  } catch {}
+  viewListeners.forEach((listener) => listener());
+}
+function subscribeView(listener: () => void) {
+  viewListeners.add(listener);
+  return () => viewListeners.delete(listener);
 }
 
 // The board's colors (its tiers', background, border and card tray's, and white), one of
@@ -88,13 +105,8 @@ export default function ColorField({
   const boardNow = React.useContext(BoardColors);
   const [presets, setPresets] = React.useState(boardNow);
   const current = normalize(value);
-  const [view, setView] = React.useState<View>(savedView);
-  const changeView = (next: View) => {
-    setView(next);
-    try {
-      localStorage.setItem(VIEW_KEY, next);
-    } catch {}
-  };
+  const view = React.useSyncExternalStore(subscribeView, currentView, () => 'swatches' as View);
+  const changeView = setSharedView;
 
   // The picker reports every pointer move; the board (and its autosave) takes the latest
   // color once a frame
@@ -248,9 +260,9 @@ export default function ColorField({
 }
 
 // The Swatches view: a grid of recommended colors, a column per hue, palest at the top. A
-// radio group with one Tab stop (the color in use, else the first), the arrows moving
-// through it as laid out and Enter, Space or a click picking, which keeps the popup open.
-// The color in use is ringed.
+// radio group, as the WAI-ARIA pattern has it: one Tab stop (the color in use, else the
+// first), the arrows (as laid out), Home and End moving and picking, as do a click, Enter
+// and Space; picking keeps the popup open. The color in use is ringed.
 function Swatches({
   current,
   label,
@@ -268,6 +280,7 @@ function Swatches({
   const move = (index: number) => {
     setFocused(index);
     refs.current[index]?.focus();
+    if (SWATCHES[index].color !== current) onPick(SWATCHES[index].color);
   };
   const onKeyDown = (e: React.KeyboardEvent, i: number) => {
     const { column, row } = SWATCHES[i];
@@ -316,7 +329,7 @@ function Swatches({
           style={
             {
               background: s.color,
-              // Its place: as listed, or on touch screens in two blocks of five hues
+              // Its place: as listed, or on touch screens in blocks of TOUCH_COLUMNS hues
               '--column': s.column + 1,
               '--row': s.row + 1,
               '--touch-column': (s.column % TOUCH_COLUMNS) + 1,

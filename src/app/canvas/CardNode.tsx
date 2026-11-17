@@ -127,6 +127,7 @@ export default function CardNode({
   dragWidth,
   hidden = false,
   draggable = true,
+  raised = false,
 }: {
   item: CardItem;
   x: number;
@@ -156,6 +157,8 @@ export default function CardNode({
   // Off where something else starts its drags (the one-row card tray on touch screens,
   // which tells a pan from a drag first and then calls startDrag)
   draggable?: boolean;
+  // Drawn over the others (the selected card: selectedLast), where its drop puts it back
+  raised?: boolean;
 }) {
   // Where the card is drawn while it isn't dragged: its parent and place in it
   const home = React.useRef<{ parent: Konva.Container; zIndex: number } | null>(null);
@@ -311,7 +314,10 @@ export default function CardNode({
           const dragLayer = node.getLayer();
           node.moveTo(back.parent);
           dragLayer?.batchDraw();
-          node.zIndex(Math.min(back.zIndex, back.parent.children.length - 1));
+          // On top again if it's raised, even if the drawing order changed during the drag
+          // (React reordering the layer while the card was out of it)
+          if (raised) node.moveToTop();
+          else node.zIndex(Math.min(back.zIndex, back.parent.children.length - 1));
           node.absolutePosition(corner);
         }
         if (unmounting.current) return;

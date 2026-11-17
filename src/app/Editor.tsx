@@ -953,6 +953,9 @@ export default function Editor() {
   const trayOpacity = Math.min(1, trayOpen / (fadeShare || 1));
   const stageWidth = width + (Math.max(TRAY_WIDTH, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
+  // The tray's left edge from the board's: centered on the stage, also while the stage
+  // widens to it as it slides in (so it opens from the middle, not wiped in from the left)
+  const trayLeft = -boardLeft - (Math.max(TRAY_WIDTH, width) - stageWidth) / 2;
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
@@ -982,10 +985,16 @@ export default function Editor() {
   const trayPan = Math.min(trayPanAsked, maxTrayPan);
   // A card added at the end scrolls the row to it, so it lands where it can be seen
   const lastTrayId = graphic.tray.items.at(-1)?.id;
-  const [trayEnd, setTrayEnd] = React.useState({ count: trayCount, last: lastTrayId });
-  if (trayEnd.count !== trayCount || trayEnd.last !== lastTrayId) {
-    setTrayEnd({ count: trayCount, last: lastTrayId });
-    if (trayCount > trayEnd.count && lastTrayId !== trayEnd.last) setTrayPan(maxTrayPan);
+  // (on the same board: switching boards starts at the row's start)
+  const [trayEnd, setTrayEnd] = React.useState({
+    kind: graphic.kind,
+    count: trayCount,
+    last: lastTrayId,
+  });
+  if (trayEnd.kind !== graphic.kind || trayEnd.count !== trayCount || trayEnd.last !== lastTrayId) {
+    setTrayEnd({ kind: graphic.kind, count: trayCount, last: lastTrayId });
+    if (trayEnd.kind !== graphic.kind) setTrayPan(0);
+    else if (trayCount > trayEnd.count && lastTrayId !== trayEnd.last) setTrayPan(maxTrayPan);
   }
   // The tray's height follows its cards; while it slides in or out, the share of it shown
   const shownTrayHeight = trayDrawn ? trayHeight(trayCount, TRAY_WIDTH, oneRowTray) * trayOpen : 0;
@@ -1010,7 +1019,7 @@ export default function Editor() {
   const trayPlacements = trayShown
     ? layoutTray(graphic.tray, TRAY_WIDTH, oneRowTray).map((p) => ({
         ...p,
-        x: p.x - boardLeft - trayPan,
+        x: p.x + trayLeft - trayPan,
         y: p.y + trayTop,
       }))
     : [];
@@ -1435,7 +1444,8 @@ export default function Editor() {
   // much as fits beside the sidebar, and under b8 its width, as long as the workspace stays
   // within BOARD_SHARE of the page's height (measured from the page, never the workspace,
   // whose height follows the board's). Exports are always full size.
-  React.useEffect(() => {
+  // (before paint, so a frame of the tray's slide never paints at the last frame's scale)
+  React.useLayoutEffect(() => {
     const workspace = workspaceRef.current;
     const board = boardRef.current;
     const box = boardBoxRef.current;
@@ -1802,7 +1812,7 @@ export default function Editor() {
 
   // A point on the board (design pixels from its corner) measured from the tray's corner
   // (and the one-row tray's scroll: its cards' own terms)
-  const inTray = (point: Point) => ({ x: point.x + boardLeft + trayPan, y: point.y - trayTop });
+  const inTray = (point: Point) => ({ x: point.x - trayLeft + trayPan, y: point.y - trayTop });
   const dropIndex = (tray: Tray, id: string, point: Point) =>
     trayDropIndex(tray, id, point, TRAY_WIDTH, oneRowTray);
 
@@ -1832,7 +1842,11 @@ export default function Editor() {
     const toTray = index === boardTargets.length;
     let placed: Placed<Graphic> | null = null;
     if (toTray && inTrayNow) {
+      // Already last: nothing to move
+      if (graphic.tray.items.at(-1)?.id === id) return;
       placed = { ...graphic, tray: moveTrayCard(graphic.tray, id, graphic.tray.items.length - 1) };
+      // The one-row tray scrolls to its end, where the card now is
+      setTrayPan(Infinity);
     } else if (toTray) {
       placed = withTray(
         type.mapCards(graphic, (i) => (i.id === id ? null : i)),
@@ -1844,7 +1858,8 @@ export default function Editor() {
     } else if (type.moveCardTo) {
       placed = type.moveCardTo(graphic, id, index);
     }
-    if (!placed) return;
+    // (moveCardTo gives the graphic back as it was when the card's already last there)
+    if (!placed || placed === graphic) return;
     setCardMenu(null);
     applyPlaced(placed);
     if (!('error' in placed)) setSelectedId(id);
@@ -3386,10 +3401,13 @@ export default function Editor() {
                 scaleY={scale}
                 // Before the press below can deselect it: a tier or the tray clicked with a
                 // card selected moves the card there (pickTargetOnBoard)
+                // (not while a replacement is being picked, which keeps its card selected)
                 onPointerDown={() => {
-                  pressSelection.current = selectedShown ? selectedId : null;
+                  pressSelection.current = selectedShown && !picking ? selectedId : null;
                 }}
                 onMouseDown={(e) => {
+                  // A double click's second press (a tier label opening its name) moves nothing
+                  if (e.evt.detail > 1) pressSelection.current = null;
                   if (e.target === e.target.getStage() || e.target.hasName('background')) {
                     setSelectedId(null);
                   }
@@ -3421,7 +3439,7 @@ export default function Editor() {
                   <CardTray
                     tray={graphic.tray}
                     width={TRAY_WIDTH}
-                    left={-boardLeft}
+                    left={trayLeft}
                     top={trayTop}
                     scale={scale}
                     border={graphic.border}

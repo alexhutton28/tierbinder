@@ -51,8 +51,11 @@ const tierList: GraphicType<TierList> = {
   // At the end of the tier
   addCard: (list, item, tier) => insertCard(list, item, tier, list.tiers[tier].items.length),
   // At the end of the tier, from wherever it is on the board
+  // (the list as it was when it's already last there)
   moveCardTo: (list, id, tier) =>
-    moveCard(list, id, tier, list.tiers[tier].items.filter((i) => i.id !== id).length),
+    list.tiers[tier].items.at(-1)?.id === id
+      ? list
+      : moveCard(list, id, tier, list.tiers[tier].items.filter((i) => i.id !== id).length),
   // In the tier under the pointer, before the first card whose center is to its right
   dropCard: (list, item, point) => {
     const target = dropTarget(list, '', point.x, point.y);

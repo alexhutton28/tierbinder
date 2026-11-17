@@ -91,6 +91,7 @@ export default function BlankCanvasView({
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
             dragWidth={cardDragWidth}
             hidden={arriving.has(item.id)}
+            raised={item.id === selectedId}
             onDragEnd={(x, y) => {
               if (!onCardDrop(item.id, x, y)) onChange(moveCard(canvas, item.id, x, y));
             }}

@@ -176,6 +176,8 @@ export default function CardTray({
   });
   React.useEffect(() => {
     if (!oneRow) return;
+    let frame = 0;
+    let pending: number | null = null;
     const move = (e: PointerEvent) => {
       const g = gesture.current;
       if (!g || e.pointerId !== g.id) return;
@@ -198,9 +200,15 @@ export default function CardTray({
           }
         }
       }
+      // Once a frame, however often the pointer reports
       if (g.mode === 'pan') {
-        const { scale: s, clampPan: clamp, onPan: setPan } = latest.current;
-        setPan(clamp(g.pan - dx / (s || 1)));
+        const { scale: s, clampPan: clamp } = latest.current;
+        pending = clamp(g.pan - dx / (s || 1));
+        frame ||= requestAnimationFrame(() => {
+          frame = 0;
+          if (pending !== null) latest.current.onPan(pending);
+          pending = null;
+        });
       }
     };
     const end = (e: PointerEvent) => {
@@ -210,6 +218,7 @@ export default function CardTray({
     window.addEventListener('pointerup', end);
     window.addEventListener('pointercancel', end);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', end);
       window.removeEventListener('pointercancel', end);
@@ -294,6 +303,7 @@ export default function CardTray({
                     if (!panned.current) onCardMenu(item.id, menuX, menuY);
                   }}
                   hidden={arriving.has(item.id)}
+                  raised={item.id === selectedId}
                   draggable={!touchPans}
                   dragWidth={(center) => (center.y > BOARD_HEIGHT ? cardWidth : boardCardWidth)}
                   onDragEnd={(cardX, cardY) => onCardDrop(item.id, cardX - pan + left, cardY + top)}

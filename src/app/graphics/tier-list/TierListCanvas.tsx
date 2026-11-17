@@ -92,6 +92,7 @@ export default function TierListCanvas({
           onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
           dragWidth={cardDragWidth}
           hidden={arriving.has(item.id)}
+          raised={item.id === selectedId}
           onDragEnd={(cardX, cardY) => {
             if (onCardDrop(item.id, cardX, cardY)) return;
             const target = dropTarget(list, item.id, cardX + width / 2, cardY + height / 2);
