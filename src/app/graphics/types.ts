@@ -36,8 +36,13 @@ export type CanvasProps<G> = {
   cardDragWidth: (center: Point) => number;
   // Cards not drawn yet: copies of them are flying in from the sidebar (CardNode's `hidden`)
   arriving: ReadonlySet<string>;
-  // One of `targets` was clicked, making it where the next search result goes
-  onPickTarget: (index: number) => void;
+  // One of `targets` was clicked, making it where the next search result goes (and moving
+  // the selected card there, through `moveCardTo`)
+  // `emptySpace`: pressed on nothing but the board (a tier's empty space), not a label,
+  // which only picks the target
+  onPickTarget: (index: number, emptySpace: boolean) => void;
+  // The selected card, drawn last (over the others: `selectedLast`)
+  selectedId: string | null;
   // Opens the Customize tab and focuses one of the graphic's settings (its own key)
   onEditSetting: (key: string) => void;
   // The active tool, one of the graphic's own (see Toolbar); DEFAULT_TOOL moves cards
@@ -111,6 +116,10 @@ export type GraphicType<G extends { kind: string }> = {
   // and go (a tier list's tiers), so the chosen one stays chosen as the others change
   targets: (graphic: G) => { id?: string; name: string; color?: string }[];
   addCard: (graphic: G, item: CardItem, target: number) => Placed<G>;
+  // Moves a card on the board to the end of a target: a tier clicked while the card is
+  // selected. Without it (the blank canvas, whose targets have no place), clicking does
+  // nothing more than pick the target.
+  moveCardTo?: (graphic: G, id: string, target: number) => G;
   // Adds a card dropped with the pointer at `point`
   dropCard: (graphic: G, item: CardItem, point: Point) => Placed<G>;
   // Where import's cards before the first `#` go: the card tray (a tier list, where groups
@@ -120,3 +129,10 @@ export type GraphicType<G extends { kind: string }> = {
   // Adds bulk-imported cards, given the import's `#` groups
   importCards: (graphic: G, groups: ResolvedGroup[]) => { graphic: G; errors: string[] };
 };
+
+// Cards in drawing order with the selected one moved last, so it's drawn over cards that
+// overlap it (a crowded tier). Only the drawing order: the graphic's own order is kept.
+export function selectedLast<T extends { item: { id: string } }>(cards: T[], id: string | null) {
+  const at = id === null ? -1 : cards.findIndex((c) => c.item.id === id);
+  return at < 0 ? cards : [...cards.slice(0, at), ...cards.slice(at + 1), cards[at]];
+}

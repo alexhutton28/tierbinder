@@ -89,6 +89,9 @@ body {
   --tb-focus-width: 2px;
   --tb-top-height: 48px;
   --tb-control-height: 32px;
+
+  /* A small control inside a popup, sitting by a caption (the color picker's view switch) */
+  --tb-control-height-small: 24px;
   --tb-icon: 16px;
   --tb-scrollbar: 8px;
 
@@ -136,9 +139,16 @@ body {
   --tb-handle-line: 2px;
   --tb-handle-hover-delay: 150ms;
 
-  /* Image sizes, chosen by eye (see Exceptions) */
+  /* Image sizes, chosen by eye (see Exceptions): search results' thumbnails at their
+     smallest width, Medium (--tb-thumb-width, the default) and Small and Large, their
+     height in the cards' shape */
   --tb-thumb-width: 80px;
-  --tb-thumb-height: 111px;
+  --tb-thumb-small: 60px;
+  --tb-thumb-large: 120px;
+
+  /* 111px tall at 80 wide, picked by eye with the width (a little under the cards' 1.4) */
+  --tb-thumb-ratio: calc(111 / 80);
+  --tb-thumb-height: calc(var(--tb-thumb-width) * var(--tb-thumb-ratio));
 
   background: var(--tb-page);
 }
@@ -189,8 +199,7 @@ body * {
   padding: var(--spacing-4) var(--spacing-3) 0;
 }
 
-/* A subheader inside a section or a popup, naming the control under it (the color picker's
-   Board Colors and Hex): small and muted */
+/* A subheader inside a section or a popup, naming what's under it: small and muted */
 .tierbinder-caption {
   color: var(--tb-muted);
   font-size: var(--text-caption);

@@ -70,7 +70,7 @@ export const DEFAULT_TIERS: [string, string][] = [
 ];
 // The colors of tiers added after those: blue, purple, pink, gray
 const ADDED_TIER_COLORS = ['#2e9df7', '#8b5cf6', '#f25fa5', '#8a9aa5'];
-const TIER_COLORS = [...DEFAULT_TIERS.map(([, color]) => color), ...ADDED_TIER_COLORS];
+export const TIER_COLORS = [...DEFAULT_TIERS.map(([, color]) => color), ...ADDED_TIER_COLORS];
 
 // What a list with more tiers than a new one's is named, top to bottom: the words only
 // go so far, so it switches to letters

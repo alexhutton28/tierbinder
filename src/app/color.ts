@@ -3,6 +3,8 @@
 // Petrel 950 (design/theme.css), for marks drawn on light colors where CSS variables
 // can't reach: canvas text, and SVG checkmarks used as backgrounds
 export const PETREL_950 = '#12171a';
+// The palette's lightest Petrel: the card tray's scroll arrows
+export const PETREL_50 = '#f2f5f6';
 
 // A color from a saved or shared board: only #rrggbb (all the picker writes) is kept,
 // anything else is `fallback`. Colors reach CSS backgrounds, so a link can't slip in a

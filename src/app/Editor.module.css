@@ -11,6 +11,19 @@
   background: var(--tb-top);
 }
 
+/* Under b8 with the sidebar folded, the board takes the whole page but the sidebar's bar
+   at its foot (.sideFolded): the top bar goes, and the workspace fills the rest, the board
+   centered in it, taking the status bar's inset where the top bar was (set in Editor.tsx,
+   which slides all of it: the top bar's margin, the sidebar's height and that inset) */
+.topFolded {
+  display: none;
+}
+
+.canvasFolded {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
 .brand {
   display: flex;
   flex: none;
@@ -514,16 +527,98 @@
   }
 }
 
-/* No padding below: the panel's own 16px top padding is the gap to the content */
+/* A true header over the tab panel, which scrolls under it: 8px around the nav and a
+   hairline below once the panel is scrolled from its top (data-scrolled), fading in, so
+   what scrolls up disappears at the line rather than beside the nav. Its
+   scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
+   before it folds (.sideFolded) */
 .sideHead {
-  padding: var(--spacing-3) var(--spacing-3) 0;
+  flex: none;
+  padding: var(--spacing-3);
+  border-bottom: var(--tb-line-width) solid transparent;
+  scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+  transition: border-color var(--duration-fade) ease-out;
+
+  &[data-scrolled] {
+    border-bottom-color: var(--tb-line);
+  }
+}
+
+/* Folded (under b8): only its head, a bar of the light logo and the button that opens it,
+   above the home indicator; a press anywhere on it opens it */
+.sideFolded {
+  flex: none;
+
+  & > :not(.sideHead) {
+    display: none;
+  }
+
+  & > .sideHead {
+    padding-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
+    border-bottom: 0;
+    cursor: pointer;
+  }
+}
+
+/* The light logo fades in once the sidebar is down */
+.foldedBrand {
+  animation: folded-brand var(--duration-fade) ease-out;
+}
+
+@keyframes folded-brand {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foldedBrand {
+    animation: none;
+  }
+}
+
+/* Under b8, the button folding the sidebar down under a bigger board: Feather's
+   chevron-down (fold it down), turning to point up (open it) on the spring while folded */
+.foldButton {
+  flex: none;
+}
+
+/* On touch screens it takes presses as a 44px target around it, as a tier's remove does */
+@media (pointer: coarse) {
+  .foldButton {
+    position: relative;
+  }
+
+  .foldButton::after {
+    position: absolute;
+    inset: calc((var(--tb-control-height) - var(--tb-touch-target)) / 2);
+    content: '';
+  }
+}
+
+.foldIcon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: url('/chevron-down.svg') center / contain no-repeat;
+  transition: rotate var(--duration-move) var(--ease-spring);
+}
+
+.foldIconUp {
+  rotate: 180deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foldIcon {
+    transition: none;
+  }
 }
 
 /* Search results: thumbnail tiles, as many per row as fit (the set and number are the
    tooltip), filling the sidebar's height and scrolling */
 .results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--tb-thumb-width), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--result-width), 1fr));
   align-content: start;
   gap: var(--spacing-2);
 }
@@ -532,10 +627,21 @@
    narrowest (most of a row, as tiles stretch to fill their columns): past that, the panel
    scrolls instead */
 .resultsBox {
+  --result-width: var(--tb-thumb-width);
+
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: var(--tb-thumb-height);
+  min-height: calc(var(--result-width) * var(--tb-thumb-ratio));
+}
+
+/* The thumbnail size picked beside the sort button (Medium, the default, above) */
+.resultsBox[data-size='small'] {
+  --result-width: var(--tb-thumb-small);
+}
+
+.resultsBox[data-size='large'] {
+  --result-width: var(--tb-thumb-large);
 }
 
 .resultsBox > .results {
@@ -655,7 +761,8 @@
    their place (and each one's real size once it has been drawn) */
 .resultTile {
   content-visibility: auto;
-  contain-intrinsic-size: auto var(--tb-thumb-width) auto var(--tb-thumb-height);
+  contain-intrinsic-size: auto var(--result-width) auto
+    calc(var(--result-width) * var(--tb-thumb-ratio));
 }
 
 /* A long press opens the result's menu (Editor.tsx), not iOS's own image callout */
@@ -664,7 +771,7 @@
   -webkit-touch-callout: none;
 }
 
-/* A result fills its column (at least --tb-thumb-width wide, stretching to share the
+/* A result fills its column (at least --result-width wide, stretching to share the
    row), at the card's shape, so the cards sit 4px apart both ways */
 .resultThumb {
   width: 100%;

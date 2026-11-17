@@ -6,7 +6,7 @@ import { Circle, Layer, Line, Rect } from 'react-konva';
 import { newId } from '../../cards';
 import CardNode from '../../canvas/CardNode';
 import { BOARD_HEIGHT, boardWidth } from '../../canvas/size';
-import type { CanvasProps } from '../types';
+import { selectedLast, type CanvasProps } from '../types';
 import { moveCard, type BlankCanvas, type Stroke } from './model';
 
 // The blank canvas: a background and freely placed cards, with ink drawn over them. Cards
@@ -23,6 +23,7 @@ export default function BlankCanvasView({
   arriving,
   tool,
   fontFamily,
+  selectedId,
 }: CanvasProps<BlankCanvas>) {
   const drawing = tool === 'pen' || tool === 'eraser';
   const width = boardWidth(canvas.shape);
@@ -72,7 +73,10 @@ export default function BlankCanvasView({
     <>
       <Layer>
         <Rect name="background" width={width} height={BOARD_HEIGHT} fill={canvas.background} />
-        {canvas.items.map((item) => (
+        {selectedLast(
+          canvas.items.map((item) => ({ item })),
+          selectedId
+        ).map(({ item }) => (
           <CardNode
             key={item.id}
             item={item}
@@ -87,6 +91,7 @@ export default function BlankCanvasView({
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
             dragWidth={cardDragWidth}
             hidden={arriving.has(item.id)}
+            raised={item.id === selectedId}
             onDragEnd={(x, y) => {
               if (!onCardDrop(item.id, x, y)) onChange(moveCard(canvas, item.id, x, y));
             }}

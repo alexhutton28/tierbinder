@@ -26,6 +26,38 @@
     color var(--duration-hover) ease-out;
 }
 
+/* An option's icon in place of its words: 16px, in the text color, its padding the same
+   on each side so the option stays square */
+.icon {
+  width: var(--tb-icon);
+  height: var(--tb-icon);
+  background: currentcolor;
+  mask: center / contain no-repeat;
+}
+
+.option:has(.icon) {
+  padding-inline: 0;
+}
+
+/* Small: no box, as tall as a small control, the chosen segment's fill the only shape */
+.small {
+  height: var(--tb-control-height-small);
+  padding: 0;
+  border-color: transparent;
+  background: none;
+
+  & .option {
+    min-width: var(--tb-control-height-small);
+  }
+}
+
+/* (still 44px wide on touch screens, as every segment is) */
+@media (pointer: coarse) {
+  .small .option {
+    min-width: var(--tb-touch-target);
+  }
+}
+
 /* Plain :hover (not Tailwind's hover:), so it also shows where hover is a tap */
 .option:hover {
   background: var(--tb-control-hover);

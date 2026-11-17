@@ -36,6 +36,8 @@ import {
   importTrayCards,
   insertTrayCard,
   layoutTray,
+  trayRowWidth,
+  rowCardWidthFor,
   mapTray,
   TRAY_WIDTH,
   trayCardWidth,
@@ -47,22 +49,25 @@ import {
 import { currentGraphic, newDoc, parseSaved, type TierBinderDoc } from './document';
 import { GRAPHIC_TYPES, typeOf, type Graphic, type GraphicKind } from './graphics';
 import { DEFAULT_TIERS } from './graphics/tier-list/model';
-import { DEFAULT_TOOL, type Placed, type Point } from './graphics/types';
+import { DEFAULT_TOOL, selectedLast, type Placed, type Point } from './graphics/types';
 import { parseImport } from './importText';
 import { MAX_SHARED_CARDS, isShareHash, readShareHash, shareLink, sharedCards } from './share';
 import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from './searchOptions';
 import Button from './ui/Button';
+import Segmented from './ui/Segmented';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
+import { TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
+import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
-import ColorField, { BoardColors, boardColors } from './ui/ColorField';
+import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
 import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
 import styles from './Editor.module.css';
-import { FOLD_CLEARANCE } from './ui/motion';
+import { FOLD_CLEARANCE, readDuration } from './ui/motion';
 import { launchFlights, onScreen, wholeOnScreen, type Flight } from './ui/flights';
 import { titleCase, cardCount } from './text';
 
@@ -116,6 +121,9 @@ const POOL_ACTIONS = {
 // The toast for cards taken out of the card tray (Clear Card Tray, or a pool clicked again)
 const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tray`;
 
+// Presentation mode's card menu row that moves the card (shown as "Move to Tier", or "Add
+// to Tier" for a tray card: moveLabel), opening a flyout of the places it can go
+const MOVE_TO = 'Move to';
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
 const TRAY_MENU = 'tray';
 
@@ -124,14 +132,17 @@ const TRAY_MENU = 'tray';
 const MENU_WIDTH = 160;
 
 // A touch press held this long (ms) opens a search result's menu, unless it moves more
-// than TOUCH_SLOP (px) first, as long presses go on phones
+// than TOUCH_SLOP (px, ui/pointer.ts) first, as long presses go on phones
 const LONG_PRESS = 500;
-const TOUCH_SLOP = 8;
 
 // Under b8 the board and the card tray stay on screen above the sidebar, which scrolls on
 // its own: they take at most this share of the page's height (top bar included), leaving
 // the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
 const BOARD_SHARE = 0.6;
+
+// The search's sort button (newest or oldest first), hidden for now to keep the search row
+// clear on phones; results stay newest first
+const SORT_BUTTON = false;
 
 // How far popups stay inside the window's edges (space-3, as ui/anchored.ts's --edge)
 const EDGE = 8;
@@ -151,6 +162,15 @@ type ResultMenu = {
 // (25px), so it lands where the top bar's mark was; shown when it has this room around it
 // beside the board (space-3)
 const LOGO_HEIGHT = 25;
+// Under b8, with the sidebar folded, the one-row card tray's cards are this many times
+// full size (the board gives up a little height for them)
+const FOLDED_TRAY_SCALE = 1.3;
+// ...and bigger still where the board can't use the height (a Wide board, limited by the
+// page's width): filling what's left under it, but never so big that fewer than this many
+// show across the tray
+const FOLDED_TRAY_VISIBLE = 3;
+// ...and never wider than this on screen (CSS pixels)
+const FOLDED_TRAY_MAX = 100;
 const LIGHT_LOGO_WIDTH = (137 * LOGO_HEIGHT) / 28;
 const LOGO_MARK_WIDTH = (32 * LOGO_HEIGHT) / 28;
 const LOGO_CLEARANCE = 8;
@@ -255,8 +275,19 @@ const SEARCH_DELAY = 300;
 // they fly, where the browser doesn't say when the scroll is over
 const SCROLL_WAIT = 800;
 
-// Placeholders shown while a search is under way: enough to fill the results at most sizes
-const SKELETON_TILES = 18;
+// The search results' thumbnail sizes (Small, Medium, Large: --tb-thumb-small, -width and
+// -large), saved per device; Medium is the size they always were
+type ResultSize = 'small' | 'medium' | 'large';
+const RESULT_SIZES = [
+  { value: 'small', short: 'S', label: 'Small thumbnails' },
+  { value: 'medium', short: 'M', label: 'Medium thumbnails' },
+  { value: 'large', short: 'L', label: 'Large thumbnails' },
+] as const satisfies readonly { value: ResultSize; short: string; label: string }[];
+const RESULT_SIZE_KEY = 'tierbinder-result-size';
+
+// Placeholders shown while a search is under way: enough to fill the results at most
+// sidebar heights at each size
+const SKELETON_TILES: Record<ResultSize, number> = { small: 30, medium: 18, large: 12 };
 
 // Results drawn at a time (about 20 rows), and how far below the list's visible end the
 // next page starts drawing
@@ -517,6 +548,23 @@ export default function Editor() {
   // The results are scrolled, so a shade shows they go on under the controls above
   const [resultsScrolled, setResultsScrolled] = React.useState(false);
   const sortDirection = sortLabel(searchOptions);
+  // How big the results' thumbnails are, remembered on this device
+  const [resultSize, setResultSize] = React.useState<ResultSize>(() => {
+    try {
+      const saved = localStorage.getItem(RESULT_SIZE_KEY);
+      return RESULT_SIZES.find((s) => s.value === saved)?.value ?? 'medium';
+    } catch {
+      return 'medium';
+    }
+  });
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(RESULT_SIZE_KEY, resultSize);
+    } catch {}
+  }, [resultSize]);
+  // Large thumbnails load the board's image (TCGdex's high.webp), which stays sharp at that
+  // size; the others the small one
+  const resultSrc = (card: CardResult) => (resultSize === 'large' ? card.image : card.thumb);
   // Where the next search result goes: one of the graphic's targets
   const [target, setTarget] = React.useState(0);
   // The active tool: moving cards, or one from the graphic's toolbar
@@ -676,8 +724,7 @@ export default function Editor() {
   const trayFlyoutRowRef = React.useRef<HTMLButtonElement>(null);
   // It opens to the row's right, or its left when that wouldn't fit in the window, EDGE in
   // (measured from layout sizes, from the board's box, since the menu opens stretching from
-  // a scale; the flyout's own offset includes its gap). It never needs to move up: its one
-  // row lines up with the menu's last.
+  // a scale; the flyout's own offset includes its gap).
   React.useLayoutEffect(() => {
     const menu = cardMenuRef.current;
     const row = trayFlyoutRowRef.current;
@@ -692,6 +739,18 @@ export default function Editor() {
       flyout.offsetLeft +
       flyout.offsetWidth;
     if (right > window.innerWidth - EDGE) flyout.dataset.side = 'left';
+    // Presentation mode's Add to flyout is a list of every place, from a row that isn't the
+    // menu's last: it moves up to end EDGE above the window's foot when it would pass it,
+    // as the result menu's does
+    const bottom =
+      box.getBoundingClientRect().top +
+      menu.offsetTop +
+      menu.clientTop +
+      row.offsetTop +
+      flyout.offsetTop +
+      flyout.offsetHeight;
+    const over = bottom - (window.innerHeight - EDGE);
+    if (over > 0) flyout.style.translate = `0 ${-over}px`;
   }, [trayFlyout]);
   // A menu that would run past the window's foot moves up just enough to end EDGE above it
   // (by its key), but no higher than EDGE under the window's top: under b8 the board's foot
@@ -782,6 +841,75 @@ export default function Editor() {
   // button at the sidebar's foot, sliding out to leave the window to the board; from b8 up
   // only, where it's beside the board. Not saved: a reload, or a narrower window, shows it.
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
+  // Under b8, the sidebar collapsed under a bigger board (and the top bar hidden), by the
+  // button at the sidebar's top; a tab picked (by any means) opens it again. Not saved.
+  const [sidebarFolded, setSidebarFolded] = React.useState(false);
+  // The sidebar, whose height (folded, just its bar) the board leaves room for
+  const sideRef = React.useRef<HTMLElement>(null);
+  const sideHeadRef = React.useRef<HTMLDivElement>(null);
+  // Folding slides (useReveal, 0 open to 1 folded): the top bar rises away, the sidebar
+  // shrinks from its open height to its bar's (measured as it starts folding), and the board
+  // grows into the room, centered; only once it's all the way down does the bar swap the
+  // nav for the logo (`folded`), and opening swaps them back first
+  const foldReveal = useReveal(sidebarFolded && !wide, wide);
+  const fold = wide ? 0 : foldReveal.value;
+  const folded = fold === 1;
+  // Presentation mode: the sidebar folded on a phone, the board taking the page. The card
+  // menu keeps only what doesn't need the sidebar (View, Add to, Remove Card).
+  const presenting = sidebarFolded && !wide;
+  // Entering or leaving it changes a card's menu (and which flyout its open one is), so an
+  // open menu closes
+  const [wasPresenting, setWasPresenting] = React.useState(presenting);
+  if (wasPresenting !== presenting) {
+    setWasPresenting(presenting);
+    if (cardMenu) setCardMenu(null);
+  }
+  const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0, shift: 0 });
+  const foldSidebar = () => {
+    const side = sideRef.current;
+    const head = sideHeadRef.current;
+    // (measured only from fully open: a reverse mid-slide keeps the last measure, not the
+    // height it's passing through)
+    if (!sidebarFolded && fold === 0 && side && head) {
+      const style = getComputedStyle(head);
+      // The folded bar's row: the light logo and the button, not the nav it replaces, which
+      // is taller, so the slide ends at the bar's own height instead of popping down to it
+      const button = head.querySelector<HTMLElement>(`.${styles.foldButton}`);
+      const row = Math.max(LOGO_HEIGHT, button?.offsetHeight ?? 0);
+      // The nav's row, taller than the bar's: the button, centered on it, rises by half the
+      // difference as it folds, so it's already where the bar's row centers it at the end
+      const navRow =
+        head.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      setFoldHeights({
+        shift: Math.max(0, (navRow - row) / 2),
+        open: side.offsetHeight,
+        // The row with its padding above, and the bar's below (kept as its
+        // scroll-margin-bottom, which resolves the safe area's inset to pixels)
+        bar:
+          parseFloat(style.paddingTop) +
+          row +
+          parseFloat(style.scrollMarginBottom) +
+          (side.offsetHeight - side.clientHeight),
+      });
+    }
+    setSidebarFolded((f) => !f);
+  };
+  // The sidebar's height while it folds or opens
+  const foldingSideHeight =
+    fold > 0 && !folded ? foldHeights.open + (foldHeights.bar - foldHeights.open) * fold : null;
+  // The header's line shows only while the tab panel under it is scrolled from its top
+  // (each tab keeping its own scroll, so its own flag)
+  const [scrolledTabs, setScrolledTabs] = React.useState<Partial<Record<Tab, boolean>>>({});
+  const panelScrolled = !!scrolledTabs[tab];
+  const onPanelScroll = (panelTab: Tab) => (e: React.UIEvent<HTMLElement>) => {
+    const scrolled = e.currentTarget.scrollTop > 0;
+    setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
+  };
+  const [foldedTab, setFoldedTab] = React.useState(tab);
+  if (foldedTab !== tab) {
+    setFoldedTab(tab);
+    setSidebarFolded(false);
+  }
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
@@ -845,6 +973,7 @@ export default function Editor() {
     const update = () => {
       setWide(query.matches);
       if (!query.matches) setSidebarHidden(false);
+      else setSidebarFolded(false);
     };
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
@@ -897,8 +1026,28 @@ export default function Editor() {
   // The card tray keeps its own width whatever the board's shape, the board centered over
   // it. What the stage shows across, and how far in the board starts (the stage is shifted
   // by it, so the board's own left edge stays x = 0 for everything laid out on it)
-  const stageWidth = trayShown ? TRAY_WIDTH : width;
+  // Turning the tray on or off slides it in or out under the board (useReveal): the stage
+  // grows to the tray's width and height as it fades in, and back. Drawn while it's on or
+  // still leaving; a leaving tray takes no presses and isn't in `placements`.
+  const trayReveal = useReveal(trayShown, graphic.kind);
+  const trayOpen = trayReveal.value;
+  const trayDrawn = trayShown || trayOpen > 0;
+  // Its contents fade over --duration-fade, the first or last part of the slide
+  const [fadeShare] = React.useState(
+    () => readDuration('--duration-fade') / (readDuration('--duration-move') || 1)
+  );
+  const trayOpacity = Math.min(1, trayOpen / (fadeShare || 1));
+  // The tray on screen: a 16:9 board's width beside the sidebar; on phones and tablets the
+  // workspace's whole width at the board's scale, its one row scrolling sideways, so a
+  // narrow board isn't drawn smaller to fit a wider tray under it, and the tray still spans
+  // the page (the image's tray is always the board's width)
+  const [trayRoom, setTrayRoom] = React.useState(0);
+  const shownTrayWidth = wide ? TRAY_WIDTH : Math.max(width, scale > 0 ? trayRoom / scale : 0);
+  const stageWidth = width + (Math.max(shownTrayWidth, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
+  // The tray's left edge from the board's: centered on the stage, also while the stage
+  // widens to it as it slides in (so it opens from the middle, not wiped in from the left)
+  const trayLeft = -boardLeft - (Math.max(shownTrayWidth, width) - stageWidth) / 2;
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
@@ -919,8 +1068,43 @@ export default function Editor() {
     } catch {}
   }, [trayHintSeen]);
   const exportTray = trayShown && includeTray;
-  // The tray's height follows its cards
-  const shownTrayHeight = trayShown ? trayHeight(graphic.tray.items.length) : 0;
+  // Under b8 the tray on screen is one row of full-size cards, scrolled sideways (trayPan,
+  // design pixels, kept within what the row overhangs); the image keeps its two rows
+  // (its cards FOLDED_TRAY_SCALE times full size while the sidebar is folded, growing with
+  // the fold's slide, so they're easier to see and pick up)
+  // (trayFill: the folded tray's cards filling the height the board leaves, from the fit)
+  const [trayFill, setTrayFill] = React.useState(0);
+  const foldedTrayCard = Math.max(
+    CARD_WIDTH,
+    Math.min(Math.max(CARD_WIDTH * FOLDED_TRAY_SCALE, trayFill), FOLDED_TRAY_MAX / (scale || 1))
+  );
+  const oneRowTray = wide ? false : CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold;
+  const trayCount = graphic.tray.items.length;
+  const maxTrayPan = oneRowTray
+    ? Math.max(0, trayRowWidth(trayCount, oneRowTray) - shownTrayWidth)
+    : 0;
+  const [trayPanAsked, setTrayPan] = React.useState(0);
+  const trayPan = Math.min(trayPanAsked, maxTrayPan);
+  // A card added at the end scrolls the row to it, so it lands where it can be seen
+  const lastTrayId = graphic.tray.items.at(-1)?.id;
+  // (on the same board: switching boards starts at the row's start)
+  const [trayEnd, setTrayEnd] = React.useState({
+    kind: graphic.kind,
+    count: trayCount,
+    last: lastTrayId,
+  });
+  if (trayEnd.kind !== graphic.kind || trayEnd.count !== trayCount || trayEnd.last !== lastTrayId) {
+    setTrayEnd({ kind: graphic.kind, count: trayCount, last: lastTrayId });
+    if (trayEnd.kind !== graphic.kind) setTrayPan(0);
+    else if (trayCount > trayEnd.count && lastTrayId !== trayEnd.last) setTrayPan(maxTrayPan);
+  }
+  // Kept within the row, so a pan asked past its end (or a row that shrank) doesn't snap a
+  // later insert to the end
+  if (trayPanAsked > maxTrayPan) setTrayPan(maxTrayPan);
+  // The tray's height follows its cards; while it slides in or out, the share of it shown
+  const shownTrayHeight = trayDrawn
+    ? trayHeight(trayCount, shownTrayWidth, oneRowTray) * trayOpen
+    : 0;
   // The image's size in its own pixels. An included card tray goes under the board at the
   // board's width, its cards laid out again to fit, so the image is one rectangle.
   const exported = exportSize(
@@ -934,15 +1118,15 @@ export default function Editor() {
   // (a full tray won't take it, so it keeps the board's size)
   const cardDragWidth = (center: Point) =>
     trayShown && center.y > BOARD_HEIGHT && graphic.tray.items.length < MAX_TRAY_CARDS
-      ? trayCardWidth(graphic.tray.items.length + 1)
+      ? trayCardWidth(graphic.tray.items.length + 1, shownTrayWidth, oneRowTray)
       : boardCardWidth;
 
   // Every card and where it's drawn: the board's, then the tray's
   const boardPlacements = type.layout(graphic);
   const trayPlacements = trayShown
-    ? layoutTray(graphic.tray).map((p) => ({
+    ? layoutTray(graphic.tray, shownTrayWidth, oneRowTray).map((p) => ({
         ...p,
-        x: p.x - boardLeft,
+        x: p.x + trayLeft - trayPan,
         y: p.y + trayTop,
       }))
     : [];
@@ -954,9 +1138,13 @@ export default function Editor() {
   // so it follows the board as it rescales or the page scrolls
   const [arriving, setArriving] = React.useState<ReadonlySet<string>>(new Set());
   const landingRef = React.useRef({ placements, scale, boardLeft });
+  // Whether the tray is still sliding in (the board's scale and the tray's spots not yet
+  // where they settle)
+  const trayRevealingRef = React.useRef(false);
   // Before the browser's next frame, so the flights' first frame sees the cards just added
   React.useLayoutEffect(() => {
     landingRef.current = { placements, scale, boardLeft };
+    trayRevealingRef.current = trayShown && trayOpen < 1;
   });
   const stopFlights = React.useRef(new Set<() => void>());
   React.useEffect(() => {
@@ -1072,23 +1260,6 @@ export default function Editor() {
   // without them
   const targetColors = boardTargets.flatMap((t) => (t.color ? [t.color] : []));
   const tickColors = targetColors.length ? targetColors : DEFAULT_TIERS.map(([, color]) => color);
-  // Every color field's Board Colors: the tiers', then the board's own, and white
-  const colorChoices = boardColors([
-    // Named after their tiers, on one line, or "Tier 2" for a tier with no name
-    ...boardTargets.flatMap((t, i) =>
-      t.color
-        ? [{ name: t.name.replace(/\s+/g, ' ').trim() || `Tier ${i + 1}`, color: t.color }]
-        : []
-    ),
-    { name: 'Background', color: graphic.background },
-    // Named as Customize names it
-    {
-      name: graphic.kind === 'tier-list' ? 'Tier dividers' : 'Split card border',
-      color: graphic.border,
-    },
-    { name: 'Card tray', color: graphic.tray.color },
-    { name: 'White', color: '#ffffff' },
-  ]);
   const targetIndex = Math.min(target, targets.length - 1);
   // The Add to choice stays on its target as the others come and go (a tier added or
   // removed, or put back by undo): it follows its target's id to its new place, takes the
@@ -1367,7 +1538,8 @@ export default function Editor() {
   // much as fits beside the sidebar, and under b8 its width, as long as the workspace stays
   // within BOARD_SHARE of the page's height (measured from the page, never the workspace,
   // whose height follows the board's). Exports are always full size.
-  React.useEffect(() => {
+  // (before paint, so a frame of the tray's slide never paints at the last frame's scale)
+  React.useLayoutEffect(() => {
     const workspace = workspaceRef.current;
     const board = boardRef.current;
     const box = boardBoxRef.current;
@@ -1377,16 +1549,32 @@ export default function Editor() {
       const style = getComputedStyle(workspace);
       const room =
         workspace.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const above = workspace.getBoundingClientRect().top - page.getBoundingClientRect().top;
       const outer = wide
         ? workspace.clientHeight
-        : page.clientHeight * BOARD_SHARE -
-          (workspace.getBoundingClientRect().top - page.getBoundingClientRect().top);
+        : fold > 0
+          ? // Folded, or on the way: everything but the sidebar as it is
+            page.clientHeight - (sideRef.current?.offsetHeight ?? 0) - above
+          : page.clientHeight * BOARD_SHARE - above;
       const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       const around = board.offsetHeight - box.offsetHeight;
       // The card tray and the gap above it, when it shows
-      const tray = trayShown ? TRAY_GAP : 0;
+      const tray = TRAY_GAP * trayOpen;
       const designHeight = BOARD_HEIGHT + shownTrayHeight;
-      const next = Math.min(room / stageWidth, (height - around - tray) / designHeight);
+      // (under b8 the tray takes whatever width the board leaves, so only the board's counts)
+      const next = Math.min(
+        room / (wide ? stageWidth : width),
+        (height - around - tray) / designHeight
+      );
+      setTrayRoom(Math.floor(room));
+      // Folded on a phone, a board limited by the width leaves height under it: the tray's
+      // cards fill it (at the width-limited scale, which the tray doesn't change), as wide as
+      // FOLDED_TRAY_VISIBLE of them across allows; rounded, so the fit settles
+      const widthScale = room / (width || 1);
+      const fillHeight = (height - around - TRAY_GAP) / widthScale - BOARD_HEIGHT;
+      setTrayFill(
+        wide ? 0 : Math.floor(rowCardWidthFor(fillHeight, room / widthScale, FOLDED_TRAY_VISIBLE))
+      );
       // Rounded down, so a fractional pixel never overflows the workspace into a scrollbar
       setScale(Math.max(0, Math.floor(next * 1000) / 1000));
     };
@@ -1398,7 +1586,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayShown, shownTrayHeight, stageWidth]);
+  }, [wide, trayOpen, shownTrayHeight, stageWidth, width, fold]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -1733,7 +1921,10 @@ export default function Editor() {
     dropped && dropped.point.y > BOARD_HEIGHT ? 'Add to card tray' : `Add to ${type.targetNoun}`;
 
   // A point on the board (design pixels from its corner) measured from the tray's corner
-  const inTray = (point: Point) => ({ x: point.x + boardLeft, y: point.y - trayTop });
+  // (and the one-row tray's scroll: its cards' own terms)
+  const inTray = (point: Point) => ({ x: point.x - trayLeft + trayPan, y: point.y - trayTop });
+  const dropIndex = (tray: Tray, id: string, point: Point) =>
+    trayDropIndex(tray, id, point, shownTrayWidth, oneRowTray);
 
   // Adds a card where it was dropped: in the card tray (or the gap above it) by position,
   // or where the graphic puts it
@@ -1741,9 +1932,65 @@ export default function Editor() {
     trayShown && point.y > BOARD_HEIGHT
       ? withTray(
           graphic,
-          insertTrayCard(graphic.tray, item, trayDropIndex(graphic.tray, '', inTray(point)))
+          insertTrayCard(graphic.tray, item, dropIndex(graphic.tray, '', inTray(point)))
         )
       : type.dropCard(graphic, item, point);
+
+  // The selected card as a press on the board began (before the press deselected it)
+  const pressSelection = React.useRef<string | null>(null);
+  // Whether its menu was open then: a tap opens the menu, so a tap on another tier moves the
+  // card, but one on its own tier (or the tray it's in) only closes the menu
+  const pressMenuOpen = React.useRef(false);
+
+  // A tier (or the card tray, the last target) clicked on the board: it's the Add to choice
+  // from then on, and with a card selected, the card moves to its end and stays selected.
+  // The blank canvas's cards have no place in a target, so they only move into the tray.
+  function pickTargetOnBoard(index: number, emptySpace: boolean) {
+    const id = emptySpace ? pressSelection.current : null;
+    pressSelection.current = null;
+    setTarget(index);
+    const place = id ? placements.find((p) => p.item.id === id) : undefined;
+    if (!id || !place) return;
+    const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    const toTray = index === boardTargets.length;
+    const ownPlace = toTray
+      ? inTrayNow
+      : !inTrayNow && 'tierIndex' in place && place.tierIndex === index;
+    if (pressMenuOpen.current && ownPlace) return;
+    moveCardToTarget(id, index);
+  }
+
+  // Moves a card on the board or in the tray to the end of a target (the card tray last),
+  // keeping it selected: a tier clicked with it selected, or presentation mode's Add to
+  function moveCardToTarget(id: string, index: number) {
+    const place = placements.find((p) => p.item.id === id);
+    if (!place) return;
+    const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    const toTray = index === boardTargets.length;
+    let placed: Placed<Graphic> | null = null;
+    if (toTray && inTrayNow) {
+      // Already last: nothing to move
+      if (graphic.tray.items.at(-1)?.id === id) return;
+      placed = { ...graphic, tray: moveTrayCard(graphic.tray, id, graphic.tray.items.length - 1) };
+      // The one-row tray scrolls to its end, where the card now is
+      setTrayPan(Infinity);
+    } else if (toTray) {
+      placed = withTray(
+        type.mapCards(graphic, (i) => (i.id === id ? null : i)),
+        insertTrayCard(graphic.tray, place.item)
+      );
+    } else if (inTrayNow) {
+      const without = { ...graphic, tray: mapTray(graphic.tray, (i) => (i.id === id ? null : i)) };
+      placed = type.addCard(without, place.item, index);
+    } else if (type.moveCardTo) {
+      placed = type.moveCardTo(graphic, id, index);
+    }
+    // (moveCardTo gives the graphic back as it was when the card's already last there)
+    if (!placed || placed === graphic) return;
+    setCardMenu(null);
+    applyPlaced(placed);
+    if (!('error' in placed)) setSelectedId(id);
+  }
 
   // A board card dropped in the card tray moves there; the graphic moves it otherwise
   const boardCardDrop = (id: string, x: number, y: number) => {
@@ -1752,7 +1999,7 @@ export default function Editor() {
     const point = inTray({ x: x + place.width / 2, y: y + place.height / 2 });
     const placed = withTray(
       typeOf(graphic.kind).mapCards(graphic, (i) => (i.id === id ? null : i)),
-      insertTrayCard(graphic.tray, place.item, trayDropIndex(graphic.tray, '', point))
+      insertTrayCard(graphic.tray, place.item, dropIndex(graphic.tray, '', point))
     );
     applyPlaced(placed);
     return true;
@@ -1768,13 +2015,35 @@ export default function Editor() {
       const point = inTray(center);
       setGraphic((g) => ({
         ...g,
-        tray: moveTrayCard(g.tray, id, trayDropIndex(g.tray, id, point)),
+        tray: moveTrayCard(g.tray, id, dropIndex(g.tray, id, point)),
       }));
       return;
     }
     const without = { ...graphic, tray: mapTray(graphic.tray, (i) => (i.id === id ? null : i)) };
     applyPlaced(type.dropCard(without, place.item, center));
   };
+
+  // The targets a card can move to from its menu (by index in `targets`): every one, but
+  // not the tray it's already in, and not the board's own for a board card on a graphic
+  // whose cards have no place in a target (the blank canvas)
+  // (nor the tier it's already in)
+  const moveChoices = (id: string) => {
+    const inTrayNow = trayPlacements.some((p) => p.item.id === id);
+    const place = placements.find((p) => p.item.id === id);
+    const ownTier = !inTrayNow && place && 'tierIndex' in place ? place.tierIndex : -1;
+    return targets
+      .map((_, i) => i)
+      .filter((i) =>
+        i === boardTargets.length
+          ? !inTrayNow
+          : i !== ownTier && (inTrayNow || type.moveCardTo !== undefined)
+      );
+  };
+
+  // Its row's name: a card already on the board moves ("Move to Tier"); one in the tray is
+  // added, as a search result is ("Add to Tier")
+  const moveLabel = (id: string) =>
+    `${trayPlacements.some((p) => p.item.id === id) ? 'Add' : 'Move'} to ${type.targetNoun}`;
 
   // The card menu's items: the tray's own menu, a clicked card's (a tray card's ending with
   // Clear Card Tray, a row opening a flyout), or a search result's dropped on a card
@@ -1790,9 +2059,15 @@ export default function Editor() {
         ? ['Replace top half', 'Replace bottom half', addToTarget(menu)]
         : ['Add as split card', addToTarget(menu)];
     }
+    // Presentation mode (the sidebar folded on a phone): only what doesn't need the
+    // sidebar, moving the card through a flyout of the places it can go
+    if (presenting) {
+      return moveChoices(id).length ? ['View', MOVE_TO, 'Remove card'] : ['View', 'Remove card'];
+    }
     const items = split
       ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
-      : ['View', 'Remove card', 'Replace card', 'Make split card'];
+      : // (Replace Card is out for now; a split card's halves can still be replaced)
+        ['View', 'Remove card', 'Make split card'];
     // A card in the tray can clear the whole tray, last (not the tray's only card, where
     // Remove Card does the same)
     const inTray = trayPlacements.some((p) => p.item.id === id);
@@ -1802,9 +2077,14 @@ export default function Editor() {
   // Clear Card Tray's flyout says how many it clears, kept up to date if cards come or go
   // meanwhile (a pool's still flying in), and closes if its row goes (the tray emptied, or
   // down to the menu's own card)
+  // (Presentation mode's Add to row opens the menu's other flyout, which closes as its row
+  // goes, too)
   if (cardMenu?.flyout) {
     const n = graphic.tray.items.length;
-    if (!cardMenuItems(cardMenu).includes('Clear card tray')) {
+    const items = cardMenuItems(cardMenu);
+    if (items.includes(MOVE_TO)) {
+      // (its flyout's `flyout` is just whether it's open)
+    } else if (!items.includes('Clear card tray')) {
       setCardMenu({ ...cardMenu, flyout: undefined });
     } else if (cardMenu.flyout !== n) {
       setCardMenu({ ...cardMenu, flyout: n });
@@ -1833,7 +2113,7 @@ export default function Editor() {
     }
     if (e.key === 'ArrowRight' && target.hasAttribute('aria-haspopup') && !cardMenu.flyout) {
       e.preventDefault();
-      toggleTrayFlyout(cardMenu);
+      toggleTrayFlyout(cardMenu, target.dataset.row === MOVE_TO);
     }
     if (e.key === 'ArrowLeft' && flyout) {
       e.preventDefault();
@@ -1845,13 +2125,24 @@ export default function Editor() {
   // Clear Card Tray's row opens its flyout ("Clear N Cards"), focusing that, or closes it,
   // as the search result menu's Add to row does: a second step, so a click (or Enter
   // twice) never clears the tray by itself
-  function toggleTrayFlyout(menu: CardMenu) {
+  // (Presentation mode's Add to row opens its own the same way: `move`)
+  function toggleTrayFlyout(menu: CardMenu, move = false) {
     if (menu.flyout) {
       setCardMenu({ ...menu, flyout: undefined });
       return;
     }
-    flushSync(() => setCardMenu({ ...menu, flyout: graphic.tray.items.length }));
+    flushSync(() => setCardMenu({ ...menu, flyout: move ? 1 : graphic.tray.items.length }));
     cardMenuRef.current?.querySelector<HTMLElement>('[data-flyout] [role=menuitem]')?.focus();
+  }
+
+  // Presentation mode's Add to flyout: the card moves there, and focus goes to the board,
+  // not lost with the menu
+  function moveFromMenu(id: string, index: number) {
+    // (gone at once, as Hide and Clear's are: the card it was on is moving away)
+    setShownMenu(null);
+    setCardMenu(null);
+    moveCardToTarget(id, index);
+    boardBoxRef.current?.focus({ preventScroll: true });
   }
 
   // Runs a menu item. Hiding or clearing the tray moves what the menu was anchored to, so it
@@ -1883,7 +2174,7 @@ export default function Editor() {
       if (item) setViewing({ id, faces: item.split ? [faceOf(item), item.split] : [faceOf(item)] });
     }
     if (label === 'Remove card') removeCard(id);
-    if (label === 'Replace card' || label === 'Replace top half') startPicking(id, 'top');
+    if (label === 'Replace top half') startPicking(id, 'top');
     if (label === 'Make split card' || label === 'Replace bottom half') startPicking(id, 'bottom');
     if (label === 'Swap halves') {
       updateCard(id, (i) => (i.split ? { ...i, ...i.split, split: faceOf(i) } : i));
@@ -1942,6 +2233,19 @@ export default function Editor() {
       land(ids);
     };
     stopFlights.current.add(waiting);
+    // Once React has drawn the new cards (the next task) and any tray they turned on has slid
+    // in, so where they land, and whether it's on screen, is measured where it settles
+    const afterTrayReveal = (then: () => void) => {
+      const check = window.setTimeout(() => {
+        if (!trayRevealingRef.current) {
+          then();
+          return;
+        }
+        const wait = window.setTimeout(then, readDuration('--duration-move'));
+        cleanUp = () => clearTimeout(wait);
+      });
+      cleanUp = () => clearTimeout(check);
+    };
     const launch = () => {
       if (!stopFlights.current.delete(waiting)) return;
       cleanUp();
@@ -1979,12 +2283,12 @@ export default function Editor() {
       stopFlights.current.add(stop);
     };
     if (!pool) {
-      launch();
+      afterTrayReveal(launch);
       return;
     }
     // Scrolls the board's foot, the tray, into view if any of it is off screen (beside the
     // sidebar, where the workspace scrolls), and flies them when the scroll is over
-    const start = window.setTimeout(() => {
+    afterTrayReveal(() => {
       if (!trayHidden()) {
         launch();
         return;
@@ -2002,7 +2306,6 @@ export default function Editor() {
       };
       boardBoxRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
     });
-    cleanUp = () => clearTimeout(start);
   }
 
   // Adds a search result to one of the Add to choices (the graphic's, or the card tray),
@@ -2292,8 +2595,9 @@ export default function Editor() {
     };
     // Beside a narrower board, over nothing (the stage is as wide as the card tray)
     if (point.y <= BOARD_HEIGHT && (point.x < 0 || point.x > width)) return;
-    // Later cards overlap earlier ones, so the last card under the pointer is the top one
-    const under = placements.findLast(
+    // Later cards overlap earlier ones, and the selected card is drawn over them all, so
+    // the last card under the pointer in that order is the top one
+    const under = selectedLast(placements, selectedId).findLast(
       (p) =>
         point.x >= p.x && point.x <= p.x + p.width && point.y >= p.y && point.y <= p.y + p.height
     );
@@ -2354,6 +2658,8 @@ export default function Editor() {
     const stage = stageRef.current;
     if (!stage) return null;
     setSelectedId(null);
+    // A card tray sliding in or out finishes first, so none of it is half drawn
+    flushSync(trayReveal.finish);
     // Cards still flying in from the sidebar land now, so they're in the image
     stopFlights.current.forEach((stop) => stop());
     await Promise.allSettled(
@@ -2384,6 +2690,14 @@ export default function Editor() {
       if (exportTray) {
         const tray = stage.findOne<Konva.Group>('.tray');
         set(tray, { x: 0, y: BOARD_HEIGHT });
+        // Its cards unclipped and unscrolled (the one-row tray on phones), in its two rows
+        set(stage.findOne('.trayClip'), {
+          clipX: undefined,
+          clipY: undefined,
+          clipWidth: undefined,
+          clipHeight: undefined,
+        });
+        set(stage.findOne('.trayCards'), { x: 0 });
         set(stage.findOne('.trayBox'), {
           width,
           height: trayHeight(graphic.tray.items.length, width),
@@ -2443,7 +2757,7 @@ export default function Editor() {
     // narrow screens the column dissolves (Editor.module.css): the header stays at the top,
     // then the board, then the sidebar. On wide screens each side scrolls on its own, so
     // the search results stay beside the board.
-    <BoardColors value={colorChoices}>
+    <>
       <div
         ref={pageRef}
         className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
@@ -2541,28 +2855,107 @@ export default function Editor() {
           className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
           inert={viewing !== null}
         >
-          <header className={styles.top}>
+          <header
+            className={`${styles.top} ${folded ? styles.topFolded : ''}`}
+            // Rising away as the sidebar folds
+            style={
+              fold > 0 && !folded
+                ? {
+                    marginTop: `calc((var(--tb-top-height) + env(safe-area-inset-top)) * ${-fold})`,
+                  }
+                : undefined
+            }
+          >
             <Link href="/" className={styles.brand}>
               <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
             </Link>
           </header>
           <SidebarHandle />
-          <aside className={`${styles.side} flex flex-col flex-1 min-w-0 min-h-0`}>
-            <div className={styles.sideHead}>
-              <RadioBar
-                label="Editor sections"
-                options={TABS}
-                value={tab}
-                onChange={(next) => {
-                  // Add Cards clicked while it's showing: straight to the search
-                  // (not on touch screens, where it would bring up the keyboard over the page)
-                  if (next === 'add' && tab === 'add' && !matchMedia('(pointer: coarse)').matches) {
-                    searchInputRef.current?.focus();
+          <aside
+            id="sidebar"
+            ref={sideRef}
+            className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+            style={
+              foldingSideHeight !== null ? { flex: 'none', height: foldingSideHeight } : undefined
+            }
+          >
+            <div
+              ref={sideHeadRef}
+              className={`${styles.sideHead} flex gap-2 items-center`}
+              data-scrolled={panelScrolled || undefined}
+              // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
+              // is the one keyboards and screen readers get)
+              onClick={(e) => {
+                if (folded && !(e.target as Element).closest('button')) foldSidebar();
+              }}
+            >
+              {/* Folded on a phone: a bar at the page's foot, the light logo at its left and
+              the button to open it again at its right; the nav stays mounted, hidden */}
+              {folded && (
+                <div className={`${styles.foldedBrand} flex flex-1 min-w-0`}>
+                  <Image
+                    src="/tierbinder-combined-light.svg"
+                    alt="TierBinder"
+                    width={LIGHT_LOGO_WIDTH}
+                    height={LOGO_HEIGHT}
+                  />
+                </div>
+              )}
+              <div
+                className="flex-1 min-w-0"
+                hidden={folded}
+                // Folding, the nav fades out over the slide's last part, gone as it ends (then
+                // the logo fades in); opening, it fades back in over the first
+                style={
+                  fold > 0 ? { opacity: Math.min(1, (1 - fold) / (fadeShare || 1)) } : undefined
+                }
+              >
+                <RadioBar
+                  label="Editor sections"
+                  options={TABS}
+                  value={tab}
+                  onChange={(next, clicked) => {
+                    // Picking a tab, even the one showing, opens a folded sidebar
+                    setSidebarFolded(false);
+                    // Add Cards clicked or tapped while it's already showing: straight to
+                    // the search (in this click, so a phone brings up its keyboard).
+                    // Switching to it doesn't, nor do the arrow keys.
+                    if (next === 'add' && clicked && tab === 'add') {
+                      searchInputRef.current?.focus();
+                      return;
+                    }
+                    setTab(next);
+                  }}
+                  onFullWidth={fitSidebarToNav}
+                />
+              </div>
+              {/* On phones and tablets: the sidebar folds down to its nav under a bigger
+              board, and back */}
+              {!wide && (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  className={styles.foldButton}
+                  // One name; aria-expanded says which way it is
+                  aria-label="Sidebar"
+                  aria-controls="sidebar"
+                  title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
+                  aria-expanded={!sidebarFolded}
+                  onClick={foldSidebar}
+                  // (rising with the slide to the folded bar's row, see foldHeights.shift; `translate`,
+                  // which the button doesn't transition, unlike its pressed `transform`)
+                  style={
+                    fold > 0 && !folded
+                      ? { translate: `0 ${-foldHeights.shift * fold}px` }
+                      : undefined
                   }
-                  setTab(next);
-                }}
-                onFullWidth={fitSidebarToNav}
-              />
+                >
+                  <span
+                    aria-hidden
+                    className={`${styles.foldIcon} ${sidebarFolded ? styles.foldIconUp : ''}`}
+                  />
+                </Button>
+              )}
             </div>
 
             {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
@@ -2572,6 +2965,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'add'}
+              onScroll={onPanelScroll('add')}
               className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Grows to fill the sidebar while it shows search results */}
@@ -2673,12 +3067,25 @@ export default function Editor() {
                       />
                     )}
                   </div>
-                  {/* Flips the order: newest or oldest set first, and each set's numbers */}
-                  {searchShown && (
+                  {/* The thumbnails' size, while there are results to show */}
+                  {searchShown && shownResults.length > 0 && (
+                    <div className="ml-auto">
+                      <Segmented
+                        compact
+                        label="Thumbnail size"
+                        value={resultSize}
+                        options={RESULT_SIZES}
+                        onChange={setResultSize}
+                      />
+                    </div>
+                  )}
+                  {/* Flips the order: newest or oldest set first, and each set's numbers
+                  (hidden for now: SORT_BUTTON) */}
+                  {SORT_BUTTON && searchShown && (
                     <Button
                       type="button"
                       variant="icon"
-                      className="ml-auto"
+                      className={shownResults.length > 0 ? undefined : 'ml-auto'}
                       aria-label={`Sort: ${sortDirection}`}
                       title={`Sort: ${sortDirection}`}
                       onClick={() =>
@@ -2752,7 +3159,7 @@ export default function Editor() {
                       : ''}
                 </p>
                 {(showingResults || showingSkeleton) && (
-                  <div className={`${styles.resultsBox} flex-1`}>
+                  <div className={`${styles.resultsBox} flex-1`} data-size={resultSize}>
                     <div
                       ref={resultsRef}
                       className={`${styles.results} overflow-y-auto overflow-x-hidden`}
@@ -2762,7 +3169,7 @@ export default function Editor() {
                       onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
                     >
                       {showingSkeleton
-                        ? Array.from({ length: SKELETON_TILES }, (_, i) => (
+                        ? Array.from({ length: SKELETON_TILES[resultSize] }, (_, i) => (
                             <span key={i} aria-hidden className={styles.resultThumb} />
                           ))
                         : visibleResults.map((card) => (
@@ -2835,7 +3242,9 @@ export default function Editor() {
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
                               <img
-                                src={card.thumb}
+                                // A new size is a new image, shimmering until it loads
+                                key={resultSize}
+                                src={resultSrc(card)}
                                 alt={`${card.name} (${card.set} ${card.number})`}
                                 className={`${styles.resultThumb} object-contain`}
                                 // Shimmers until it's loaded (Editor.module.css)
@@ -2845,11 +3254,17 @@ export default function Editor() {
                                 loading="lazy"
                                 draggable={false}
                                 // The CDN occasionally fails a load; retry once through the image
-                                // proxy, and hide the result if that fails too
+                                // proxy (then a Large one's small image, both ways), and hide
+                                // the result if that fails too
                                 onError={(e) => {
-                                  const proxy = proxied(card.thumb);
-                                  if (!e.currentTarget.src.endsWith(proxy)) {
-                                    e.currentTarget.src = proxy;
+                                  const tries = [...new Set([resultSrc(card), card.thumb])].flatMap(
+                                    (src) => [src, proxied(src)]
+                                  );
+                                  const now = tries.findLastIndex((src) =>
+                                    e.currentTarget.src.endsWith(src)
+                                  );
+                                  if (now < tries.length - 1) {
+                                    e.currentTarget.src = tries[now + 1];
                                     return;
                                   }
                                   const key = `${card.set} ${card.number}`;
@@ -3024,6 +3439,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'customize'}
+              onScroll={onPanelScroll('customize')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
@@ -3097,13 +3513,17 @@ export default function Editor() {
                     checked={graphic.tray.enabled}
                     onChange={(on) => {
                       showTray(on);
-                      // Its rows come into view once they and the tray are laid out (on
-                      // phones the tray under the board moves the sidebar down too)
+                      // Its rows come into view once they and the tray are laid out: on
+                      // phones the tray growing under the board moves the sidebar down too,
+                      // so once it has slid in
                       if (on)
-                        requestAnimationFrame(() =>
-                          requestAnimationFrame(() => {
+                        setTimeout(
+                          () => {
                             if (traySectionRef.current) revealBelow(traySectionRef.current);
-                          })
+                          },
+                          matchMedia('(prefers-reduced-motion: reduce)').matches
+                            ? 0
+                            : readDuration('--duration-move')
                         );
                     }}
                     heading
@@ -3125,6 +3545,7 @@ export default function Editor() {
             <section
               role="tabpanel"
               hidden={tab !== 'save'}
+              onScroll={onPanelScroll('save')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
               {/* Sections as in Customize, a hairline between them and each setting a row: the
@@ -3199,7 +3620,13 @@ export default function Editor() {
           ref={workspaceRef}
           // With the sidebar hidden, more room at the left, so the board stays clear of the show
           // button at the bottom left
-          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+          // Folding, it takes over the status bar's inset from the rising top bar
+          style={
+            fold > 0
+              ? { paddingTop: `calc(var(--spacing-4) + env(safe-area-inset-top) * ${fold})` }
+              : undefined
+          }
           inert={viewing !== null}
         >
           {/* Under b8 the toolbar takes the page's width, so a board narrowed to fit its height
@@ -3223,10 +3650,19 @@ export default function Editor() {
                 width={stageWidth * scale}
                 // Shifted so the board, centered over a wider card tray, starts at x = 0
                 x={boardLeft * scale}
-                height={BOARD_HEIGHT * scale + (trayShown ? TRAY_GAP + shownTrayHeight * scale : 0)}
+                height={BOARD_HEIGHT * scale + TRAY_GAP * trayOpen + shownTrayHeight * scale}
                 scaleX={scale}
                 scaleY={scale}
+                // Before the press below can deselect it: a tier or the tray clicked with a
+                // card selected moves the card there (pickTargetOnBoard)
+                // (not while a replacement is being picked, which keeps its card selected)
+                onPointerDown={() => {
+                  pressSelection.current = selectedShown && !picking ? selectedId : null;
+                  pressMenuOpen.current = !!cardMenu;
+                }}
                 onMouseDown={(e) => {
+                  // A double click's second press (a tier label opening its name) moves nothing
+                  if (e.evt.detail > 1) pressSelection.current = null;
                   if (e.target === e.target.getStage() || e.target.hasName('background')) {
                     setSelectedId(null);
                   }
@@ -3245,7 +3681,8 @@ export default function Editor() {
                   onCardDrop={boardCardDrop}
                   cardDragWidth={cardDragWidth}
                   arriving={arriving}
-                  onPickTarget={setTarget}
+                  onPickTarget={(i, emptySpace) => pickTargetOnBoard(i, emptySpace)}
+                  selectedId={selectedId}
                   onEditSetting={(key) => {
                     setTab('customize');
                     setSidebarHidden(false);
@@ -3253,11 +3690,11 @@ export default function Editor() {
                   }}
                   tool={tool}
                 />
-                {trayShown && (
+                {trayDrawn && (
                   <CardTray
                     tray={graphic.tray}
-                    width={TRAY_WIDTH}
-                    left={-boardLeft}
+                    width={shownTrayWidth}
+                    left={trayLeft}
                     top={trayTop}
                     scale={scale}
                     border={graphic.border}
@@ -3265,14 +3702,20 @@ export default function Editor() {
                     onSelect={setSelectedId}
                     onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
                     onCardDrop={trayCardDrop}
-                    onPick={() => setTarget(boardTargets.length)}
+                    onPick={() => pickTargetOnBoard(boardTargets.length, true)}
+                    selectedId={selectedId}
+                    oneRow={oneRowTray}
+                    pan={trayPan}
+                    onPan={setTrayPan}
                     onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
                     boardCardWidth={boardCardWidth}
                     hintFont={interfaceFont}
                     showHint={!trayHintSeen}
                     arriving={arriving}
-                    // Ignores presses while drawing (pen, eraser), as the board does
-                    listening={tool === DEFAULT_TOOL}
+                    // Ignores presses while drawing (pen, eraser), as the board does, and while
+                    // it slides away
+                    listening={trayShown && tool === DEFAULT_TOOL}
+                    opacity={trayOpacity}
                   />
                 )}
                 {/* Editor-only layer: hidden while exporting */}
@@ -3328,7 +3771,7 @@ export default function Editor() {
                     }}
                   >
                     {cardMenuItems(shownMenu).map((label) =>
-                      label === 'Clear card tray' ? (
+                      label === 'Clear card tray' || label === MOVE_TO ? (
                         // Opens on a click (or Enter), not on hover; a second click closes it.
                         // Escape in it goes back to the row.
                         <div key={label} className={styles.flyoutAnchor}>
@@ -3337,17 +3780,29 @@ export default function Editor() {
                             role="menuitem"
                             aria-haspopup="menu"
                             aria-expanded={!!shownMenu.flyout}
+                            data-row={label}
                             className={`tierbinder-option ${styles.flyoutItem}`}
-                            onClick={() => toggleTrayFlyout(shownMenu)}
+                            onClick={() => toggleTrayFlyout(shownMenu, label === MOVE_TO)}
                           >
-                            {titleCase(label)}
+                            {titleCase(label === MOVE_TO ? moveLabel(shownMenu.id) : label)}
                             <span aria-hidden className={styles.menuChevron} />
                           </button>
                           {shownTrayFlyout !== null && (
                             <div
                               data-flyout
                               role="menu"
-                              aria-label="Clear card tray"
+                              aria-label={
+                                label === MOVE_TO ? moveLabel(shownMenu.id) : 'Clear card tray'
+                              }
+                              // Add to's choices, by their index in `targets` (one handler
+                              // here rather than one per choice)
+                              onClick={(e) => {
+                                const choice = (e.target as HTMLElement).closest<HTMLElement>(
+                                  '[data-target]'
+                                );
+                                if (choice)
+                                  moveFromMenu(shownMenu.id, Number(choice.dataset.target));
+                              }}
                               onKeyDown={(e) => {
                                 if (e.key !== 'Escape') return;
                                 // Not the page's Escape, which would close the whole menu
@@ -3358,19 +3813,38 @@ export default function Editor() {
                               }}
                               className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${trayFlyoutClosing ? 'closing pointer-events-none' : ''}`}
                             >
-                              <button
-                                role="menuitem"
-                                className="tierbinder-option whitespace-nowrap"
-                                onClick={() => {
-                                  clearTray();
-                                  setShownMenu(null);
-                                  setCardMenu(null);
-                                  // The menu is gone: focus goes to the board, not lost
-                                  boardBoxRef.current?.focus({ preventScroll: true });
-                                }}
-                              >
-                                {`Clear ${cardCount(shownTrayFlyout)}`}
-                              </button>
+                              {label === MOVE_TO ? (
+                                // Every place the card can go, with its swatch, as the
+                                // result menu's Add to has
+                                moveChoices(shownMenu.id).map((i) => (
+                                  <button
+                                    key={i}
+                                    role="menuitem"
+                                    className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
+                                    data-target={i}
+                                  >
+                                    <Swatch
+                                      color={targets[i].color}
+                                      outlined={'outlined' in targets[i] && targets[i].outlined}
+                                    />
+                                    {targets[i].name.replaceAll('\n', ' ')}
+                                  </button>
+                                ))
+                              ) : (
+                                <button
+                                  role="menuitem"
+                                  className="tierbinder-option whitespace-nowrap"
+                                  onClick={() => {
+                                    clearTray();
+                                    setShownMenu(null);
+                                    setCardMenu(null);
+                                    // The menu is gone: focus goes to the board, not lost
+                                    boardBoxRef.current?.focus({ preventScroll: true });
+                                  }}
+                                >
+                                  {`Clear ${cardCount(shownTrayFlyout)}`}
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -3552,6 +4026,6 @@ export default function Editor() {
           />
         )}
       </div>
-    </BoardColors>
+    </>
   );
 }
