@@ -9,6 +9,7 @@ import { Group, Layer, Rect, Stage } from 'react-konva';
 import {
   BOARD_HEIGHT,
   SHAPES,
+  shapeOf,
   boardWidth,
   exportScale,
   exportSize,
@@ -62,7 +63,7 @@ import { LONG_PRESS, TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
-import Working from './ui/Working';
+import Working, { DOTS_CYCLE, DOTS_SHOWN } from './ui/Working';
 import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar, { panelId, tabId } from './ui/RadioBar';
@@ -79,8 +80,23 @@ import { titleCase, cardCount } from './text';
 
 const STORAGE_KEY = 'tierbinder-doc';
 const SAVE_FAILED = "Couldn't Save Changes on This Device";
-// The shortest a Save & Share button says it's working (ms), so a quick export doesn't flicker
-const WORKING_MIN = 600;
+// What Save & Share has under way: exporting, copying or sharing the image, or the link
+type WorkKind = 'export' | 'copy' | 'share' | 'link';
+// How long a downloaded image's object URL is kept before it's let go (ms)
+const REVOKE_DELAY = 10_000;
+// Runs a task (starting it at once), then waits until the working dots have hopped
+// DOTS_SHOWN whole rounds, or the next whole round after that, so a quick one doesn't
+// flicker and none stops mid-hop
+async function forWholeRounds(task: () => Promise<void>) {
+  const started = performance.now();
+  try {
+    await task();
+  } finally {
+    const elapsed = performance.now() - started;
+    const rounds = Math.max(DOTS_SHOWN, Math.ceil(elapsed / DOTS_CYCLE));
+    await new Promise((resolve) => setTimeout(resolve, rounds * DOTS_CYCLE - elapsed));
+  }
+}
 // The most characters a Discord message holds: a longer share link gets a note that it won't
 // fit in one
 const DISCORD_MESSAGE_LIMIT = 2000;
@@ -1143,6 +1159,20 @@ export default function Editor() {
   const trayTop = BOARD_HEIGHT + TRAY_GAP / (scale || 1);
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
+  // Phones and tablets that can hand an image to the system's share sheet (iOS, Android):
+  // there Save & Share leads with Share Image and Share Board Link. Elsewhere it's Download, Copy
+  // Image and Copy Board Link: desktops may have a share sheet, but downloading is what's expected.
+  // Checked once, since neither changes during a visit.
+  const [shareSheet] = React.useState(() => {
+    try {
+      return (
+        matchMedia('(pointer: coarse)').matches &&
+        !!navigator.canShare?.({ files: [new File([], 'board.png', { type: 'image/png' })] })
+      );
+    } catch {
+      return false;
+    }
+  });
   // The empty tray's hint shows until a card has been in a tray, then not again for the
   // tab's session (sessionStorage, so a reload keeps it hidden)
   const [trayHintSeen, setTrayHintSeen] = React.useState(() => {
@@ -1636,19 +1666,90 @@ export default function Editor() {
     });
   }
 
-  // Save & Share's export, copy or link under way: its button says so ("Exporting" and
-  // bouncing dots, ui/Working.tsx) for at least WORKING_MIN, so a quick one doesn't just
+  // Share Image and Share Board Link on phones and tablets: the board's image, or its link, handed
+  // to the system's share sheet (Messages, Discord, Photos, Copy). iOS only opens the sheet
+  // straight after a tap, so what's made is kept for the board as it is, and when making it
+  // took too long a toast asks for a second tap, which shares the kept one at once. Closing
+  // the sheet without picking anything says nothing.
+  const readyShare = React.useRef<{
+    kind: 'share' | 'link';
+    graphic: Graphic;
+    tray: boolean;
+    data: ShareData;
+  } | null>(null);
+  function shareThrough(kind: 'share' | 'link', make: () => Promise<ShareData | null>) {
+    const kept = readyShare.current;
+    const ready =
+      kept &&
+      kept.kind === kind &&
+      kept.graphic === graphic &&
+      // The link holds the card tray either way; only the image follows Include Card Tray
+      (kind === 'link' || kept.tray === exportTray)
+        ? kept.data
+        : null;
+    whileWorking(kind, async () => {
+      // Shared in the tap itself when it's ready: nothing is awaited before it
+      const data = ready ?? (await make());
+      if (!data) return;
+      readyShare.current = { kind, graphic, tray: exportTray, data };
+      // Not awaited: the button's work is making it, not the sheet, whose promise WebKit
+      // sometimes never settles, which would leave every button waiting on it
+      navigator.share(data).then(
+        () => {
+          if (data.url && data.url.length > DISCORD_MESSAGE_LIMIT)
+            showToast('Link Shared\nToo Long for a Discord Message');
+        },
+        (error) => {
+          const name = error instanceof DOMException ? error.name : '';
+          if (name === 'AbortError') return;
+          if (name === 'NotAllowedError' && !ready)
+            showToast(
+              kind === 'link'
+                ? 'Link Ready; Tap Share Board Link Again'
+                : 'Image Ready; Tap Share Image Again'
+            );
+          else
+            showToast(
+              kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Save Image"
+            );
+        }
+      );
+    });
+  }
+  // What was made is for the board as it was: let it go once the board changes, or the
+  // canvas's font arrives (an image drawn before it would keep the stand-in font)
+  React.useEffect(() => {
+    readyShare.current = null;
+  }, [graphic, fontFamily]);
+
+  const shareImage = () =>
+    shareThrough('share', async () => {
+      const blob = await renderBlob();
+      return blob && { files: [new File([blob], `${graphic.kind}.png`, { type: 'image/png' })] };
+    });
+
+  function shareBoardLink() {
+    if (sharedCards(graphic) > MAX_SHARED_CARDS) {
+      showToast(`Too Many Cards to Share (${MAX_SHARED_CARDS} at Most)`);
+      return;
+    }
+    shareThrough('link', async () => {
+      return { url: await shareLink(graphic) };
+    });
+  }
+
+  // Save & Share's export, copy, share or link under way: its button says so ("Downloading" and
+  // bouncing dots, ui/Working.tsx) for at least DOTS_SHOWN rounds of the dots, so a quick one doesn't just
   // flicker, and the others wait for it
-  const [working, setWorking] = React.useState<'export' | 'copy' | 'link' | null>(null);
+  const [working, setWorking] = React.useState<WorkKind | null>(null);
   const workingRef = React.useRef(false);
-  async function whileWorking(kind: 'export' | 'copy' | 'link', task: () => Promise<void>) {
+  async function whileWorking(kind: WorkKind, task: () => Promise<void>) {
     if (workingRef.current) return;
     workingRef.current = true;
     setWorking(kind);
-    // Started at once, so a clipboard write in it is still inside the click
-    const done = task();
     try {
-      await Promise.all([done, new Promise((resolve) => setTimeout(resolve, WORKING_MIN))]);
+      // Started at once, so a clipboard write in it is still inside the click
+      await forWholeRounds(task);
     } finally {
       workingRef.current = false;
       setWorking(null);
@@ -3084,7 +3185,8 @@ export default function Editor() {
       a.href = url;
       a.download = `${graphic.kind}.png`;
       a.click();
-      URL.revokeObjectURL(url);
+      // Later, since iOS Safari reads the file after the click returns
+      setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY);
     });
 
   const copyPng = () =>
@@ -3095,7 +3197,7 @@ export default function Editor() {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         showToast('Copied to Clipboard');
       } catch {
-        showToast("Couldn't Copy; Use Export PNG");
+        showToast("Couldn't Copy; Use Download");
       }
     });
 
@@ -3816,7 +3918,8 @@ export default function Editor() {
                               />
                               <Button
                                 variant="primary"
-                                className="self-start"
+                                size="large"
+                                className="b7:self-start"
                                 onClick={runImport}
                                 disabled={busy || !importText.trim()}
                               >
@@ -3841,7 +3944,7 @@ export default function Editor() {
                   <h2 className="sr-only">Customize</h2>
                   {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
               hairline between sections (.tierbinder-sections), and every setting a row
-              with its label muted at the left and its control at the right
+              with its label at the left and its control at the right
               (.tierbinder-prop). Board first, what the board is: its type and shape (where
               it's posted: it sets the board's width and the image's size), with Clear at
               the end of its heading. Then the graphic's own sections (what's on it), then
@@ -3950,56 +4053,114 @@ export default function Editor() {
                   className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
                 >
                   <h2 className="sr-only">Save &amp; Share</h2>
-                  {/* Sections as in Customize, a hairline between them and each setting a row: the
-              image (its size and format, whether the card tray goes in it, and exporting
-              or copying it), then the share link. Each section's buttons act on it, so they
-              sit in it, as Import does in Advanced. */}
+                  {/* Sections as in Customize, a hairline between them: the image (its size and
+              format at the end of the heading, its buttons, then whether the card tray goes in
+              it), then the board's link. On phones and tablets that have a share sheet, Share
+              leads (Share Image, Save Image, Share Board Link); elsewhere Download does (Download,
+              Copy Image, Copy Board Link). Below b7 the buttons are touch-sized and span the panel. */}
                   <div className="flex flex-col gap-3">
-                    <h3 className="tierbinder-heading">Image</h3>
-                    <div className="tierbinder-prop">
-                      Size
-                      <span className="text-(--tb-text)">
-                        {exported.width} × {exported.height}
-                      </span>
+                    {/* The heading, and right under it the board's shape, which sets the
+                        image's size, and where it's best posted */}
+                    <div className="flex flex-col">
+                      <h3 className="tierbinder-heading">Image</h3>
+                      <p className="text-caption text-(--tb-muted) text-pretty">
+                        {shapeOf(graphic.shape).label}, best for {shapeOf(graphic.shape).bestFor}.
+                      </p>
                     </div>
-                    <div className="tierbinder-prop">
-                      Format
-                      <span className="text-(--tb-text)">PNG</span>
+                    <div className="grid grid-cols-2 gap-3 b7:flex b7:flex-wrap">
+                      {shareSheet ? (
+                        <>
+                          <Button
+                            variant="primary"
+                            size="large"
+                            onClick={shareImage}
+                            disabled={busy}
+                            aria-busy={working === 'share'}
+                          >
+                            <Working active={working === 'share'} label="Sharing">
+                              <span aria-hidden className={styles.buttonIcon} data-icon="share" />
+                              Share Image
+                            </Working>
+                          </Button>
+                          <Button
+                            size="large"
+                            onClick={exportPng}
+                            disabled={busy}
+                            aria-busy={working === 'export'}
+                          >
+                            <Working active={working === 'export'} label="Saving">
+                              <span
+                                aria-hidden
+                                className={styles.buttonIcon}
+                                data-icon="download"
+                              />
+                              Save Image
+                            </Working>
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="primary"
+                            size="large"
+                            onClick={exportPng}
+                            disabled={busy}
+                            aria-busy={working === 'export'}
+                          >
+                            <Working active={working === 'export'} label="Downloading">
+                              <span
+                                aria-hidden
+                                className={styles.buttonIcon}
+                                data-icon="download"
+                              />
+                              Download
+                            </Working>
+                          </Button>
+                          <Button
+                            size="large"
+                            onClick={copyPng}
+                            disabled={busy}
+                            aria-busy={working === 'copy'}
+                          >
+                            <Working active={working === 'copy'} label="Copying">
+                              <span aria-hidden className={styles.buttonIcon} data-icon="copy" />
+                              Copy Image
+                            </Working>
+                          </Button>
+                        </>
+                      )}
                     </div>
+                    {/* After the buttons rather than before, as toggles usually are: the
+                        buttons are what the tab is for, and this adjusts them */}
                     {trayShown && (
                       <Toggle checked={includeTray} onChange={setIncludeTray}>
-                        Include Card Tray
+                        Include Card Tray in Export
                       </Toggle>
                     )}
-                    <div className="flex flex-wrap gap-3">
-                      <Button
-                        variant="primary"
-                        onClick={exportPng}
-                        disabled={busy}
-                        aria-busy={working === 'export'}
-                      >
-                        <Working active={working === 'export'} label="Exporting">
-                          Export PNG
-                        </Working>
-                      </Button>
-                      <Button onClick={copyPng} disabled={busy} aria-busy={working === 'copy'}>
-                        <Working active={working === 'copy'} label="Copying">
-                          Copy PNG
-                        </Working>
-                      </Button>
-                    </div>
                   </div>
-                  {/* A link that opens this board, card tray and all, on anyone's device */}
+                  {/* A link that opens an editable copy of this board, card tray and all, on
+                      anyone's device */}
                   <div className="flex flex-col gap-3">
-                    <h3 className="tierbinder-heading">Link</h3>
-                    <p className="text-(--tb-muted) text-pretty">
-                      Opens this board and its card tray for anyone you send it to.
-                    </p>
-                    <div className="flex">
-                      <Button onClick={copyLink} aria-busy={working === 'link'}>
-                        <Working active={working === 'link'} label="Copying">
-                          <span aria-hidden className={styles.linkIcon} />
-                          Copy Link
+                    {/* The help text sits right under its heading, the two one group with the
+                        section's usual 8px under it */}
+                    <div className="flex flex-col">
+                      <h3 className="tierbinder-heading">Board Link</h3>
+                      <p className="text-caption text-(--tb-muted) text-pretty">
+                        Opens an editable copy of this board.
+                      </p>
+                    </div>
+                    <div className="grid b7:flex">
+                      <Button
+                        size="large"
+                        onClick={shareSheet ? shareBoardLink : copyLink}
+                        aria-busy={working === 'link'}
+                      >
+                        <Working
+                          active={working === 'link'}
+                          label={shareSheet ? 'Sharing' : 'Copying'}
+                        >
+                          <span aria-hidden className={styles.buttonIcon} data-icon="link" />
+                          {shareSheet ? 'Share Board Link' : 'Copy Board Link'}
                         </Working>
                       </Button>
                     </div>
@@ -4430,9 +4591,12 @@ export default function Editor() {
                 It replaces the {typeOf(sharedBoard.kind).label.toLowerCase()} on this device, card
                 tray and all.
               </p>
-              <div className="flex flex-wrap gap-3 justify-end">
-                <Button onClick={() => answerShared(false)}>Keep Mine</Button>
-                <Button variant="primary" onClick={() => answerShared(true)}>
+              {/* Below b7, touch-sized and splitting the dialog's width */}
+              <div className="grid grid-cols-2 gap-3 b7:flex b7:flex-wrap b7:justify-end">
+                <Button size="large" onClick={() => answerShared(false)}>
+                  Keep Mine
+                </Button>
+                <Button size="large" variant="primary" onClick={() => answerShared(true)}>
                   Open Shared Board
                 </Button>
               </div>

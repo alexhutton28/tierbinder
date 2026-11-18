@@ -314,13 +314,29 @@
   }
 }
 
-/* Feather's link, before Copy Link's words */
-.linkIcon {
+/* A Feather icon before a Save & Share button's words, drawn in the text color */
+.buttonIcon {
   flex: none;
   width: var(--tb-icon);
   height: var(--tb-icon);
   background: currentcolor;
-  mask: url('/link.svg') center / contain no-repeat;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.buttonIcon[data-icon='share'] {
+  --icon: url('/share.svg');
+}
+
+.buttonIcon[data-icon='download'] {
+  --icon: url('/download.svg');
+}
+
+.buttonIcon[data-icon='copy'] {
+  --icon: url('/copy.svg');
+}
+
+.buttonIcon[data-icon='link'] {
+  --icon: url('/link.svg');
 }
 
 /* The shared-board dialog: a popup in the middle of the window over the dimmed page,

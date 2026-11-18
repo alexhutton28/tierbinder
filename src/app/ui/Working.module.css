@@ -3,6 +3,8 @@
   display: inline-grid;
 }
 
+/* The two crossfade over --duration-hover, in place. The hidden one turns invisible once
+   it has faded out, so screen readers skip it */
 .layer {
   display: inline-flex;
   grid-area: 1 / 1;
@@ -10,15 +12,22 @@
   align-items: center;
   justify-content: center;
   visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity var(--duration-hover) ease-out,
+    visibility 0s linear var(--duration-hover);
 }
 
 .layer[data-shown] {
   visibility: visible;
+  opacity: 1;
+  transition:
+    opacity var(--duration-hover) ease-out,
+    visibility 0s;
 }
 
 /* Three dots after the words, each hopping in turn, a third of a cycle apart */
 .dots {
-  --dots-cycle: 1s;
   --dot-size: 0.25em;
   --dot-gap: 0.15em;
 
@@ -61,8 +70,13 @@
   }
 }
 
-/* Still dots under reduced motion: the words say it's under way */
+/* Still dots and an instant swap under reduced motion: the words say it's under way */
 @media (prefers-reduced-motion: reduce) {
+  .layer,
+  .layer[data-shown] {
+    transition: none;
+  }
+
   .dots span {
     animation: none;
   }

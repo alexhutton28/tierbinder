@@ -5,6 +5,8 @@ import styles from './Button.module.css';
 // square and holds only its icon, so it needs an aria-label (and a title for the tooltip).
 // A quiet button is an icon button with no box, muted until hovered (a tier's remove).
 // A text button is just its words (and any icon beside them), brightening on hover.
+// A large button is a section's closing action on phones: a touch target tall below b7
+// (its parent decides its width), a control's height from b7 up.
 const VARIANTS = {
   default: '',
   primary: styles.primary,
@@ -14,9 +16,21 @@ const VARIANTS = {
   text: styles.text,
 };
 
-type Props = ComponentProps<'button'> & { variant?: keyof typeof VARIANTS };
+const SIZES = { default: '', large: styles.large };
 
-export default function Button({ variant = 'default', className = '', ...props }: Props) {
-  const classes = [styles.button, VARIANTS[variant], className].filter(Boolean).join(' ');
+type Props = ComponentProps<'button'> & {
+  variant?: keyof typeof VARIANTS;
+  size?: keyof typeof SIZES;
+};
+
+export default function Button({
+  variant = 'default',
+  size = 'default',
+  className = '',
+  ...props
+}: Props) {
+  const classes = [styles.button, VARIANTS[variant], SIZES[size], className]
+    .filter(Boolean)
+    .join(' ');
   return <button {...props} className={classes} />;
 }

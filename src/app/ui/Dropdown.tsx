@@ -31,7 +31,7 @@ export default function Dropdown<T extends string | number>({
 }: {
   label: string;
   hideLabel?: boolean;
-  // A setting's row (.tierbinder-prop): its label muted at the left, the dropdown at the
+  // A setting's row (.tierbinder-prop): its label at the left, the dropdown at the
   // right, as every Customize setting is (Type, Shape)
   prop?: boolean;
   chevron?: boolean;

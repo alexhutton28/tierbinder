@@ -4,7 +4,7 @@ import React from 'react';
 import styles from './Segmented.module.css';
 
 // A segmented control, for a setting with a few named choices (a tier list's Label Width:
-// S, M and L): a setting's row (.tierbinder-prop), its label muted at the left and the
+// S, M and L): a setting's row (.tierbinder-prop), its label at the left and the
 // segments at the right, joined in one box in the fields' colors, the chosen one lit.
 // Native radio buttons underneath, so Tab reaches the group once, the arrows move the
 // choice, and screen readers hear each choice's full `label` ("Large: 170 pixels wide")
