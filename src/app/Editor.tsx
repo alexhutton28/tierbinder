@@ -4049,15 +4049,12 @@ export default function Editor() {
               leads (Share Image, Save Image, Share Link); elsewhere Download does (Download,
               Copy Image, Copy Link). Below b7 the buttons are touch-sized and span the panel. */}
                   <div className="flex flex-col gap-3">
-                    {/* The heading, and right under it the board's shape, where it's best
-                        posted and the image's size, which the shape sets */}
+                    {/* The heading, and right under it the board's shape, which sets the
+                        image's size, and where it's best posted */}
                     <div className="flex flex-col">
                       <h3 className="tierbinder-heading">Image</h3>
                       <p className="text-caption text-(--tb-muted) text-pretty">
-                        {shapeOf(graphic.shape).label}, best for {shapeOf(graphic.shape).bestFor}:{' '}
-                        <span className="whitespace-nowrap">
-                          {exported.width} × {exported.height}
-                        </span>
+                        {shapeOf(graphic.shape).label}, best for {shapeOf(graphic.shape).bestFor}.
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3 b7:flex b7:flex-wrap">
