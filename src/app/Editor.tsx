@@ -97,9 +97,6 @@ async function forWholeRounds(task: () => Promise<void>) {
     await new Promise((resolve) => setTimeout(resolve, rounds * DOTS_CYCLE - elapsed));
   }
 }
-// The most characters a Discord message holds: a longer share link gets a note that it won't
-// fit in one
-const DISCORD_MESSAGE_LIMIT = 2000;
 
 // The Add to picker's swatch while a split card is being made: a white card
 const SPLIT_SWATCH = '#ffffff';
@@ -1655,11 +1652,7 @@ export default function Editor() {
               'text/plain': link.then((text) => new Blob([text], { type: 'text/plain' })),
             }),
           ]);
-        showToast(
-          (await link).length > DISCORD_MESSAGE_LIMIT
-            ? 'Link Copied\nToo Long for a Discord Message'
-            : 'Link Copied'
-        );
+        showToast('Link Copied');
       } catch {
         showToast("Couldn't Copy the Link");
       }
@@ -1694,26 +1687,14 @@ export default function Editor() {
       readyShare.current = { kind, graphic, tray: exportTray, data };
       // Not awaited: the button's work is making it, not the sheet, whose promise WebKit
       // sometimes never settles, which would leave every button waiting on it
-      navigator.share(data).then(
-        () => {
-          if (data.url && data.url.length > DISCORD_MESSAGE_LIMIT)
-            showToast('Link Shared\nToo Long for a Discord Message');
-        },
-        (error) => {
-          const name = error instanceof DOMException ? error.name : '';
-          if (name === 'AbortError') return;
-          if (name === 'NotAllowedError' && !ready)
-            showToast(
-              kind === 'link'
-                ? 'Link Ready; Tap Share Board Link Again'
-                : 'Image Ready; Tap Share Image Again'
-            );
-          else
-            showToast(
-              kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Copy Image"
-            );
-        }
-      );
+      navigator.share(data).catch((error) => {
+        const name = error instanceof DOMException ? error.name : '';
+        if (name === 'AbortError') return;
+        // Kept, so trying again shares it at once
+        if (name === 'NotAllowedError' && !ready) showToast("Sharing Didn't Open; Try Again");
+        else
+          showToast(kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Copy Image");
+      });
     });
   }
   // What was made is for the board as it was: let it go once the board changes, or the
@@ -1725,7 +1706,11 @@ export default function Editor() {
   const shareImage = () =>
     shareThrough('share', async () => {
       const blob = await renderBlob();
-      return blob && { files: [new File([blob], `${graphic.kind}.png`, { type: 'image/png' })] };
+      return (
+        blob && {
+          files: [new File([blob], `tierbinder-${graphic.kind}.png`, { type: 'image/png' })],
+        }
+      );
     });
 
   function shareBoardLink() {
@@ -3183,7 +3168,7 @@ export default function Editor() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${graphic.kind}.png`;
+      a.download = `tierbinder-${graphic.kind}.png`;
       a.click();
       // Later, since iOS Safari reads the file after the click returns
       setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY);
