@@ -15,7 +15,7 @@
 }
 
 /* Quiet: muted until hovered (Button's text hover brightens it); on touch screens its 44px
-   target gives the extra height back, so the section keeps its 8px spacing
+   target gives the extra height back, so the section keeps its 8px spacing */
 button.quiet {
   color: var(--tb-muted);
 }

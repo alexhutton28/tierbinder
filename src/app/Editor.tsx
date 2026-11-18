@@ -1026,8 +1026,11 @@ export default function Editor() {
     if (panelTab !== 'add' || wide) return;
     if (!scrolled) setNavTucked(0);
     else if (!navTucked) {
-      const head = sideHeadRef.current?.offsetHeight ?? 0;
-      if (panel.scrollHeight - panel.clientHeight > head) setNavTucked(head);
+      const head = sideHeadRef.current;
+      // (not while focus is in it: it'd slide away from under the keyboard)
+      if (!head || head.contains(document.activeElement)) return;
+      if (panel.scrollHeight - panel.clientHeight > head.offsetHeight)
+        setNavTucked(head.offsetHeight);
     }
   };
   // The nav is tucked only while Add Cards shows under b8, open and not folding
@@ -3373,10 +3376,11 @@ export default function Editor() {
                   className={`${styles.sideHead} flex gap-2 items-center`}
                   data-scrolled={panelScrolled || undefined}
                   // Slid up out of the way while Add Cards is scrolled on a phone (`navTucked`);
-                  // inert then, so Tab doesn't reach what can't be seen
+                  // focus reaching it (Shift+Tab from the search) brings it back, so the
+                  // keyboard can still switch tabs or fold the sidebar
                   data-tucked={tucked > 0 || undefined}
-                  inert={tucked > 0}
                   style={tucked ? { marginBlockStart: -tucked } : undefined}
+                  onFocus={() => setNavTucked(0)}
                   // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
                   // is the one keyboards and screen readers get)
                   onClick={(e) => {
