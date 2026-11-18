@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import styles from './Working.module.css';
 
-// A button's words while what it started is under way: "Exporting" and three bouncing
-// dots in place of "Export PNG". Both are laid out in one cell, so the button keeps the
+// A button's words while what it started is under way: "Downloading" and three bouncing
+// dots in place of "Download". Both are laid out in one cell, so the button keeps the
 // wider one's width and doesn't jump; the one not showing is hidden from screen readers too.
 export default function Working({
   active,
@@ -10,7 +10,7 @@ export default function Working({
   children,
 }: {
   active: boolean;
-  // What it's doing, as in "Exporting"
+  // What it's doing, as in "Downloading"
   label: string;
   // The button's own contents
   children: ReactNode;
