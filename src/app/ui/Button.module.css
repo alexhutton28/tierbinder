@@ -73,7 +73,7 @@
 
 /* A section's closing action on phones (Save & Share's, Import, the shared-board dialog's
    answers): a full touch target tall, spanning the room its parent gives it; from b7 up, a
-   control's usual height */
+   control's usual height, except on touch screens */
 .large {
   display: inline-flex;
   gap: var(--spacing-2);
@@ -83,6 +83,13 @@
 
   @variant b7 {
     height: var(--tb-control-height);
+  }
+}
+
+/* Touch screens keep it a finger's height at every width (tablets past b7) */
+@media (pointer: coarse) {
+  .large {
+    height: var(--tb-touch-target);
   }
 }
 

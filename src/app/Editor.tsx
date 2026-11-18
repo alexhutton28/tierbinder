@@ -83,6 +83,8 @@ const SAVE_FAILED = "Couldn't Save Changes on This Device";
 const WORKING_MIN = 600;
 // What Save & Share has under way: exporting, copying or sharing the image, or the link
 type WorkKind = 'export' | 'copy' | 'share' | 'link';
+// How long a downloaded image's object URL is kept before it's let go (ms)
+const REVOKE_DELAY = 10_000;
 // The most characters a Discord message holds: a longer share link gets a note that it won't
 // fit in one
 const DISCORD_MESSAGE_LIMIT = 2000;
@@ -1666,7 +1668,11 @@ export default function Editor() {
   function shareThrough(kind: 'share' | 'link', make: () => Promise<ShareData | null>) {
     const kept = readyShare.current;
     const ready =
-      kept && kept.kind === kind && kept.graphic === graphic && kept.tray === exportTray
+      kept &&
+      kept.kind === kind &&
+      kept.graphic === graphic &&
+      // The link holds the card tray either way; only the image follows Include Card Tray
+      (kind === 'link' || kept.tray === exportTray)
         ? kept.data
         : null;
     whileWorking(kind, async () => {
@@ -1674,22 +1680,35 @@ export default function Editor() {
       const data = ready ?? (await make());
       if (!data) return;
       readyShare.current = { kind, graphic, tray: exportTray, data };
-      try {
-        await navigator.share(data);
-      } catch (error) {
-        const name = error instanceof DOMException ? error.name : '';
-        if (name === 'AbortError') return;
-        if (name === 'NotAllowedError' && !ready)
-          showToast(
-            kind === 'link'
-              ? 'Link Ready; Tap Share Link Again'
-              : 'Image Ready; Tap Share Image Again'
-          );
-        else
-          showToast(kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Save Image");
-      }
+      // Not awaited: the button's work is making it, not the sheet, whose promise WebKit
+      // sometimes never settles, which would leave every button waiting on it
+      navigator.share(data).then(
+        () => {
+          if (data.url && data.url.length > DISCORD_MESSAGE_LIMIT)
+            showToast('Link Shared\nToo Long for a Discord Message');
+        },
+        (error) => {
+          const name = error instanceof DOMException ? error.name : '';
+          if (name === 'AbortError') return;
+          if (name === 'NotAllowedError' && !ready)
+            showToast(
+              kind === 'link'
+                ? 'Link Ready; Tap Share Link Again'
+                : 'Image Ready; Tap Share Image Again'
+            );
+          else
+            showToast(
+              kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Save Image"
+            );
+        }
+      );
     });
   }
+  // What was made is for the board as it was: let it go once the board changes, or the
+  // canvas's font arrives (an image drawn before it would keep the stand-in font)
+  React.useEffect(() => {
+    readyShare.current = null;
+  }, [graphic, fontFamily]);
 
   const shareImage = () =>
     shareThrough('share', async () => {
@@ -1703,10 +1722,7 @@ export default function Editor() {
       return;
     }
     shareThrough('link', async () => {
-      const url = await shareLink(graphic);
-      // Said as the sheet opens, so it's there to read when it closes
-      if (url.length > DISCORD_MESSAGE_LIMIT) showToast('Link Too Long for a Discord Message');
-      return { url };
+      return { url: await shareLink(graphic) };
     });
   }
 
@@ -3158,7 +3174,8 @@ export default function Editor() {
       a.href = url;
       a.download = `${graphic.kind}.png`;
       a.click();
-      URL.revokeObjectURL(url);
+      // Later, since iOS Safari reads the file after the click returns
+      setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY);
     });
 
   const copyPng = () =>
@@ -4119,7 +4136,6 @@ export default function Editor() {
                       <Button
                         size="large"
                         onClick={shareSheet ? shareBoardLink : copyLink}
-                        disabled={busy}
                         aria-busy={working === 'link'}
                       >
                         <Working
