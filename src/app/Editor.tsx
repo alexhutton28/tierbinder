@@ -1160,8 +1160,8 @@ export default function Editor() {
   // Exported under the board when ticked in Save & Share
   const [includeTray, setIncludeTray] = React.useState(false);
   // Phones and tablets that can hand an image to the system's share sheet (iOS, Android):
-  // there Save & Share leads with Share Image and Share Link. Elsewhere it's Download, Copy
-  // Image and Copy Link: desktops may have a share sheet, but downloading is what's expected.
+  // there Save & Share leads with Share Image and Share Board Link. Elsewhere it's Download, Copy
+  // Image and Copy Board Link: desktops may have a share sheet, but downloading is what's expected.
   // Checked once, since neither changes during a visit.
   const [shareSheet] = React.useState(() => {
     try {
@@ -1666,7 +1666,7 @@ export default function Editor() {
     });
   }
 
-  // Share Image and Share Link on phones and tablets: the board's image, or its link, handed
+  // Share Image and Share Board Link on phones and tablets: the board's image, or its link, handed
   // to the system's share sheet (Messages, Discord, Photos, Copy). iOS only opens the sheet
   // straight after a tap, so what's made is kept for the board as it is, and when making it
   // took too long a toast asks for a second tap, which shares the kept one at once. Closing
@@ -1705,7 +1705,7 @@ export default function Editor() {
           if (name === 'NotAllowedError' && !ready)
             showToast(
               kind === 'link'
-                ? 'Link Ready; Tap Share Link Again'
+                ? 'Link Ready; Tap Share Board Link Again'
                 : 'Image Ready; Tap Share Image Again'
             );
           else
@@ -4056,8 +4056,8 @@ export default function Editor() {
                   {/* Sections as in Customize, a hairline between them: the image (its size and
               format at the end of the heading, its buttons, then whether the card tray goes in
               it), then the board's link. On phones and tablets that have a share sheet, Share
-              leads (Share Image, Save Image, Share Link); elsewhere Download does (Download,
-              Copy Image, Copy Link). Below b7 the buttons are touch-sized and span the panel. */}
+              leads (Share Image, Save Image, Share Board Link); elsewhere Download does (Download,
+              Copy Image, Copy Board Link). Below b7 the buttons are touch-sized and span the panel. */}
                   <div className="flex flex-col gap-3">
                     {/* The heading, and right under it the board's shape, which sets the
                         image's size, and where it's best posted */}
@@ -4160,7 +4160,7 @@ export default function Editor() {
                           label={shareSheet ? 'Sharing' : 'Copying'}
                         >
                           <span aria-hidden className={styles.buttonIcon} data-icon="link" />
-                          {shareSheet ? 'Share Link' : 'Copy Link'}
+                          {shareSheet ? 'Share Board Link' : 'Copy Board Link'}
                         </Working>
                       </Button>
                     </div>
