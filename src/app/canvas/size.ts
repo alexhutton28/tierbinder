@@ -5,22 +5,50 @@ export const BOARD_HEIGHT = 675;
 
 // The shapes a board can have, for where it's posted. Every board is BOARD_HEIGHT tall in
 // design pixels, so rows and cards keep their size: a shape only sets how wide it is, and
-// so how many cards fit across. The image is exported at the shape's own size.
+// so how many cards fit across. The image is exported at the shape's own size. `bestFor`
+// is where it's posted, for Save & Share's help text ("best for X and YouTube").
 export const SHAPES = [
-  { id: '16:9', label: 'Wide (16:9)', exportWidth: 2400, exportHeight: 1350 },
-  { id: '1:1', label: 'Square (1:1)', exportWidth: 1080, exportHeight: 1080 },
-  { id: '4:5', label: 'Portrait (4:5)', exportWidth: 1080, exportHeight: 1350 },
-  { id: '3:4', label: 'Tall (3:4)', exportWidth: 1080, exportHeight: 1440 },
-  { id: '9:16', label: 'Story (9:16)', exportWidth: 1080, exportHeight: 1920 },
+  {
+    id: '16:9',
+    label: 'Wide (16:9)',
+    bestFor: 'X and YouTube',
+    exportWidth: 2400,
+    exportHeight: 1350,
+  },
+  {
+    id: '1:1',
+    label: 'Square (1:1)',
+    bestFor: 'Instagram posts and Discord',
+    exportWidth: 1080,
+    exportHeight: 1080,
+  },
+  {
+    id: '4:5',
+    label: 'Portrait (4:5)',
+    bestFor: 'Instagram and Facebook posts',
+    exportWidth: 1080,
+    exportHeight: 1350,
+  },
+  {
+    id: '3:4',
+    label: 'Tall (3:4)',
+    bestFor: 'Instagram’s profile grid',
+    exportWidth: 1080,
+    exportHeight: 1440,
+  },
+  {
+    id: '9:16',
+    label: 'Story (9:16)',
+    bestFor: 'Instagram Stories and TikTok',
+    exportWidth: 1080,
+    exportHeight: 1920,
+  },
 ] as const;
 
 export type ShapeId = (typeof SHAPES)[number]['id'];
 export const DEFAULT_SHAPE: ShapeId = '16:9';
 
-const shapeOf = (id: ShapeId) => SHAPES.find((s) => s.id === id) ?? SHAPES[0];
-
-// A shape's name, as the Shape dropdown shows it ("Story (9:16)")
-export const shapeLabel = (id: ShapeId) => shapeOf(id).label;
+export const shapeOf = (id: ShapeId) => SHAPES.find((s) => s.id === id) ?? SHAPES[0];
 
 // A saved shape, or the default for a board saved before shapes
 export function parseShape(value: unknown): ShapeId {
