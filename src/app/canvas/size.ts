@@ -6,12 +6,12 @@ export const BOARD_HEIGHT = 675;
 // The shapes a board can have, for where it's posted. Every board is BOARD_HEIGHT tall in
 // design pixels, so rows and cards keep their size: a shape only sets how wide it is, and
 // so how many cards fit across. The image is exported at the shape's own size. `bestFor`
-// is where it's posted, for Save & Share's help text ("best for X and YouTube").
+// is where it's posted, for Save & Share's help text ("best for X and Bluesky posts").
 export const SHAPES = [
   {
     id: '16:9',
     label: 'Wide (16:9)',
-    bestFor: 'X and YouTube',
+    bestFor: 'X and Bluesky posts',
     exportWidth: 2400,
     exportHeight: 1350,
   },
@@ -39,7 +39,7 @@ export const SHAPES = [
   {
     id: '9:16',
     label: 'Story (9:16)',
-    bestFor: 'Instagram Stories and TikTok',
+    bestFor: 'Instagram and Facebook Stories',
     exportWidth: 1080,
     exportHeight: 1920,
   },
