@@ -1024,7 +1024,9 @@ export default function Editor() {
     const scrolled = panel.scrollTop > 0;
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
     if (panelTab !== 'add' || wide) return;
-    if (!scrolled) setNavTucked(0);
+    // Only during a search (results, placeholders or none found): the pools and Advanced
+    // just scroll
+    if (!scrolled || !searchShown) setNavTucked(0);
     else if (!navTucked) {
       const head = sideHeadRef.current;
       // (not while focus is in it: it'd slide away from under the keyboard)
@@ -1034,7 +1036,8 @@ export default function Editor() {
     }
   };
   // The nav is tucked only while Add Cards shows under b8, open and not folding
-  const tucked = !wide && tab === 'add' && !sidebarFolded && fold === 0 ? navTucked : 0;
+  const tucked =
+    !wide && tab === 'add' && searchShown && !sidebarFolded && fold === 0 ? navTucked : 0;
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
@@ -3526,6 +3529,8 @@ export default function Editor() {
                         search(query);
                       }}
                       className={`${styles.searchRow} flex gap-3`}
+                      // Pinned to the panel's top on phones only during a search
+                      data-pinned={(!wide && searchShown) || undefined}
                       data-tucked={tucked > 0 || undefined}
                     >
                       <label className={styles.search}>

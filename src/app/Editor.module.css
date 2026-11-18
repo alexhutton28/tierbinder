@@ -478,15 +478,14 @@
   }
 }
 
-/* Under b8, where the whole panel scrolls, the search sticks to the panel's top as the rest
-   goes under it, on the sidebar's color with 8px above and below (given back as negative
+/* Under b8, where the whole panel scrolls, the search sticks to the panel's top during a
+   search (data-pinned: results, placeholders or none found showing) as the rest goes under it, on the sidebar's color with 8px above and below (given back as negative
    margin, so the layout keeps its spacing), and the hairline the nav carries while it's
    tucked away (data-tucked). It sticks a line's width above the panel's top (and is that much
    taller), so no sliver of what scrolls under it shows at a fractional pixel */
 .searchRow {
   --overlap: var(--tb-line-width);
 
-  position: sticky;
   top: calc(-1 * var(--overlap));
   z-index: 1;
   margin-block: calc(-1 * (var(--spacing-3) + var(--overlap)))
@@ -496,12 +495,15 @@
   background: var(--tb-bar);
   transition: border-color var(--duration-fade) ease-out;
 
+  &[data-pinned] {
+    position: sticky;
+  }
+
   &[data-tucked] {
     border-bottom-color: var(--tb-line);
   }
 
   @variant b8 {
-    position: static;
     z-index: auto;
     margin-block: 0;
     padding-block: 0;
