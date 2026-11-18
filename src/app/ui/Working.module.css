@@ -28,7 +28,6 @@
 
 /* Three dots after the words, each hopping in turn, a third of a cycle apart */
 .dots {
-  --dots-cycle: 1s;
   --dot-size: 0.25em;
   --dot-gap: 0.15em;
 

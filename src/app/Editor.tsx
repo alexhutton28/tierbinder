@@ -63,7 +63,7 @@ import { LONG_PRESS, TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
-import Working from './ui/Working';
+import Working, { DOTS_CYCLE, DOTS_SHOWN } from './ui/Working';
 import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar, { panelId, tabId } from './ui/RadioBar';
@@ -80,12 +80,23 @@ import { titleCase, cardCount } from './text';
 
 const STORAGE_KEY = 'tierbinder-doc';
 const SAVE_FAILED = "Couldn't Save Changes on This Device";
-// The shortest a Save & Share button says it's working (ms), so a quick export doesn't flicker
-const WORKING_MIN = 600;
 // What Save & Share has under way: exporting, copying or sharing the image, or the link
 type WorkKind = 'export' | 'copy' | 'share' | 'link';
 // How long a downloaded image's object URL is kept before it's let go (ms)
 const REVOKE_DELAY = 10_000;
+// Runs a task (starting it at once), then waits until the working dots have hopped
+// DOTS_SHOWN whole rounds, or the next whole round after that, so a quick one doesn't
+// flicker and none stops mid-hop
+async function forWholeRounds(task: () => Promise<void>) {
+  const started = performance.now();
+  try {
+    await task();
+  } finally {
+    const elapsed = performance.now() - started;
+    const rounds = Math.max(DOTS_SHOWN, Math.ceil(elapsed / DOTS_CYCLE));
+    await new Promise((resolve) => setTimeout(resolve, rounds * DOTS_CYCLE - elapsed));
+  }
+}
 // The most characters a Discord message holds: a longer share link gets a note that it won't
 // fit in one
 const DISCORD_MESSAGE_LIMIT = 2000;
@@ -1728,7 +1739,7 @@ export default function Editor() {
   }
 
   // Save & Share's export, copy, share or link under way: its button says so ("Downloading" and
-  // bouncing dots, ui/Working.tsx) for at least WORKING_MIN, so a quick one doesn't just
+  // bouncing dots, ui/Working.tsx) for at least DOTS_SHOWN rounds of the dots, so a quick one doesn't just
   // flicker, and the others wait for it
   const [working, setWorking] = React.useState<WorkKind | null>(null);
   const workingRef = React.useRef(false);
@@ -1736,10 +1747,9 @@ export default function Editor() {
     if (workingRef.current) return;
     workingRef.current = true;
     setWorking(kind);
-    // Started at once, so a clipboard write in it is still inside the click
-    const done = task();
     try {
-      await Promise.all([done, new Promise((resolve) => setTimeout(resolve, WORKING_MIN))]);
+      // Started at once, so a clipboard write in it is still inside the click
+      await forWholeRounds(task);
     } finally {
       workingRef.current = false;
       setWorking(null);
