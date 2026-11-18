@@ -13,6 +13,9 @@ import { CARD_HEIGHT, CARD_WIDTH } from '../canvas/size';
 // tooltip. The list floats over the board, in the top layer (useAnchored), so a narrow
 // sidebar doesn't clip it. `current` shows something else on the button than any option
 // (a mode, as in "Splitting Pikachu"), with no option selected; picking any option ends it.
+// `swatchOnly` shows only the chosen option's swatch, in a square button as tall as what's
+// beside it (the pinned search's Add to on phones), its label and the option's name the
+// tooltip and what screen readers hear.
 
 // A swatch of `color`, or `icon` (a 16px SVG in public/, drawn in the text color)
 type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card'; icon?: string };
@@ -28,6 +31,7 @@ export default function Dropdown<T extends string | number>({
   onChange,
   variant,
   buttonClassName = '',
+  swatchOnly = false,
 }: {
   label: string;
   hideLabel?: boolean;
@@ -44,6 +48,7 @@ export default function Dropdown<T extends string | number>({
   // format, a `text` button inside its field
   variant?: React.ComponentProps<typeof Button>['variant'];
   buttonClassName?: string;
+  swatchOnly?: boolean;
 }) {
   const id = React.useId();
   const labelId = `${id}-label`;
@@ -87,11 +92,16 @@ export default function Dropdown<T extends string | number>({
 
   return (
     // Shrinks to fit (its button's words cut short with an ellipsis) rather than overflowing
-    <div className={`min-w-0 ${prop ? 'tierbinder-prop' : 'flex gap-3 items-center'}`}>
-      <span id={labelId} className={hideLabel ? 'sr-only' : prop ? 'flex-none' : undefined}>
+    <div
+      className={`min-w-0 ${prop ? 'tierbinder-prop' : swatchOnly ? 'flex' : 'flex gap-3 items-center'}`}
+    >
+      <span
+        id={labelId}
+        className={hideLabel || swatchOnly ? 'sr-only' : prop ? 'flex-none' : undefined}
+      >
         {label}
       </span>
-      <div ref={boxRef} className="relative min-w-0">
+      <div ref={boxRef} className={`relative min-w-0 ${swatchOnly ? 'flex' : ''}`}>
         <Button
           ref={buttonRef}
           id={`${id}-button`}
@@ -99,9 +109,15 @@ export default function Dropdown<T extends string | number>({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-labelledby={`${labelId} ${id}-button`}
-          title={hideLabel ? label : undefined}
-          variant={variant}
-          className={`flex gap-2 items-center max-w-full ${buttonClassName}`}
+          title={
+            swatchOnly
+              ? `${label}: ${(current ?? options[selected])?.label}`
+              : hideLabel
+                ? label
+                : undefined
+          }
+          variant={swatchOnly ? 'icon' : variant}
+          className={`flex gap-2 items-center max-w-full ${swatchOnly ? styles.swatchOnly : ''} ${buttonClassName}`}
           onClick={() => setOpen((o) => !o)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -111,7 +127,9 @@ export default function Dropdown<T extends string | number>({
           }}
         >
           <Swatch {...(current ?? options[selected])} />
-          <span className="truncate">{(current ?? options[selected])?.label}</span>
+          <span className={swatchOnly ? 'sr-only' : 'truncate'}>
+            {(current ?? options[selected])?.label}
+          </span>
           {chevron && <span aria-hidden className={styles.chevron} />}
         </Button>
         {shown && (

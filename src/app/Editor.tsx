@@ -3224,6 +3224,42 @@ export default function Editor() {
       }
     });
 
+  // The Add to picker (a tier, the canvas or the card tray): in the row under the search,
+  // and on phones also as a swatch button in the pinned search while the nav's tucked away,
+  // so where a tapped result goes stays in sight
+  const showAddTo = (!picking || splitPicker) && targets.length > 1;
+  const addToPicker = (swatchOnly: boolean) => (
+    <Dropdown
+      swatchOnly={swatchOnly}
+      label="Add to"
+      hideLabel
+      chevron={false}
+      value={targetIndex}
+      options={targets.map((t, i) => ({
+        value: i,
+        label: t.name.replaceAll('\n', ' '),
+        color: t.color,
+        // The tray's color is a shade of the board, so it gets a stroke
+        outlined: 'outlined' in t && t.outlined,
+      }))}
+      // While a split card is being made, it says so, with a white card as its
+      // swatch; picking a target cancels the split
+      current={
+        splitPicker && pickingCard
+          ? {
+              label: `Splitting ${pickingCard.name}`,
+              color: SPLIT_SWATCH,
+              shape: 'card',
+            }
+          : undefined
+      }
+      onChange={(i) => {
+        setTarget(i);
+        if (splitPicker) setPicking(null);
+      }}
+    />
+  );
+
   // The top bar with the logo (placed by the layout below)
   const topBar = (
     <header
@@ -3540,6 +3576,18 @@ export default function Editor() {
                           </button>
                         )}
                       </label>
+                      {/* On phones, once the search is pinned (the nav tucked away), where a
+                          tapped result goes: the Add to picker as a swatch button, sliding in
+                          beside Search and out again as the row unpins */}
+                      {!wide && showAddTo && (
+                        <div
+                          className={styles.pinnedTarget}
+                          data-shown={tucked > 0 || undefined}
+                          inert={!tucked}
+                        >
+                          {addToPicker(true)}
+                        </div>
+                      )}
                       <Button variant="primary">Search</Button>
                     </form>
                     {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
@@ -3554,36 +3602,7 @@ export default function Editor() {
                           colors={tickColors}
                           onChange={changeSearchOptions}
                         />
-                        {(!picking || splitPicker) && targets.length > 1 && (
-                          <Dropdown
-                            label="Add to"
-                            hideLabel
-                            chevron={false}
-                            value={targetIndex}
-                            options={targets.map((t, i) => ({
-                              value: i,
-                              label: t.name.replaceAll('\n', ' '),
-                              color: t.color,
-                              // The tray's color is a shade of the board, so it gets a stroke
-                              outlined: 'outlined' in t && t.outlined,
-                            }))}
-                            // While a split card is being made, it says so, with a white card as its
-                            // swatch; picking a target cancels the split
-                            current={
-                              splitPicker && pickingCard
-                                ? {
-                                    label: `Splitting ${pickingCard.name}`,
-                                    color: SPLIT_SWATCH,
-                                    shape: 'card',
-                                  }
-                                : undefined
-                            }
-                            onChange={(i) => {
-                              setTarget(i);
-                              if (splitPicker) setPicking(null);
-                            }}
-                          />
-                        )}
+                        {showAddTo && addToPicker(false)}
                       </div>
                       {/* The thumbnails' size, while there are results to show */}
                       {searchShown && shownResults.length > 0 && (

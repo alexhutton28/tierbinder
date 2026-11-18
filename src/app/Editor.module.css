@@ -445,6 +445,39 @@
   height: auto;
 }
 
+/* The pinned search's Add to swatch button (phones): it takes no room until the row is
+   pinned, then grows to its square beside Search as the nav slides away, on the same
+   ease-slide over duration-move, fading in, and shrinks back as the row unpins; while closed
+   its gap in the row is given back. Clipped to its growing box (out past it by a focus
+   ring's reach, so the ring shows) rather than by overflow, which would cut the ring off */
+.pinnedTarget {
+  display: grid;
+  grid-template-columns: 0fr;
+  margin-inline-start: calc(-1 * var(--spacing-3));
+  opacity: 0;
+  clip-path: inset(calc(-1 * var(--spacing-2)));
+  transition:
+    grid-template-columns var(--duration-move) var(--ease-slide),
+    margin-inline-start var(--duration-move) var(--ease-slide),
+    opacity var(--duration-fade) ease-out;
+
+  & > * {
+    min-width: 0;
+  }
+
+  &[data-shown] {
+    grid-template-columns: 1fr;
+    margin-inline-start: 0;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pinnedTarget {
+    transition: none;
+  }
+}
+
 /* Under b8, where the whole panel scrolls, the search sticks to the panel's top as the rest
    goes under it, on the sidebar's color with 8px above and below (given back as negative
    margin, so the layout keeps its spacing), and the hairline the nav carries while it's
