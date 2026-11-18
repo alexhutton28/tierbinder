@@ -454,7 +454,7 @@
 }
 
 /* The pinned search's Add to swatch button (phones): it takes no room until the row is
-   pinned, then grows to its square beside Search as the nav slides away, on the same
+   pinned, then grows to its width beside Search as the nav slides away, on the same
    ease-slide over duration-move, fading in, and shrinks back as the row unpins; while closed
    its gap in the row is given back. Clipped to its growing box (out past it by a focus
    ring's reach, so the ring shows) rather than by overflow, which would cut the ring off */
