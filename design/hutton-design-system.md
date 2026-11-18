@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.29 · November 17, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.30 · November 18, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -157,6 +157,8 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 ### Menus
 
 - A click or tap on a card selects it (to delete it, or move it by clicking a tier); its menu opens on a right-click or a long press (half a second, moving less than 8px), as a search result's does, in presentation mode too, where dragging is the main way to rank cards.
+- The board is one Tab stop: the arrow keys pick a card (the selection outline shows which; the board shows the focus ring only while none is picked), Alt and the arrows move it (along its tier or into the next, or nudged on the blank canvas, finer with Shift), Enter or the menu key opens its menu, which takes focus, and Delete removes it, picking the card beside it. Screen readers hear each card picked or moved, with its place ("Charizard ex (OBF 125), S, 2 of 3"). Every card's menu has Move to Tier, its flyout listing the places it can go (with one place, a plain item naming it: "Move to Card Tray"). Below `b8` the page is in the order it shows (top bar, board, sidebar) for Tab and screen readers too.
+- Options in menus and dropdowns light up while pressed on every device, in their hover color, so a tap shows.
 
 ### Focus
 
@@ -337,6 +339,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 18, 2026 · v1.30:** Keyboard and screen readers: the board is a Tab stop whose arrow keys pick cards and whose Alt+arrows move them, every card's menu has Move to Tier, the board is described and each pick read out, and below `b8` the page's order matches what shows. Options light up while pressed on touch screens.
 - **November 17, 2026 · v1.29:** A card's menu opens on a right-click or a long press, not a click or tap, which now only selects it; in presentation mode too.
 - **November 17, 2026 · v1.28:** Feedback states: Save & Share's buttons say "Exporting" or "Copying" with hopping dots while they work; the page shows a shimmering board under the top bar while it first loads; a card on the board shimmers until its image loads, in place of its name; a failed save says so in a toast.
 - **November 17, 2026 · v1.27:** From phone testing: folding the sidebar is presentation mode, sliding smoothly to a bar at the foot that opens on a tap anywhere, with a shorter card menu (View, Move to Tier, Remove Card). The phone card tray spans the page while the board keeps its size, its cards bigger while folded, with shades and arrows at edges that scroll. Dragged cards resize around the pointer. The color picker is nine hues of five shades (the tier colors in the middle), a small icon switch to Spectrum that grows and shrinks the picker, and one color field typed as Hex, RGB or HSL. Replace Card is out for now; the sort button is hidden. The main nav is a header over the sidebar's panel, a hairline fading in under it once the panel is scrolled. Added `--tb-control-height-small`.

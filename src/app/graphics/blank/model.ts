@@ -13,6 +13,7 @@ import {
 } from '../../canvas/size';
 import { defaultTray, parseTray, type Tray } from '../../canvas/tray';
 import type { CardPlacement, Point } from '../types';
+import type { Direction } from '../../canvas/keyboard';
 
 export type BlankCanvas = {
   kind: 'blank';
@@ -152,6 +153,26 @@ export function moveCard(canvas: BlankCanvas, id: string, x: number, y: number):
     ...canvas,
     items: [...canvas.items.filter((i) => i.id !== id), { ...item, ...clamp(canvas, item, x, y) }],
   };
+}
+
+// Moves a card from the keyboard (Alt+arrows): NUDGE design pixels, or 1 (`small`), kept on
+// the board and going on top as a dragged card does. Null for down at the board's foot
+// (where the editor's card tray is).
+export const NUDGE = 10;
+export function nudgeCard(
+  canvas: BlankCanvas,
+  id: string,
+  direction: Direction,
+  small: boolean
+): BlankCanvas | null {
+  const item = canvas.items.find((i) => i.id === id);
+  if (!item) return canvas;
+  const step = small ? 1 : NUDGE;
+  const x = item.x + (direction === 'left' ? -step : direction === 'right' ? step : 0);
+  const y = item.y + (direction === 'up' ? -step : direction === 'down' ? step : 0);
+  const to = clamp(canvas, item, x, y);
+  if (to.x === item.x && to.y === item.y) return direction === 'down' ? null : canvas;
+  return moveCard(canvas, id, to.x, to.y);
 }
 
 // Changes the card size, the top-half setting or the board's shape, moving cards that

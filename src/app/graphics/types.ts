@@ -2,6 +2,7 @@ import type React from 'react';
 import type { CardItem } from '../cards';
 import type { ShapeId } from '../canvas/size';
 import type { ResolvedGroup } from '../importText';
+import type { Direction } from '../canvas/keyboard';
 
 // The interface every graphic type implements. The editor (Editor.tsx) owns everything
 // graphics share: the stage and its scaling, export, autosave, card search and dragging,
@@ -123,6 +124,11 @@ export type GraphicType<G extends { kind: string }> = {
   // selected. Without it (the blank canvas, whose targets have no place), clicking does
   // nothing more than pick the target.
   moveCardTo?: (graphic: G, id: string, target: number) => G;
+  // Moves a card on the board a step from the keyboard (Alt+arrows; `small` with Shift, for
+  // a finer step where cards are placed freely), the graphic as it was where it can't go
+  // further, or null for down past the board's foot, where the editor takes it into the
+  // card tray
+  nudgeCard: (graphic: G, id: string, direction: Direction, small: boolean) => G | null;
   // Adds a card dropped with the pointer at `point`
   dropCard: (graphic: G, item: CardItem, point: Point) => Placed<G>;
   // Where import's cards before the first `#` go: the card tray (a tier list, where groups

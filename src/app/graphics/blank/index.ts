@@ -8,6 +8,7 @@ import {
   dropCard,
   layoutCards,
   mapCards,
+  nudgeCard,
   parseBlankCanvas,
   setCardShape,
   type BlankCanvas,
@@ -56,6 +57,7 @@ const blank: GraphicType<BlankCanvas> = {
   targets: () => [{ name: 'Canvas' }],
   addCard: (canvas, item) => addCard(canvas, item),
   dropCard,
+  nudgeCard,
   // Groups don't mean anything on a blank canvas: every card takes the next spot
   ungroupedImport: 'board',
   importCards: (canvas, groups) => ({

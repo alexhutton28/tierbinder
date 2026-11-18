@@ -370,6 +370,11 @@ textarea.tierbinder-field {
   }
 }
 
+/* Pressed, on every device: the touch version of the hover, as a pool's is */
+.tierbinder-option:active {
+  background: var(--tb-option-hover);
+}
+
 /* A popup listing options (the card menu, dropdowns): the options are rounded rows inset
    4px from its edge, so its own corners are that much rounder */
 .tierbinder-list {
