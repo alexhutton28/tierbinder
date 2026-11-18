@@ -211,8 +211,9 @@ body * {
   font-weight: 600;
 }
 
-/* Trimmed to the capitals at the top, so the space above a heading (8px under the main nav)
-   reaches its letters rather than the font's empty ascender room */
+/* Trimmed to the capitals at the top, so the space above a heading (none under the main
+   nav, 16px past a section's hairline) reaches its letters rather than the font's empty
+   ascender room */
 .tierbinder-heading {
   color: var(--tb-heading);
   font-size: var(--text-body);

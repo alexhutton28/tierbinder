@@ -469,6 +469,7 @@
 
   @variant b8 {
     position: static;
+    z-index: auto;
     margin-block: 0;
     padding-block: 0;
     border-bottom: 0;
@@ -692,11 +693,11 @@
   gap: var(--spacing-2);
 }
 
-/* Beside the board (b8 up), the results and the shade over their top, never shorter than a thumbnail at its
-   narrowest (most of a row, as tiles stretch to fill their columns): past that, the panel
-   scrolls instead. Large thumbnails count as Medium here: a phone's sidebar has room for a
-   Medium one under the search but not a Large one, which would make the whole panel scroll
-   as well as the results */
+/* The results and the shade over their top. Beside the board (b8 up) they scroll on their
+   own, never shorter than a thumbnail at its narrowest (most of a row, as tiles stretch to
+   fill their columns; Large counts as Medium, so a short sidebar isn't made to scroll for
+   a big one): past that, the panel scrolls instead. Under b8 the whole panel scrolls, so
+   the box has no minimum there */
 .resultsBox {
   --result-width: var(--tb-thumb-width);
 

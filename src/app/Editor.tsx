@@ -1039,6 +1039,9 @@ export default function Editor() {
   if (foldedTab !== tab) {
     setFoldedTab(tab);
     setSidebarFolded(false);
+    // A hidden panel loses its scroll without a scroll event, so Add Cards comes back at its
+    // top with the nav out
+    setNavTucked(0);
   }
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
@@ -2124,6 +2127,9 @@ export default function Editor() {
     setSearched(text.trim());
     setSearching(true);
     setImporting(false);
+    // Under b8, where the whole panel scrolls, a new search starts from its first result
+    // (the scroll event that follows brings the nav back)
+    if (!wide) addPanelRef.current?.scrollTo({ top: 0 });
     try {
       const found = await searchCards(text.trim(), options, abort.signal);
       if (count !== searchCount.current) return;
