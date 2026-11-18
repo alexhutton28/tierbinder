@@ -445,6 +445,71 @@
   height: auto;
 }
 
+/* The pinned search's Add to swatch button (phones): it takes no room until the row is
+   pinned, then grows to its square beside Search as the nav slides away, on the same
+   ease-slide over duration-move, fading in, and shrinks back as the row unpins; while closed
+   its gap in the row is given back. Clipped to its growing box (out past it by a focus
+   ring's reach, so the ring shows) rather than by overflow, which would cut the ring off */
+.pinnedTarget {
+  display: grid;
+  grid-template-columns: 0fr;
+  margin-inline-start: calc(-1 * var(--spacing-3));
+  opacity: 0;
+  clip-path: inset(calc(-1 * var(--spacing-2)));
+  transition:
+    grid-template-columns var(--duration-move) var(--ease-slide),
+    margin-inline-start var(--duration-move) var(--ease-slide),
+    opacity var(--duration-fade) ease-out;
+
+  & > * {
+    min-width: 0;
+  }
+
+  &[data-shown] {
+    grid-template-columns: 1fr;
+    margin-inline-start: 0;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pinnedTarget {
+    transition: none;
+  }
+}
+
+/* Under b8, where the whole panel scrolls, the search sticks to the panel's top as the rest
+   goes under it, on the sidebar's color with 8px above and below (given back as negative
+   margin, so the layout keeps its spacing), and the hairline the nav carries while it's
+   tucked away (data-tucked). It sticks a line's width above the panel's top (and is that much
+   taller), so no sliver of what scrolls under it shows at a fractional pixel */
+.searchRow {
+  --overlap: var(--tb-line-width);
+
+  position: sticky;
+  top: calc(-1 * var(--overlap));
+  z-index: 1;
+  margin-block: calc(-1 * (var(--spacing-3) + var(--overlap)))
+    calc(-1 * (var(--spacing-3) + var(--tb-line-width)));
+  padding-block: calc(var(--spacing-3) + var(--overlap)) var(--spacing-3);
+  border-bottom: var(--tb-line-width) solid transparent;
+  background: var(--tb-bar);
+  transition: border-color var(--duration-fade) ease-out;
+
+  &[data-tucked] {
+    border-bottom-color: var(--tb-line);
+  }
+
+  @variant b8 {
+    position: static;
+    z-index: auto;
+    margin-block: 0;
+    padding-block: 0;
+    border-bottom: 0;
+    background: none;
+  }
+}
+
 .searchIcon {
   position: absolute;
   top: 50%;
@@ -549,8 +614,9 @@
   }
 }
 
-/* A true header over the tab panel, which scrolls under it: 8px around the nav and a
-   hairline below once the panel is scrolled from its top (data-scrolled), fading in, so
+/* A true header over the tab panel, which scrolls under it: 8px around the nav (the
+   panel's first heading starts right under that), and a hairline below once
+   the panel is scrolled from its top (data-scrolled), fading in, so
    what scrolls up disappears at the line rather than beside the nav. Its
    scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
    before it folds (.sideFolded) */
@@ -559,10 +625,25 @@
   padding: var(--spacing-3);
   border-bottom: var(--tb-line-width) solid transparent;
   scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
-  transition: border-color var(--duration-fade) ease-out;
+  transition:
+    border-color var(--duration-fade) ease-out,
+    margin-block-start var(--duration-move) var(--ease-slide),
+    opacity var(--duration-fade) ease-out;
 
   &[data-scrolled] {
     border-bottom-color: var(--tb-line);
+  }
+
+  /* Slid up out of the way (its height as negative margin, set from Editor.tsx) while Add
+     Cards is scrolled on a phone, fading out as it goes; the sidebar clips it */
+  &[data-tucked] {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sideHead {
+    transition: border-color var(--duration-fade) ease-out;
   }
 }
 
@@ -645,16 +726,21 @@
   gap: var(--spacing-2);
 }
 
-/* The results and the shade over their top, never shorter than a thumbnail at its
-   narrowest (most of a row, as tiles stretch to fill their columns): past that, the panel
-   scrolls instead */
+/* The results and the shade over their top. Beside the board (b8 up) they scroll on their
+   own, never shorter than a thumbnail at its narrowest (most of a row, as tiles stretch to
+   fill their columns; Large counts as Medium, so a short sidebar isn't made to scroll for
+   a big one): past that, the panel scrolls instead. Under b8 the whole panel scrolls, so
+   the box has no minimum there */
 .resultsBox {
   --result-width: var(--tb-thumb-width);
 
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: calc(var(--result-width) * var(--tb-thumb-ratio));
+
+  @variant b8 {
+    min-height: calc(min(var(--result-width), var(--tb-thumb-width)) * var(--tb-thumb-ratio));
+  }
 }
 
 /* The thumbnail size picked beside the sort button (Medium, the default, above) */
@@ -673,6 +759,7 @@
 
 /* Fades in once the results are scrolled, as if they go under the controls above */
 .resultsShade {
+  display: none;
   position: absolute;
   inset-inline: 0;
   top: 0;
@@ -685,6 +772,13 @@
 
 .resultsShade[data-shown='true'] {
   opacity: 1;
+}
+
+/* Only beside the board, where the results scroll on their own */
+@variant b8 {
+  .resultsShade {
+    display: block;
+  }
 }
 
 /* A featured card pool in Add Cards: a button, its name over a row of its cards, on the

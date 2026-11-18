@@ -196,11 +196,12 @@ body * {
   }
 }
 
-/* The sidebar's tab panels: 16px under the main nav, 8px at the sides to line up with it
-   (.sideHead in Editor.module.css), and 16px at the bottom */
+/* The sidebar's tab panels: 8px at the sides to line up with the main nav (.sideHead in
+   Editor.module.css), and nothing above, so a panel starts right under the nav's own 8px
+   and scrolls straight under it */
 .tierbinder-panel {
-  /* None below: the sidebar's foot (the credits) has its own room above it */
-  padding: var(--spacing-4) var(--spacing-3) 0;
+  /* None below either: the sidebar's foot (the credits) has its own room above it */
+  padding: 0 var(--spacing-3);
 }
 
 /* A subheader inside a section or a popup, naming what's under it: small and muted */
@@ -210,8 +211,9 @@ body * {
   font-weight: 600;
 }
 
-/* Trimmed to the capitals at the top, so the space above a heading (16px under the main
-   nav) reaches its letters rather than the font's empty ascender room */
+/* Trimmed to the capitals at the top, so the space above a heading (8px under the main
+   nav, 16px past a section's hairline) reaches its letters rather than the font's empty
+   ascender room */
 .tierbinder-heading {
   color: var(--tb-heading);
   font-size: var(--text-body);
@@ -331,16 +333,6 @@ textarea.tierbinder-field {
   max-height: calc(100dvh - var(--anchor-top, 0px) - var(--spacing-2) - var(--edge));
   margin: 0;
   color: var(--tb-text);
-}
-
-/* Lined up with its button's right edge instead (data-align="end": a button at the end of
-   a row, Customize's Clear), so it hangs under the row rather than out past it */
-.tierbinder-anchored[data-align='end'] {
-  left: clamp(
-    var(--edge),
-    var(--anchor-left, 0px) + var(--anchor-width, 0px) - var(--anchor-popup-width, 0px),
-    100vw - var(--edge) - var(--anchor-popup-width, 0px)
-  );
 }
 
 /* Above its button (useAnchored found more room there), growing up from it */

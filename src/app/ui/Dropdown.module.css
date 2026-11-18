@@ -48,3 +48,9 @@
   background: currentcolor;
   mask: url('/chevron-down.svg') center / contain no-repeat;
 }
+
+/* Only the swatch, in a square button as tall as what's beside it (swatchOnly) */
+.swatchOnly {
+  justify-content: center;
+  height: auto;
+}
