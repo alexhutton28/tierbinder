@@ -4131,7 +4131,7 @@ export default function Editor() {
                     {/* The help text sits 4px under its heading, closer to it than to the button */}
                     <div className="flex flex-col gap-2">
                       <h3 className="tierbinder-heading">Board Link</h3>
-                      <p className="text-(--tb-muted) text-pretty">
+                      <p className="text-caption text-(--tb-muted) text-pretty">
                         Opens an editable copy of this board.
                       </p>
                     </div>
