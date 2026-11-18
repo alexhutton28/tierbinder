@@ -647,14 +647,16 @@
 
 /* The results and the shade over their top, never shorter than a thumbnail at its
    narrowest (most of a row, as tiles stretch to fill their columns): past that, the panel
-   scrolls instead */
+   scrolls instead. Large thumbnails count as Medium here: a phone's sidebar has room for a
+   Medium one under the search but not a Large one, which would make the whole panel scroll
+   as well as the results */
 .resultsBox {
   --result-width: var(--tb-thumb-width);
 
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: calc(var(--result-width) * var(--tb-thumb-ratio));
+  min-height: calc(min(var(--result-width), var(--tb-thumb-width)) * var(--tb-thumb-ratio));
 }
 
 /* The thumbnail size picked beside the sort button (Medium, the default, above) */
