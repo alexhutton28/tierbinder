@@ -13,8 +13,9 @@ import styles from './ClearButton.module.css';
 // choice, and the arrows, Home and End move through them. Once one's done, focus goes
 // back to the button, or to `onEmptied` when nothing's left to clear, unless the choice
 // moved it. It floats like a dropdown's list (useAnchored), so it's never squeezed by a
-// narrow sidebar. As `quiet`, it's a muted text button (Customize's Clear, at the end of the
-// Board heading), and `label` names it for screen readers ("Clear board").
+// narrow sidebar. As `quiet`, it's a muted text button (Customize's Clear, the last thing in
+// the Board section, under Type and Shape), and `label` names it for screen readers
+// ("Clear board").
 
 export type ClearChoice = { label: string; onSelect: () => void };
 
@@ -75,8 +76,6 @@ export default function ClearButton({
           popover="manual"
           role="menu"
           aria-label={label ?? children}
-          // A quiet Clear ends its row: its menu lines up with its right edge
-          data-align={quiet ? 'end' : undefined}
           onKeyDown={(e) => {
             // Kept from the page's own Escape handling, which would also deselect the card
             if (e.key === 'Escape') {

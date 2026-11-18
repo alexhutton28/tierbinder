@@ -334,16 +334,6 @@ textarea.tierbinder-field {
   color: var(--tb-text);
 }
 
-/* Lined up with its button's right edge instead (data-align="end": a button at the end of
-   a row, Customize's Clear), so it hangs under the row rather than out past it */
-.tierbinder-anchored[data-align='end'] {
-  left: clamp(
-    var(--edge),
-    var(--anchor-left, 0px) + var(--anchor-width, 0px) - var(--anchor-popup-width, 0px),
-    100vw - var(--edge) - var(--anchor-popup-width, 0px)
-  );
-}
-
 /* Above its button (useAnchored found more room there), growing up from it */
 .tierbinder-anchored.tierbinder-menu[data-side='above'] {
   top: auto;

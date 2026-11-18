@@ -570,10 +570,16 @@ export default function Editor() {
   // How many results are drawn: a page at first, and another each time the list is
   // scrolled near its end, so listing many whole sets can't put thousands of cards on the
   // page at once. Each set of results starts again at one page.
+  // From b8 up, where the board has the room beside the sidebar
+  // Known from the first render (the editor only renders in the browser), so the board's
+  // first fit already uses the wide layout
+  const [wide, setWide] = React.useState(() => wideQuery().matches);
   const [resultsLimit, setResultsLimit] = React.useState({ of: results, count: RESULTS_PAGE });
   const resultsCount = resultsLimit.of === results ? resultsLimit.count : RESULTS_PAGE;
   const visibleResults = shownResults.slice(0, resultsCount);
   const resultsRef = React.useRef<HTMLDivElement>(null);
+  // The Add Cards panel, which scrolls the results under b8
+  const addPanelRef = React.useRef<HTMLElement>(null);
   const moreResultsRef = React.useRef<HTMLSpanElement>(null);
   React.useEffect(() => {
     const more = moreResultsRef.current;
@@ -583,12 +589,17 @@ export default function Editor() {
         if (entry.isIntersecting)
           setResultsLimit({ of: results, count: resultsCount + RESULTS_PAGE });
       },
-      // Starts drawing the next page a little before the end comes into view
-      { root: resultsRef.current, rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px` }
+      // Starts drawing the next page a little before the end comes into view: the end of
+      // the results' own scroll beside the board, or of the panel's under b8, where they
+      // don't scroll on their own
+      {
+        root: wide ? resultsRef.current : addPanelRef.current,
+        rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px`,
+      }
     );
     observer.observe(more);
     return () => observer.disconnect();
-  }, [results, resultsCount, visibleResults.length]);
+  }, [results, resultsCount, visibleResults.length, wide]);
   // What the last search was for; when nothing it found can be shown (none found, or every
   // thumbnail failed), that's said under the search
   const [searchedFor, setSearchedFor] = React.useState<{ query: string; sets: string[] } | null>(
@@ -914,10 +925,6 @@ export default function Editor() {
   // Set from a drag's release until the click that follows it, so the drag doesn't also add the card
   const justDragged = React.useRef(false);
 
-  // From b8 up, where the board has the room beside the sidebar
-  // Known from the first render (the editor only renders in the browser), so the board's
-  // first fit already uses the wide layout
-  const [wide, setWide] = React.useState(() => wideQuery().matches);
   // Crossing b8 moves the sidebar column or the workspace in the page (see the layout), and
   // a moved element loses what the browser kept for it: open popups (closed here, as a
   // press outside them does), focus (put back) and scroll positions (read again)
@@ -1006,10 +1013,25 @@ export default function Editor() {
   // (each tab keeping its own scroll, so its own flag)
   const [scrolledTabs, setScrolledTabs] = React.useState<Partial<Record<Tab, boolean>>>({});
   const panelScrolled = !!scrolledTabs[tab];
+  // Under b8 the whole Add Cards panel scrolls, and once it's scrolled from its top the main
+  // nav slides up out of the way (`navTucked`: the height it slides by), leaving the search,
+  // which sticks to the panel's top as the rest goes under it; back at the top, the nav slides
+  // down again. Only when the panel would still scroll with the nav gone, so tucking it can't
+  // bring the panel back to its top and untuck it again
+  const [navTucked, setNavTucked] = React.useState(0);
   const onPanelScroll = (panelTab: Tab) => (e: React.UIEvent<HTMLElement>) => {
-    const scrolled = e.currentTarget.scrollTop > 0;
+    const panel = e.currentTarget;
+    const scrolled = panel.scrollTop > 0;
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
+    if (panelTab !== 'add' || wide) return;
+    if (!scrolled) setNavTucked(0);
+    else if (!navTucked) {
+      const head = sideHeadRef.current?.offsetHeight ?? 0;
+      if (panel.scrollHeight - panel.clientHeight > head) setNavTucked(head);
+    }
   };
+  // The nav is tucked only while Add Cards shows under b8, open and not folding
+  const tucked = !wide && tab === 'add' && !sidebarFolded && fold === 0 ? navTucked : 0;
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
@@ -3350,6 +3372,11 @@ export default function Editor() {
                   ref={sideHeadRef}
                   className={`${styles.sideHead} flex gap-2 items-center`}
                   data-scrolled={panelScrolled || undefined}
+                  // Slid up out of the way while Add Cards is scrolled on a phone (`navTucked`);
+                  // inert then, so Tab doesn't reach what can't be seen
+                  data-tucked={tucked > 0 || undefined}
+                  inert={tucked > 0}
+                  style={tucked ? { marginBlockStart: -tucked } : undefined}
                   // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
                   // is the one keyboards and screen readers get)
                   onClick={(e) => {
@@ -3431,6 +3458,7 @@ export default function Editor() {
             fill the sidebar's height and scroll on their own, and the panel scrolls when
             the pools and Advanced don't fit */}
                 <section
+                  ref={addPanelRef}
                   role="tabpanel"
                   id={panelId(TAB_PREFIX, 'add')}
                   aria-labelledby={tabId(TAB_PREFIX, 'add')}
@@ -3441,7 +3469,7 @@ export default function Editor() {
                   <h2 className="sr-only">Add Cards</h2>
                   {/* Grows to fill the sidebar while it shows search results */}
                   <div
-                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'flex-1 min-h-0' : ''}`}
+                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
                   >
                     <h3 id="card-search-heading" className="tierbinder-heading">
                       Add a Card
@@ -3452,6 +3480,7 @@ export default function Editor() {
                         search(query);
                       }}
                       className={`${styles.searchRow} flex gap-3`}
+                      data-tucked={tucked > 0 || undefined}
                     >
                       <label className={styles.search}>
                         <span className={styles.searchIcon} aria-hidden />
@@ -3633,10 +3662,11 @@ export default function Editor() {
                           : ''}
                     </p>
                     {(showingResults || showingSkeleton) && (
-                      <div className={`${styles.resultsBox} flex-1`} data-size={resultSize}>
+                      <div className={`${styles.resultsBox} b8:flex-1`} data-size={resultSize}>
                         <div
                           ref={resultsRef}
-                          className={`${styles.results} overflow-y-auto overflow-x-hidden`}
+                          // Scrolling on their own beside the board; under b8 the panel scrolls
+                          className={`${styles.results} b8:overflow-y-auto b8:overflow-x-hidden`}
                           style={
                             {
                               '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
@@ -3938,23 +3968,11 @@ export default function Editor() {
               hairline between sections (.tierbinder-sections), and every setting a row
               with its label at the left and its control at the right
               (.tierbinder-prop). Board first, what the board is: its type and shape (where
-              it's posted: it sets the board's width and the image's size), with Clear at
-              the end of its heading. Then the graphic's own sections (what's on it), then
+              it's posted: it sets the board's width and the image's size), then Clear
+              under them. Then the graphic's own sections (what's on it), then
               Style (how it looks), then the card tray. */}
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h3 className="tierbinder-heading">Board</h3>
-                      {/* Asks first with a menu of only the clears that would change something */}
-                      <ClearButton
-                        quiet
-                        label="Clear board"
-                        choices={boardClears}
-                        // Nothing left to clear: the button's disabled, so focus goes to the board
-                        onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
-                      >
-                        Clear
-                      </ClearButton>
-                    </div>
+                    <h3 className="tierbinder-heading">Board</h3>
                     <Dropdown
                       label="Type"
                       prop
@@ -3978,6 +3996,21 @@ export default function Editor() {
                           setGraphic((g) => typeOf(g.kind).reshape(g, shape));
                       }}
                     />
+                    {/* Last in the section, under Type and Shape (so the heading is where every
+                        tab's first heading is): asks first with a menu of only the clears that
+                        would change something. In a row of its own, so it's only as wide as its
+                        words */}
+                    <div className="flex">
+                      <ClearButton
+                        quiet
+                        label="Clear board"
+                        choices={boardClears}
+                        // Nothing left to clear: the button's disabled, so focus goes to the board
+                        onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
+                      >
+                        Clear
+                      </ClearButton>
+                    </div>
                   </div>
                   <type.Settings
                     graphic={graphic}
