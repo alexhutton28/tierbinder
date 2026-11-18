@@ -60,3 +60,35 @@ export function followOpen(el: HTMLElement) {
   const timer = setTimeout(stop, OPEN_WAIT);
   frame = requestAnimationFrame(follow);
 }
+
+// The longest a smooth scroll back to the top is waited for, where neither the top nor
+// scrollend comes (a hidden tab)
+const TOP_WAIT = 800;
+
+// Scrolls a panel back to its top (smoothly, unless motion is reduced), then runs `then`:
+// what changes the panel's contents (clearing the search) waits until it's there, so the
+// scroll isn't cut short by the panel shrinking under it. Done once the top is reached
+// (Safari has no scrollend), at scrollend, or after TOP_WAIT
+export function toTopThen(box: HTMLElement, then: () => void) {
+  if (box.scrollTop <= 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    box.scrollTop = 0;
+    then();
+    return;
+  }
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    box.removeEventListener('scroll', onScroll);
+    box.removeEventListener('scrollend', finish);
+    clearTimeout(timer);
+    then();
+  };
+  const onScroll = () => {
+    if (box.scrollTop <= 0) finish();
+  };
+  box.addEventListener('scroll', onScroll);
+  box.addEventListener('scrollend', finish);
+  const timer = setTimeout(finish, TOP_WAIT);
+  box.scrollTo({ top: 0, behavior: 'smooth' });
+}

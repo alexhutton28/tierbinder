@@ -60,7 +60,7 @@ import Button from './ui/Button';
 import Segmented from './ui/Segmented';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
 import { LONG_PRESS, TOUCH_SLOP } from './ui/pointer';
-import { followOpen, revealBelow } from './ui/reveal';
+import { followOpen, revealBelow, toTopThen } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
 import Working, { DOTS_CYCLE, DOTS_SHOWN } from './ui/Working';
@@ -3523,9 +3523,17 @@ export default function Editor() {
                             aria-label="Clear search"
                             title="Clear search"
                             onClick={() => {
-                              setQuery('');
-                              search('');
-                              searchInputRef.current?.focus();
+                              // Focused in the click, so a phone brings up its keyboard
+                              searchInputRef.current?.focus({ preventScroll: true });
+                              const clear = () => {
+                                setQuery('');
+                                search('');
+                              };
+                              // Under b8, where the whole panel scrolls, it glides back to the top
+                              // of Add a Card first, and the results go once it's there
+                              const panel = addPanelRef.current;
+                              if (!wide && panel) toTopThen(panel, clear);
+                              else clear();
                             }}
                           >
                             <span aria-hidden />
