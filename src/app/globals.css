@@ -22,8 +22,11 @@ body {
 
 /* Text sits on the font's own line height, not Tailwind's 1.5, so a line takes about the
    room its letters do and gaps measure what they look like. Sizes that need a set line
-   (text-caption) keep it. */
+   (text-caption) keep it. Past the page's edges (a rubber-band scroll, should one get
+   through) it's the top bar's color above and the sidebar's below, as at the page's own top
+   and foot on a phone. */
 html {
+  background: linear-gradient(var(--color-storm-400) 50%, var(--color-petrel-900) 50%);
   line-height: normal;
 }
 
@@ -154,7 +157,21 @@ body {
   --tb-thumb-ratio: calc(111 / 80);
   --tb-thumb-height: calc(var(--tb-thumb-width) * var(--tb-thumb-ratio));
 
-  background: var(--tb-page);
+  /* Under b8, the strips the page leaves under iOS's status bar (Dynamic Island) and over its
+     home indicator and toolbar are the top bar's color and the sidebar's, so the page runs
+     on into them: the top stays the header's color while the sidebar is folded and the top
+     bar has gone, and the foot is the sidebar's (the main's bottom padding). Beside the
+     board, the page's own color */
+  background: linear-gradient(
+    var(--tb-top) env(safe-area-inset-top),
+    var(--tb-page) env(safe-area-inset-top),
+    var(--tb-page) calc(100% - env(safe-area-inset-bottom)),
+    var(--tb-bar) calc(100% - env(safe-area-inset-bottom))
+  );
+
+  @variant b8 {
+    background: var(--tb-page);
+  }
 }
 
 /* Clear of the notch or Dynamic Island on a phone turned sideways (viewport-fit=cover in
