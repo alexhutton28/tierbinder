@@ -5,6 +5,7 @@ import React from 'react';
 import { Group, Image as KonvaImage, Rect, Text } from 'react-konva';
 import { loadImage, type CardFace, type CardItem } from '../cards';
 import type { Point } from '../graphics/types';
+import { readDuration } from '../ui/motion';
 import { CARD_BORDER_WIDTH, CARD_CORNER_RADIUS, CARD_HEIGHT, CARD_WIDTH } from './size';
 
 // A card on the board, shared by every graphic: its image (or both halves of a split
@@ -63,11 +64,12 @@ function Face({
       />
     );
   }
+  if (!failed) return <Shimmer y={y} height={height} />;
   return (
     <>
       <Rect y={y} width={CARD_WIDTH} height={height} fill="#2c4e5e" cornerRadius={6} />
       <Text
-        text={failed ? `${face.name}\n(no image)` : face.name}
+        text={`${face.name}\n(no image)`}
         y={y}
         width={CARD_WIDTH}
         height={height}
@@ -80,6 +82,57 @@ function Face({
         fill="#ffffff"
       />
     </>
+  );
+}
+
+// A card image still loading: the search results' placeholder (Editor.module.css), a dark
+// card shape with a lighter band sweeping across it, left to right, once every
+// --tb-shimmer, in the page's --tb-skeleton colors; under reduced motion a still dark card,
+// as the results' is. Exports wait for images, so it's never in one.
+const SHIMMER_BAND = 0.6; // the band's width, a share of the card's, as the results' is
+function Shimmer({ y, height }: { y: number; height: number }) {
+  const ref = React.useRef<Konva.Rect>(null);
+  const [colors] = React.useState(() => {
+    const style = getComputedStyle(document.body);
+    return {
+      base: style.getPropertyValue('--tb-skeleton').trim(),
+      shine: style.getPropertyValue('--tb-skeleton-shine').trim(),
+    };
+  });
+  // The band's left edge, from just off the card's left to just off its right
+  const placeBand = (rect: Konva.Rect, share: number) => {
+    const band = CARD_WIDTH * SHIMMER_BAND;
+    const x = -band + share * (CARD_WIDTH + band);
+    rect.fillLinearGradientStartPoint({ x, y: 0 });
+    rect.fillLinearGradientEndPoint({ x: x + band, y: 0 });
+  };
+  React.useEffect(() => {
+    const rect = ref.current;
+    if (!rect) return;
+    placeBand(rect, -1);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const cycle = readDuration('--tb-shimmer');
+    if (!cycle) return;
+    // Redraws whichever layer the card is in now: a dragged card moves to the editor's
+    const animation = new Konva.Animation((frame) => {
+      placeBand(rect, ((frame?.time ?? 0) % cycle) / cycle);
+      rect.getLayer()?.batchDraw();
+      return false;
+    });
+    animation.start();
+    return () => {
+      animation.stop();
+    };
+  }, []);
+  return (
+    <Rect
+      ref={ref}
+      y={y}
+      width={CARD_WIDTH}
+      height={height}
+      cornerRadius={CARD_CORNER_RADIUS}
+      fillLinearGradientColorStops={[0, colors.base, 0.5, colors.shine, 1, colors.base]}
+    />
   );
 }
 
