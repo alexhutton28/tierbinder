@@ -486,6 +486,11 @@
   .pinnedTarget {
     transition: none;
   }
+
+  /* (its hairline with it) */
+  .searchRow {
+    transition: none;
+  }
 }
 
 /* Under b8, where the whole sidebar scrolls, the search sticks to its top during a search

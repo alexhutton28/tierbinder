@@ -1043,6 +1043,11 @@ export default function Editor() {
   };
   // Only while Add Cards shows a search under b8
   const pinnedTarget = !wide && tab === 'add' && searchShown && searchStuck;
+  // Measured again when the results change without a scroll (a new search, results
+  // arriving, the tab coming back), so the swatch button isn't left in or out
+  React.useEffect(() => {
+    if (!wide) sideRef.current?.dispatchEvent(new Event('scroll'));
+  }, [wide, tab, searchShown, results]);
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);

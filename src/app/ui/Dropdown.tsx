@@ -13,9 +13,9 @@ import { CARD_HEIGHT, CARD_WIDTH } from '../canvas/size';
 // tooltip. The list floats over the board, in the top layer (useAnchored), so a narrow
 // sidebar doesn't clip it. `current` shows something else on the button than any option
 // (a mode, as in "Splitting Pikachu"), with no option selected; picking any option ends it.
-// `swatchOnly` shows only the chosen option's swatch, in a square button as tall as what's
-// beside it (the pinned search's Add to on phones), its label and the option's name the
-// tooltip and what screen readers hear.
+// `swatchOnly` shows only the chosen option's swatch, in a button as tall as what's beside it
+// (the pinned search's Add to on phones), its label and the option's name the tooltip and
+// what screen readers hear.
 
 // A swatch of `color`, or `icon` (a 16px SVG in public/, drawn in the text color)
 type Look = { color?: string; outlined?: boolean; shape?: 'square' | 'card'; icon?: string };

@@ -184,9 +184,10 @@ body {
 /* Under b8, the strip under iOS's status bar (the Dynamic Island) in the top bar's color,
    fixed at the window's top so it stays there when iOS scrolls the window for the keyboard
    or the sidebar is folded, and so iOS Safari (26 up) tints its top bar from it rather than
-   from the body's color, the sidebar's. It's behind the page (first in the body, unlayered),
-   so the top bar, the same color, covers it, and View's dimming dims it. (Zero tall where
-   there's no status bar to clear.) */
+   from the body's color, the sidebar's. Being fixed, it paints over the page's unpositioned
+   content, but only over the status bar's strip, which the page keeps clear: the top bar
+   there is the same color, and the folded workspace pads it. Layered things (View's
+   dimming, toasts, popups) stay over it. (Zero tall where there's no status bar to clear.) */
 .tierbinder-status {
   position: fixed;
   inset: 0 0 auto;
