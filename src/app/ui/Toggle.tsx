@@ -4,7 +4,7 @@ import type React from 'react';
 import styles from './Toggle.module.css';
 
 // A setting that turns something on the board on or off, as a row like every setting's
-// (.tierbinder-prop): its words muted at the left, and at the right a pill track in the
+// (.tierbinder-prop): its words at the left, and at the right a pill track in the
 // fields' colors with a knob that slides across, filled with the primary color when on (as
 // a ticked checkbox is). The whole row is the button; on touch screens it's a full touch
 // target. Checkbox stays for picking from a list (the Sets popup).

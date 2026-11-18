@@ -49,6 +49,10 @@ body {
   --tb-text: var(--color-petrel-100);
   --tb-heading: var(--color-petrel-50);
   --tb-muted: var(--color-petrel-400);
+
+  /* What a setting is called (its row's label): a step lighter than muted help text, so it
+     reads before the sentences that explain things */
+  --tb-label: var(--color-petrel-300);
   --tb-control-hover: var(--color-petrel-800);
   --tb-control-text: var(--color-petrel-100);
   --tb-control-border: var(--color-petrel-700);
@@ -223,14 +227,14 @@ body * {
   border-block-start: var(--tb-line-width) solid var(--tb-line);
 }
 
-/* A setting's row: its label muted at the left, its control or value at the right */
+/* A setting's row: its label at the left, its control or value at the right */
 .tierbinder-prop {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-4);
   min-height: var(--tb-control-height);
-  color: var(--tb-muted);
+  color: var(--tb-label);
 }
 
 .tierbinder-field {

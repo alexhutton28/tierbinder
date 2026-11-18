@@ -1,6 +1,6 @@
 @reference "../globals.css";
 
-/* A named color: a setting's row (as .tierbinder-prop), its name muted at the left and
+/* A named color: a setting's row (as .tierbinder-prop), its name at the left and
    the swatch at the right, all one button that opens the picker, lighting up like a list
    option on hover and while its picker is open. It reaches 4px past its section on each
    side, so the name lines up with the other labels and the swatch with the other
@@ -15,7 +15,7 @@
   margin-inline: calc(-1 * var(--spacing-2));
   padding-inline: var(--spacing-2);
   border-radius: var(--tb-radius);
-  color: var(--tb-muted);
+  color: var(--tb-label);
   text-align: start;
   cursor: pointer;
   transition:

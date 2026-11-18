@@ -3933,7 +3933,7 @@ export default function Editor() {
                   <h2 className="sr-only">Customize</h2>
                   {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
               hairline between sections (.tierbinder-sections), and every setting a row
-              with its label muted at the left and its control at the right
+              with its label at the left and its control at the right
               (.tierbinder-prop). Board first, what the board is: its type and shape (where
               it's posted: it sets the board's width and the image's size), with Clear at
               the end of its heading. Then the graphic's own sections (what's on it), then

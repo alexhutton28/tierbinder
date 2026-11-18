@@ -1,6 +1,6 @@
 @reference "../globals.css";
 
-/* A setting's row: its words muted at the left and the switch at the right, as tall as a
+/* A setting's row: its words at the left and the switch at the right, as tall as a
    control so a section of settings keeps one rhythm. Like a color row, it spans its
    section, lights up on hover and reaches 4px past it on each side, so its words line up
    with the other labels and the switch with the swatches. The switch stays on the first
@@ -16,7 +16,7 @@
   padding-block: calc((var(--tb-control-height) - 1lh) / 2);
   padding-inline: var(--spacing-2);
   border-radius: var(--tb-radius);
-  color: var(--tb-muted);
+  color: var(--tb-label);
   text-align: start;
   cursor: pointer;
   transition:
