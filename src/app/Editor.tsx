@@ -4128,8 +4128,9 @@ export default function Editor() {
                   {/* A link that opens an editable copy of this board, card tray and all, on
                       anyone's device */}
                   <div className="flex flex-col gap-3">
-                    {/* The help text sits 4px under its heading, closer to it than to the button */}
-                    <div className="flex flex-col gap-2">
+                    {/* The help text sits right under its heading, the two one group with the
+                        section's usual 8px under it */}
+                    <div className="flex flex-col">
                       <h3 className="tierbinder-heading">Board Link</h3>
                       <p className="text-caption text-(--tb-muted) text-pretty">
                         Opens an editable copy of this board.
