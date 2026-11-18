@@ -885,12 +885,17 @@
   height: var(--tb-thumb-height);
 }
 
-/* The browser skips drawing results scrolled out of view, keeping a thumbnail's size in
-   their place (and each one's real size once it has been drawn) */
+/* Beside the board, where they scroll in their own box, the browser skips drawing results
+   scrolled out of view, keeping a thumbnail's size in their place (and each one's real size
+   once it has been drawn). Not under b8, where the whole panel scrolls: iOS Safari drew the
+   tiles coming in a moment late, so they flashed at the edge being scrolled toward (a page
+   is at most RESULTS_PAGE more tiles) */
 .resultTile {
-  content-visibility: auto;
-  contain-intrinsic-size: auto var(--result-width) auto
-    calc(var(--result-width) * var(--tb-thumb-ratio));
+  @variant b8 {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--result-width) auto
+      calc(var(--result-width) * var(--tb-thumb-ratio));
+  }
 }
 
 /* A long press opens the result's menu (Editor.tsx), not iOS's own image callout */

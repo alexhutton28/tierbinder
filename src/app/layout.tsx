@@ -36,6 +36,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body className={`${inter.variable} ${figtree.variable} antialiased`}>
+        {/* The status bar's strip in the top bar's color on phones (globals.css) */}
+        <div aria-hidden className="tierbinder-status" />
         <main className="flex justify-center items-start overflow-y-auto h-dvh pb-[env(safe-area-inset-bottom)]">
           {children}
         </main>

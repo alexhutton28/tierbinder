@@ -27,7 +27,7 @@ body {
    and foot on a phone. */
 html {
   background: linear-gradient(var(--color-storm-400) 50%, var(--color-petrel-900) 50%)
-    var(--color-storm-400);
+    var(--color-petrel-900);
   line-height: normal;
 }
 
@@ -164,18 +164,38 @@ body {
      bar has gone, and the foot is the sidebar's (the main's bottom padding). Beside the
      board, the page's own color. Under the gradient, a background color for iOS Safari to
      tint its bars with (26 up ignores theme-color and reads the body's background-color,
-     where a gradient alone left them white): the top bar's, for the top while the sidebar
-     is folded and the top bar has gone; the sticky sidebar gives the bottom its color */
+     where a gradient alone left them white): the sidebar's, which is also what shows
+     around the keyboard and its toolbar. The top takes the top bar's color from
+     .tierbinder-status (a fixed element at the window's edge wins over the body), and the
+     bottom from the sticky sidebar */
   background: linear-gradient(
       var(--tb-top) env(safe-area-inset-top),
       var(--tb-page) env(safe-area-inset-top),
       var(--tb-page) calc(100% - env(safe-area-inset-bottom)),
       var(--tb-bar) calc(100% - env(safe-area-inset-bottom))
     )
-    var(--tb-top);
+    var(--tb-bar);
 
   @variant b8 {
     background: var(--tb-page);
+  }
+}
+
+/* Under b8, the strip under iOS's status bar (the Dynamic Island) in the top bar's color,
+   fixed at the window's top so it stays there when iOS scrolls the window for the keyboard
+   or the sidebar is folded, and so iOS Safari (26 up) tints its top bar from it rather than
+   from the body's color, the sidebar's. It's behind the page (first in the body, unlayered),
+   so the top bar, the same color, covers it, and View's dimming dims it. (Zero tall where
+   there's no status bar to clear.) */
+.tierbinder-status {
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top);
+  background: var(--tb-top);
+  pointer-events: none;
+
+  @variant b8 {
+    display: none;
   }
 }
 
