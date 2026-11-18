@@ -501,9 +501,9 @@
   }
 }
 
-/* Under b8, where the whole sidebar scrolls, the search sticks to its top during a search
-   (data-pinned: results, placeholders or none found showing) as the rest goes under it, the
-   nav included, on the sidebar's color with 8px above and below (given back as negative
+/* Where the whole sidebar scrolls (under b8, and on touch screens beside the board), the
+   search sticks to its top during a search (data-pinned: results, placeholders or none
+   found showing) as the rest goes under it, the nav included, on the sidebar's color with 8px above and below (given back as negative
    margin, so the layout keeps its spacing), and a hairline once the row under it (Sets,
    Add to) is wholly under it too (data-stuck). It sticks a line's width above the sidebar's
    top (and is that much taller), so no sliver of what scrolls under it shows at a
@@ -531,13 +531,6 @@
 
   &[data-stuck] {
     border-bottom-color: var(--tb-line);
-  }
-
-  @variant b8 {
-    margin-block: 0;
-    padding-block: 0;
-    border-bottom: 0;
-    background: none;
   }
 }
 
@@ -1018,5 +1011,39 @@ img.poolCard:not([data-loaded]) {
   /* Fades only */
   .reveal {
     transition: opacity var(--duration-fade) ease-out;
+  }
+}
+
+/* On touch screens beside the board (a phone turned sideways, a tablet: data-one-scroll),
+   the column scrolls as one, its top bar and the main nav with it, as the sidebar does
+   under b8, so a short window doesn't lose its height to them: the sidebar and its tab
+   panels grow to their content, the results don't scroll on their own (nor are they
+   skipped while off screen, which iOS drew late), and the credits' touch target doesn't
+   hang past the foot. */
+.sideColumn[data-one-scroll] {
+  overflow-y: auto;
+
+  & > .side,
+  & [role='tabpanel'],
+  & .resultsBox {
+    flex: none;
+    min-height: auto;
+  }
+
+  & [role='tabpanel'],
+  & [data-results] {
+    overflow: visible;
+  }
+
+  & .resultTile {
+    content-visibility: visible;
+  }
+
+  & .resultsShade {
+    display: none;
+  }
+
+  & .foot {
+    overflow-y: clip;
   }
 }

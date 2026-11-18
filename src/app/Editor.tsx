@@ -574,6 +574,13 @@ export default function Editor() {
   // Known from the first render (the editor only renders in the browser), so the board's
   // first fit already uses the wide layout
   const [wide, setWide] = React.useState(() => wideQuery().matches);
+  // Touch screens (phones, tablets) scroll the sidebar as one even beside the board (a
+  // phone turned sideways, a tablet), top bar and nav with it, as every screen does under
+  // b8, so a short window doesn't lose its height to them; with a mouse beside the board,
+  // each tab panel scrolls on its own under them. (Known from the first render; a device's
+  // pointer doesn't change during a visit.)
+  const [touch] = React.useState(() => matchMedia('(pointer: coarse)').matches);
+  const oneScroll = !wide || touch;
   const [resultsLimit, setResultsLimit] = React.useState({ of: results, count: RESULTS_PAGE });
   const resultsCount = resultsLimit.of === results ? resultsLimit.count : RESULTS_PAGE;
   const visibleResults = shownResults.slice(0, resultsCount);
@@ -591,13 +598,13 @@ export default function Editor() {
       // the results' own scroll beside the board, or of the sidebar's under b8, where the
       // whole sidebar scrolls
       {
-        root: wide ? resultsRef.current : sideRef.current,
+        root: oneScroll ? (wide ? sideColumnRef.current : sideRef.current) : resultsRef.current,
         rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px`,
       }
     );
     observer.observe(more);
     return () => observer.disconnect();
-  }, [results, resultsCount, visibleResults.length, wide]);
+  }, [results, resultsCount, visibleResults.length, wide, oneScroll]);
   // What the last search was for; when nothing it found can be shown (none found, or every
   // thumbnail failed), that's said under the search
   const [searchedFor, setSearchedFor] = React.useState<{ query: string; sets: string[] } | null>(
@@ -1010,22 +1017,26 @@ export default function Editor() {
   const foldingSideHeight =
     fold > 0 && !folded ? foldHeights.open + (foldHeights.bar - foldHeights.open) * fold : null;
   // The header's line shows only while the tab panel under it is scrolled from its top
-  // (each tab keeping its own scroll, so its own flag). Beside the board only: under b8 the
-  // whole sidebar scrolls, the nav with it (see onSideScroll)
+  // (each tab keeping its own scroll, so its own flag). Only where the panels scroll on
+  // their own (beside the board, with a mouse): elsewhere the whole sidebar scrolls, the
+  // nav with it (see onSideScroll)
   const [scrolledTabs, setScrolledTabs] = React.useState<Partial<Record<Tab, boolean>>>({});
-  const panelScrolled = wide && !!scrolledTabs[tab];
+  const panelScrolled = !oneScroll && !!scrolledTabs[tab];
   const onPanelScroll = (panelTab: Tab) => (e: React.UIEvent<HTMLElement>) => {
     const scrolled = e.currentTarget.scrollTop > 0;
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
   };
-  // Under b8 the whole sidebar scrolls as one, its main nav with it, so scrolling down moves
+  // Under b8, and on touch screens beside the board, the whole sidebar scrolls as one (the
+  // sidebar, or beside the board the column with the top bar: `sidebarScroller`), its main
+  // nav with it, so scrolling down moves
   // the nav out of the way exactly as the finger does, with no animation of its own to fight
   // the scroll. During a search the search sticks to the sidebar's top as the rest goes
   // under it, and once the row under it (Sets, Add to) is wholly under it too, it gets a
   // hairline and the Add to picker joins it as a swatch button (`searchStuck`)
   const [searchStuck, setSearchStuck] = React.useState(false);
+  const sidebarScroller = () => (wide ? sideColumnRef.current : sideRef.current);
   const onSideScroll = (e: React.UIEvent<HTMLElement>) => {
-    if (wide) return;
+    if (!oneScroll || e.currentTarget !== sidebarScroller()) return;
     const side = e.currentTarget;
     const stuck = tab === 'add' && searchShown && side.scrollTop >= stuckAt(side);
     setSearchStuck((was) => (was === stuck ? was : stuck));
@@ -1043,22 +1054,23 @@ export default function Editor() {
     const pinnedFoot = form.offsetHeight + parseFloat(getComputedStyle(form).top);
     return side.scrollTop + rowFoot - pinnedFoot;
   };
-  // Only while Add Cards shows a search under b8
-  const pinnedTarget = !wide && tab === 'add' && searchShown && searchStuck;
+  // Only while Add Cards shows a search where the sidebar scrolls as one
+  const pinnedTarget = oneScroll && tab === 'add' && searchShown && searchStuck;
   // Measured again when the results change without a scroll (a new search, results
   // arriving, the tab coming back), so the swatch button isn't left in or out
   React.useEffect(() => {
-    if (!wide) sideRef.current?.dispatchEvent(new Event('scroll'));
-  }, [wide, tab, searchShown, results]);
+    if (oneScroll)
+      (wide ? sideColumnRef.current : sideRef.current)?.dispatchEvent(new Event('scroll'));
+  }, [oneScroll, wide, tab, searchShown, results]);
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
     setSidebarFolded(false);
   }
-  // Under b8, a tab picked starts at the sidebar's top (the tabs share its scroll)
+  // Where the sidebar scrolls as one, a tab picked starts at its top (the tabs share it)
   React.useLayoutEffect(() => {
-    if (!wide) sideRef.current?.scrollTo({ top: 0 });
-  }, [tab, wide]);
+    if (oneScroll) (wide ? sideColumnRef.current : sideRef.current)?.scrollTo({ top: 0 });
+  }, [tab, wide, oneScroll]);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
@@ -1127,12 +1139,11 @@ export default function Editor() {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
-  const hideSidebarRef = React.useRef<HTMLButtonElement>(null);
-  // The sidebar's foot (the credits) shows under every tab from b8 up, and below it only
-  // under Save & Share. Hiding it with focus inside (the window narrowed, or a tab switched
-  // from the keyboard) would drop focus to the page, so it goes to the main nav's tab.
+  // The sidebar's foot (the credits) shows only under Save & Share, at every width, so the
+  // other tabs keep the height. Hiding it with focus inside (a tab switched from the
+  // keyboard) would drop focus to the page, so it goes to the main nav's tab.
   const footRef = React.useRef<HTMLElement>(null);
-  const footHidden = !wide && tab !== 'save';
+  const footHidden = tab !== 'save';
   React.useLayoutEffect(() => {
     const foot = footRef.current;
     if (!footHidden || !foot?.contains(document.activeElement)) return;
@@ -1140,10 +1151,14 @@ export default function Editor() {
   }, [footHidden]);
   const toggleSidebar = React.useCallback(() => {
     if (sidebarHidden) {
-      // The show button goes as the sidebar comes back: focus on it moves to the hide button
+      // The show button goes as the sidebar comes back: focus on it moves to the main nav's
+      // tab, the sidebar's first stop
       const fromShowButton = document.activeElement === showSidebarRef.current;
       flushSync(() => setSidebarHidden(false));
-      if (fromShowButton) hideSidebarRef.current?.focus({ preventScroll: true });
+      if (fromShowButton)
+        sideColumnRef.current
+          ?.querySelector<HTMLElement>('[role=tab][aria-selected=true]')
+          ?.focus({ preventScroll: true });
     } else {
       // Focus in the sidebar would be lost with it: the board takes it
       if (sideColumnRef.current?.contains(document.activeElement)) {
@@ -2144,7 +2159,7 @@ export default function Editor() {
     setSearching(true);
     setImporting(false);
     // Under b8, where the whole sidebar scrolls, a new search starts from its top
-    if (!wide) sideRef.current?.scrollTo({ top: 0 });
+    if (oneScroll) sidebarScroller()?.scrollTo({ top: 0 });
     try {
       const found = await searchCards(text.trim(), options, abort.signal);
       if (count !== searchCount.current) return;
@@ -3414,6 +3429,9 @@ export default function Editor() {
               id="sidebar-column"
               ref={sideColumnRef}
               className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
+              // Scrolling as one on touch screens beside the board (data-one-scroll)
+              data-one-scroll={(wide && touch) || undefined}
+              onScroll={onSideScroll}
               inert={viewing !== null}
             >
               {wide && topBar}
@@ -3536,7 +3554,7 @@ export default function Editor() {
                       }}
                       className={`${styles.searchRow} flex gap-3`}
                       // Pinned to the panel's top on phones only during a search
-                      data-pinned={(!wide && searchShown) || undefined}
+                      data-pinned={(oneScroll && searchShown) || undefined}
                       data-stuck={pinnedTarget || undefined}
                     >
                       <label className={styles.search}>
@@ -3576,10 +3594,10 @@ export default function Editor() {
                                 setQuery('');
                                 search('');
                               };
-                              // Under b8, where the whole sidebar scrolls, it glides back to its top
-                              // first, and the results go once it's there
-                              const side = sideRef.current;
-                              if (!wide && side) toTopThen(side, clear);
+                              // Where the whole sidebar scrolls, it glides back to its top first,
+                              // and the results go once it's there
+                              const side = sidebarScroller();
+                              if (oneScroll && side) toTopThen(side, clear);
                               else clear();
                             }}
                           >
@@ -3590,7 +3608,7 @@ export default function Editor() {
                       {/* On phones, once the row under the pinned search has gone under it:
                           the Add to picker as a swatch button, sliding in beside Search, and out
                           again as that row comes back out */}
-                      {!wide && showAddTo && (
+                      {oneScroll && showAddTo && (
                         <div
                           className={styles.pinnedTarget}
                           data-shown={pinnedTarget || undefined}
@@ -4219,25 +4237,11 @@ export default function Editor() {
                   </div>
                 </section>
 
-                {/* The credits, and from b8 up the button that hides the sidebar at its other end:
-            at the sidebar's foot under every tab beside the board, and under b8 only in
-            Save & Share, where the sidebar's height is too short to spend on them */}
+                {/* The credits, at the sidebar's foot under Save & Share only, so the other
+            tabs keep the height. (The sidebar hides with Ctrl+\ or Cmd+\ from b8 up; the
+            button that did it here was taken out to keep the foot off the other tabs) */}
                 <footer ref={footRef} className={styles.foot} hidden={footHidden}>
                   <Credits />
-                  {wide && (
-                    <button
-                      ref={hideSidebarRef}
-                      type="button"
-                      className={styles.sidebarToggle}
-                      aria-label="Hide sidebar"
-                      title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
-                      aria-keyshortcuts="Control+\ Meta+\"
-                      aria-controls="sidebar-column"
-                      onClick={toggleSidebar}
-                    >
-                      <span aria-hidden className={styles.sidebarIcon} />
-                    </button>
-                  )}
                 </footer>
               </aside>
             </div>
