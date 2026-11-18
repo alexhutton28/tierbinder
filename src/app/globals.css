@@ -216,8 +216,8 @@ body * {
 }
 
 /* A tab of settings sections (Customize, Save & Share): a hairline between them, 16px
-   above and below it, so a section's end reads apart from the gaps inside it */
-/* After a section, not after a panel's hidden heading */
+   above and below it, so a section's end reads apart from the gaps inside it (after a
+   section, not after the panel's hidden heading) */
 .tierbinder-sections > :not(.sr-only) + * {
   padding-block-start: var(--spacing-4);
   border-block-start: var(--tb-line-width) solid var(--tb-line);

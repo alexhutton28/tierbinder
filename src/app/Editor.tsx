@@ -64,7 +64,7 @@ import Toggle from './ui/Toggle';
 import Working from './ui/Working';
 import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
-import RadioBar from './ui/RadioBar';
+import RadioBar, { panelId, tabId } from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
 import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
@@ -249,7 +249,7 @@ function describeBoard(graphic: Graphic) {
     ...typeOf(graphic.kind).describe(graphic),
     ...(graphic.tray.enabled ? [{ name: 'Card Tray', items: graphic.tray.items }] : []),
   ];
-  return places.map(({ name, items, note }: { name: string; items: CardItem[]; note?: string }) => {
+  return places.map(({ name, items, note }) => {
     const cards = items.length
       ? `${items.length} ${items.length === 1 ? 'card' : 'cards'}: ${items.map(cardLabel).join(', ')}`
       : 'empty';
@@ -278,6 +278,8 @@ const TABS = [
   { value: 'save', label: 'Save & Share', icon: 'share', color: 'var(--color-tier-solid)' },
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
+// The main nav's tab ids, and its panels' (RadioBar's tabId and panelId)
+const TAB_PREFIX = 'sidebar-tab';
 
 // Card pools shown in Add Cards before a search: each previews its first POOL_PREVIEW_CARDS
 // cards in a row, or card-shaped placeholders while it has none. Clicking one adds all its
@@ -2972,7 +2974,7 @@ export default function Editor() {
                 }
               >
                 <RadioBar
-                  id="tab"
+                  id={TAB_PREFIX}
                   label="Editor sections"
                   options={TABS}
                   value={tab}
@@ -3026,8 +3028,8 @@ export default function Editor() {
             the pools and Advanced don't fit */}
             <section
               role="tabpanel"
-              id="tab-add-panel"
-              aria-labelledby="tab-add"
+              id={panelId(TAB_PREFIX, 'add')}
+              aria-labelledby={tabId(TAB_PREFIX, 'add')}
               hidden={tab !== 'add'}
               onScroll={onPanelScroll('add')}
               className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
@@ -3509,8 +3511,8 @@ export default function Editor() {
 
             <section
               role="tabpanel"
-              id="tab-customize-panel"
-              aria-labelledby="tab-customize"
+              id={panelId(TAB_PREFIX, 'customize')}
+              aria-labelledby={tabId(TAB_PREFIX, 'customize')}
               hidden={tab !== 'customize'}
               onScroll={onPanelScroll('customize')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
@@ -3618,8 +3620,8 @@ export default function Editor() {
 
             <section
               role="tabpanel"
-              id="tab-save-panel"
-              aria-labelledby="tab-save"
+              id={panelId(TAB_PREFIX, 'save')}
+              aria-labelledby={tabId(TAB_PREFIX, 'save')}
               hidden={tab !== 'save'}
               onScroll={onPanelScroll('save')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
