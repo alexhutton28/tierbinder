@@ -5,6 +5,7 @@ import {
   defaultTierList,
   defaultTierStyle,
   dropTarget,
+  nudgeCard,
   importCards,
   moveCard,
   insertCard,
@@ -59,6 +60,7 @@ const tierList: GraphicType<TierList> = {
     list.tiers[tier].items.at(-1)?.id === id
       ? list
       : moveCard(list, id, tier, list.tiers[tier].items.filter((i) => i.id !== id).length),
+  nudgeCard: (list, id, direction) => nudgeCard(list, id, direction),
   // In the tier under the pointer, before the first card whose center is to its right
   dropCard: (list, item, point) => {
     const target = dropTarget(list, '', point.x, point.y);

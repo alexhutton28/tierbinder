@@ -15,6 +15,7 @@ import {
 } from '../../canvas/size';
 import { defaultTray, importTrayCards, parseTray, type Tray } from '../../canvas/tray';
 import type { CardPlacement } from '../types';
+import type { Direction } from '../../canvas/keyboard';
 
 export type Tier = {
   id: string;
@@ -172,6 +173,24 @@ export function moveCard(list: TierList, id: string, tierIndex: number, index: n
   const tiers = list.tiers.map((t) => ({ ...t, items: t.items.filter((i) => i.id !== id) }));
   tiers[tierIndex].items.splice(index, 0, item);
   return { ...list, tiers };
+}
+
+// Moves a card a step from the keyboard (Alt+arrows): along its tier, or into the tier
+// above or below at the same place in the row (or the end, if that's shorter). Null past
+// the last tier's foot (where the editor's card tray is).
+export function nudgeCard(list: TierList, id: string, direction: Direction): TierList | null {
+  const tierIndex = list.tiers.findIndex((t) => t.items.some((i) => i.id === id));
+  if (tierIndex < 0) return list;
+  const { items } = list.tiers[tierIndex];
+  const index = items.findIndex((i) => i.id === id);
+  if (direction === 'left' || direction === 'right') {
+    const to = index + (direction === 'right' ? 1 : -1);
+    return to < 0 || to >= items.length ? list : moveCard(list, id, tierIndex, to);
+  }
+  const to = tierIndex + (direction === 'down' ? 1 : -1);
+  if (to < 0) return list;
+  if (to >= list.tiers.length) return null;
+  return moveCard(list, id, to, Math.min(index, list.tiers[to].items.length));
 }
 
 // Adds a new card at a position

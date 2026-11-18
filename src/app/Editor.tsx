@@ -31,6 +31,7 @@ import {
   type CardResult,
 } from './cards';
 import CardTray from './canvas/CardTray';
+import { ARROWS, nextCard, type Direction } from './canvas/keyboard';
 import {
   MAX_TRAY_CARDS,
   TRAY_GAP,
@@ -242,14 +243,20 @@ function shortcutKey(e: KeyboardEvent) {
   return /^[a-z]$/.test(key) ? key : e.code.replace(/^Key/, '').toLowerCase();
 }
 
-// The board for screen readers, a line for each place (a tier, the canvas, the card tray
-// while it shows): its name, then its cards in order, or that it's empty
-function describeBoard(graphic: Graphic) {
-  const places = [
+// Every place cards are in, in order, each with its cards: the graphic's own (each tier,
+// the canvas), then the card tray while it shows. For screen readers and the arrow keys.
+function placesOf(graphic: Graphic) {
+  const places: { name: string; items: CardItem[]; note?: string }[] = [
     ...typeOf(graphic.kind).describe(graphic),
     ...(graphic.tray.enabled ? [{ name: 'Card Tray', items: graphic.tray.items }] : []),
   ];
-  return places.map(({ name, items, note }) => {
+  return places.map((p) => ({ ...p, name: p.name.replaceAll('\n', ' ') }));
+}
+
+// The board for screen readers, a line for each place: its name, then its cards in order,
+// or that it's empty
+function describeBoard(graphic: Graphic) {
+  return placesOf(graphic).map(({ name, items, note }) => {
     const cards = items.length
       ? `${items.length} ${items.length === 1 ? 'card' : 'cards'}: ${items.map(cardLabel).join(', ')}`
       : note
@@ -257,6 +264,16 @@ function describeBoard(graphic: Graphic) {
         : 'empty';
     return `${name}: ${cards}${note ? `; ${note}` : ''}`;
   });
+}
+
+// A card as screen readers hear it once the arrow keys pick or move it: "Charizard ex
+// (OBF 125), S, 2 of 3"
+function cardNews(graphic: Graphic, id: string) {
+  for (const { name, items } of placesOf(graphic)) {
+    const at = items.findIndex((i) => i.id === id);
+    if (at >= 0) return `${cardLabel(items[at])}, ${name}, ${at + 1} of ${items.length}`;
+  }
+  return '';
 }
 
 // From b8 up, where the board has the room beside the sidebar
@@ -280,6 +297,9 @@ const TABS = [
   { value: 'save', label: 'Save & Share', icon: 'share', color: 'var(--color-tier-solid)' },
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
+// The page's two halves, in the order they're laid out and focused (see the layout)
+const SIDE_FIRST = ['side', 'board'] as const;
+const BOARD_FIRST = ['board', 'side'] as const;
 // The main nav's tab ids, and its panels' (RadioBar's tabId and panelId)
 const TAB_PREFIX = 'sidebar-tab';
 
@@ -613,8 +633,14 @@ export default function Editor() {
     y: number;
     dropped?: { card: CardResult; point: Point };
     flyout?: number;
+    // The row whose flyout is open (a tray card's menu has both Move To and Clear Card Tray)
+    flyoutRow?: string;
   } | null>(null);
   const cardMenuRef = React.useRef<HTMLDivElement>(null);
+  // What the arrow keys just picked or moved, for screen readers (a new element each time,
+  // as the toast's, so the same card again is read again)
+  const [boardNews, setBoardNews] = React.useState<{ n: number; text: string } | null>(null);
+  const announce = (text: string) => setBoardNews((old) => ({ n: (old?.n ?? 0) + 1, text }));
   // Menu for a search result, from a right-click (or the menu key): View, and Add to with
   // a flyout of every Add to choice. At the pointer, in the window's pixels; `tile` is the
   // result, for View's start and for focus to go back to. Like the card menu, it stays on
@@ -723,18 +749,23 @@ export default function Editor() {
   const [shownTrayFlyoutState, setShownTrayFlyout] = React.useState<{
     menu: string;
     n: number;
+    row?: string;
   } | null>(null);
   if (
     cardMenu &&
     trayFlyout !== null &&
-    (trayFlyout !== shownTrayFlyoutState?.n || shownTrayFlyoutState.menu !== menuKey(cardMenu))
+    (trayFlyout !== shownTrayFlyoutState?.n ||
+      shownTrayFlyoutState.menu !== menuKey(cardMenu) ||
+      shownTrayFlyoutState.row !== cardMenu.flyoutRow)
   ) {
-    setShownTrayFlyout({ menu: menuKey(cardMenu), n: trayFlyout });
+    setShownTrayFlyout({ menu: menuKey(cardMenu), n: trayFlyout, row: cardMenu.flyoutRow });
   }
   const shownTrayFlyout =
     shownTrayFlyoutState && shownMenu && shownTrayFlyoutState.menu === menuKey(shownMenu)
       ? shownTrayFlyoutState.n
       : null;
+  // Which row's flyout shows (kept while it folds closed)
+  const shownFlyoutRow = shownTrayFlyout !== null ? shownTrayFlyoutState?.row : undefined;
   const trayFlyoutClosing = shownTrayFlyout !== null && trayFlyout === null;
   React.useEffect(() => {
     if (!trayFlyoutClosing) return;
@@ -787,6 +818,18 @@ export default function Editor() {
     const top = Math.max(EDGE - boxTop, shownMenu.y - over);
     setRaisedMenu({ key: menuKey(shownMenu), top });
   }, [shownMenu]);
+  // Opening focuses its first item, as the search result menu does; closing with focus in
+  // it (Escape, Tab, an item that leaves focus nowhere) hands focus back to the board
+  const openMenuKey = cardMenu && menuKey(cardMenu);
+  React.useEffect(() => {
+    if (!openMenuKey) return;
+    const menu = cardMenuRef.current;
+    const board = boardBoxRef.current;
+    menu?.querySelector<HTMLElement>('[role=menuitem]')?.focus({ preventScroll: true });
+    return () => {
+      if (menu?.contains(document.activeElement)) board?.focus({ preventScroll: true });
+    };
+  }, [openMenuKey]);
   // Removed on a timer just after its 180ms fold (globals.css) rather than on
   // animationend, which doesn't fire in a tab that isn't painting
   React.useEffect(() => {
@@ -1313,6 +1356,10 @@ export default function Editor() {
   // but cards and ink changing always start one. Kept for the visit only. Keys only: buttons
   // would take room under the board.
   const historyRef = React.useRef<Partial<Record<GraphicKind, History>>>({});
+  // The card the change being recorded moved from the keyboard (set just before it), and
+  // the last one, with when: repeated moves of one card are one step
+  const nudgeRef = React.useRef<string | null>(null);
+  const lastNudge = React.useRef<{ id: string; at: number } | null>(null);
   const lastDoc = React.useRef(doc);
   // The change undo or redo itself makes, which isn't recorded
   const restoring = React.useRef<Graphic | null>(null);
@@ -1348,8 +1395,24 @@ export default function Editor() {
       restoring.current = null;
       return;
     }
-    // Only settings changes merge, and only into a step of settings changes
     const at = performance.now();
+    const h0 = historyRef.current[doc.kind] ?? NO_HISTORY;
+    // A card moved by Alt and the arrow keys again (held down, or pressed in quick
+    // succession) is the same step, so holding a key doesn't fill the history
+    const nudged = nudgeRef.current;
+    nudgeRef.current = null;
+    const lastNudged = lastNudge.current;
+    lastNudge.current = nudged ? { id: nudged, at } : null;
+    if (
+      nudged &&
+      lastNudged?.id === nudged &&
+      at - lastNudged.at < HISTORY_MERGE &&
+      h0.past.length
+    ) {
+      lastChange.current = 0;
+      return;
+    }
+    // Only settings changes merge, and only into a step of settings changes
     const settingsOnly = cardsAndInk(before) === cardsAndInk(now);
     const merge = settingsOnly && at - lastChange.current < HISTORY_MERGE;
     lastChange.current = settingsOnly ? at : 0;
@@ -2124,10 +2187,20 @@ export default function Editor() {
     if (presenting) {
       return moveChoices(id).length ? ['View', MOVE_TO, 'Remove card'] : ['View', 'Remove card'];
     }
+    // Move To (a flyout of the places it can go) also moves it from the keyboard
+    const move = moveChoices(id).length ? [MOVE_TO] : [];
     const items = split
-      ? ['View', 'Remove card', 'Replace top half', 'Replace bottom half', 'Swap halves', 'Unsplit']
+      ? [
+          'View',
+          ...move,
+          'Remove card',
+          'Replace top half',
+          'Replace bottom half',
+          'Swap halves',
+          'Unsplit',
+        ]
       : // (Replace Card is out for now; a split card's halves can still be replaced)
-        ['View', 'Remove card', 'Make split card'];
+        ['View', ...move, 'Remove card', 'Make split card'];
     // A card in the tray can clear the whole tray, last (not the tray's only card, where
     // Remove Card does the same)
     const inTray = trayPlacements.some((p) => p.item.id === id);
@@ -2142,10 +2215,10 @@ export default function Editor() {
   if (cardMenu?.flyout) {
     const n = graphic.tray.items.length;
     const items = cardMenuItems(cardMenu);
-    if (items.includes(MOVE_TO)) {
+    if (!items.includes(cardMenu.flyoutRow ?? '')) {
+      setCardMenu({ ...cardMenu, flyout: undefined, flyoutRow: undefined });
+    } else if (cardMenu.flyoutRow === MOVE_TO) {
       // (its flyout's `flyout` is just whether it's open)
-    } else if (!items.includes('Clear card tray')) {
-      setCardMenu({ ...cardMenu, flyout: undefined });
     } else if (cardMenu.flyout !== n) {
       setCardMenu({ ...cardMenu, flyout: n });
     }
@@ -2159,6 +2232,16 @@ export default function Editor() {
     const flyout = target.closest<HTMLElement>('[data-flyout]');
     const scope = flyout ?? cardMenuRef.current;
     if (!scope || !cardMenu) return;
+    // Delete and Backspace don't remove the card from here; Escape closes the menu (the
+    // flyout's own goes back to its row) back to the board, keeping the card selected,
+    // rather than going on to the page's, which would deselect it
+    if (e.key === 'Delete' || e.key === 'Backspace') e.stopPropagation();
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      setCardMenu(null);
+      boardBoxRef.current?.focus({ preventScroll: true });
+      return;
+    }
     const items = [...scope.querySelectorAll<HTMLElement>('[role=menuitem]')].filter(
       (el) => flyout || !el.closest('[data-flyout]')
     );
@@ -2171,13 +2254,17 @@ export default function Editor() {
       e.preventDefault();
       items[e.key === 'Home' ? 0 : items.length - 1]?.focus();
     }
-    if (e.key === 'ArrowRight' && target.hasAttribute('aria-haspopup') && !cardMenu.flyout) {
+    if (
+      e.key === 'ArrowRight' &&
+      target.hasAttribute('aria-haspopup') &&
+      !(cardMenu.flyout && cardMenu.flyoutRow === target.dataset.row)
+    ) {
       e.preventDefault();
       toggleTrayFlyout(cardMenu, target.dataset.row === MOVE_TO);
     }
     if (e.key === 'ArrowLeft' && flyout) {
       e.preventDefault();
-      setCardMenu((m) => m && { ...m, flyout: undefined });
+      setCardMenu((m) => m && { ...m, flyout: undefined, flyoutRow: undefined });
       trayFlyoutRowRef.current?.focus();
     }
   };
@@ -2187,11 +2274,18 @@ export default function Editor() {
   // twice) never clears the tray by itself
   // (Presentation mode's Add to row opens its own the same way: `move`)
   function toggleTrayFlyout(menu: CardMenu, move = false) {
-    if (menu.flyout) {
-      setCardMenu({ ...menu, flyout: undefined });
+    // (the other row's flyout, open, gives way to it)
+    if (menu.flyout && menu.flyoutRow === (move ? MOVE_TO : 'Clear card tray')) {
+      setCardMenu({ ...menu, flyout: undefined, flyoutRow: undefined });
       return;
     }
-    flushSync(() => setCardMenu({ ...menu, flyout: move ? 1 : graphic.tray.items.length }));
+    flushSync(() =>
+      setCardMenu({
+        ...menu,
+        flyout: move ? 1 : graphic.tray.items.length,
+        flyoutRow: move ? MOVE_TO : 'Clear card tray',
+      })
+    );
     cardMenuRef.current?.querySelector<HTMLElement>('[data-flyout] [role=menuitem]')?.focus();
   }
 
@@ -2204,6 +2298,139 @@ export default function Editor() {
     moveCardToTarget(id, index);
     boardBoxRef.current?.focus({ preventScroll: true });
   }
+
+  // The keyboard on the board (one Tab stop): the arrows pick a card (the first with none
+  // picked), Home and End the first and last in its place; Alt and the arrows move it (a
+  // step along its tier or into the next, or nudged on the blank canvas, Shift for a finer
+  // step; in and out of the card tray); Enter, Space, the menu key or Shift+F10 open its
+  // menu. Delete and Escape are the page's. Only with the Move tool.
+  function onBoardKey(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.target !== e.currentTarget || tool !== DEFAULT_TOOL) return;
+    const shown = placements.filter((p) => !arriving.has(p.item.id));
+    const selected = shown.find((p) => p.item.id === selectedId);
+    const direction: Direction | undefined = ARROWS[e.key];
+    const menuKey =
+      e.key === 'Enter' ||
+      e.key === ' ' ||
+      e.key === 'ContextMenu' ||
+      (e.key === 'F10' && e.shiftKey);
+    if (!direction && !menuKey && e.key !== 'Home' && e.key !== 'End') return;
+    // (Alt+Left would go back a page on Windows; Space would scroll)
+    e.preventDefault();
+    if (!selected) {
+      if (!shown.length) announce('No cards on the board');
+      else if (direction || e.key === 'Home' || e.key === 'End') pickByKey(shown[0].item.id);
+      return;
+    }
+    const id = selected.item.id;
+    if (menuKey) {
+      setCardMenu({
+        id,
+        x: (boardLeft + selected.x + selected.width / 2) * scale,
+        y: (selected.y + selected.height / 2) * scale,
+      });
+      return;
+    }
+    if (e.key === 'Home' || e.key === 'End') {
+      const place = placesOf(graphic).find((p) => p.items.some((i) => i.id === id));
+      const items = place?.items.filter((i) => !arriving.has(i.id)) ?? [];
+      const to = e.key === 'Home' ? items[0] : items.at(-1);
+      if (to) pickByKey(to.id);
+      return;
+    }
+    if (!direction) return;
+    if (e.altKey) {
+      nudgeSelected(selected, direction, e.shiftKey);
+      return;
+    }
+    const places = placesOf(graphic);
+    const placeOf = (cardId: string) =>
+      places.findIndex((p) => p.items.some((i) => i.id === cardId));
+    const next = nextCard(shown, placeOf, id, direction);
+    if (next) pickByKey(next);
+    // (at the end of a row it stays, saying so again)
+    else announce(cardNews(graphic, id));
+  }
+
+  function pickByKey(id: string) {
+    setSelectedId(id);
+    setCardMenu(null);
+    revealTrayCard(id);
+    announce(cardNews(graphic, id));
+  }
+
+  // The one-row card tray scrolls a card picked from the keyboard into view, a card's width
+  // clear of its edges (where the shades and their arrows are)
+  function revealTrayCard(id: string, pan = trayPan) {
+    if (!oneRowTray) return;
+    const p = trayPlacements.find((t) => t.item.id === id);
+    if (!p) return;
+    // (its place along the row, and the part of the row in view)
+    const left = p.x + pan - trayLeft;
+    if (left < pan + p.width) setTrayPan(Math.max(0, left - p.width));
+    else if (left + 2 * p.width > pan + shownTrayWidth) {
+      setTrayPan(left + 2 * p.width - shownTrayWidth);
+    }
+  }
+
+  // Moves the selected card a step (Alt and the arrows): the graphic moves a board card
+  // (into the card tray past the board's foot), and a tray card moves along the tray, or
+  // up onto the board's foot, under where it was
+  function nudgeSelected(place: (typeof placements)[number], direction: Direction, small: boolean) {
+    const id = place.item.id;
+    const center = place.x + place.width / 2;
+    let placed: Placed<Graphic> | null = null;
+    if (trayPlacements.some((p) => p.item.id === id)) {
+      const index = graphic.tray.items.findIndex((i) => i.id === id);
+      if (direction === 'left' || direction === 'right') {
+        const to = index + (direction === 'right' ? 1 : -1);
+        if (to >= 0 && to < graphic.tray.items.length) {
+          placed = { ...graphic, tray: moveTrayCard(graphic.tray, id, to) };
+        }
+      } else if (direction === 'up') {
+        const without = {
+          ...graphic,
+          tray: mapTray(graphic.tray, (i) => (i.id === id ? null : i)),
+        };
+        placed = type.dropCard(without, place.item, { x: center, y: BOARD_HEIGHT - 1 });
+      }
+    } else {
+      const next = type.nudgeCard(graphic, id, direction, small);
+      if (next !== null) placed = next;
+      else if (trayShown) {
+        // Into the card tray, by where it was across the board, as a drop there would be
+        placed = withTray(
+          type.mapCards(graphic, (i) => (i.id === id ? null : i)),
+          insertTrayCard(
+            graphic.tray,
+            place.item,
+            dropIndex(graphic.tray, '', inTray({ x: center, y: trayTop }))
+          )
+        );
+      }
+    }
+    if (!placed || placed === graphic) {
+      announce(cardNews(graphic, id));
+      return;
+    }
+    if ('error' in placed) {
+      applyPlaced(placed);
+      return;
+    }
+    nudgeRef.current = id;
+    setGraphic(() => placed);
+    setCardMenu(null);
+    setSelectedId(id);
+    // (the one-row tray follows it, measured once it's laid out)
+    pendingReveal.current = id;
+    announce(cardNews(placed, id));
+  }
+  const pendingReveal = React.useRef<string | null>(null);
+  React.useLayoutEffect(() => {
+    const id = pendingReveal.current;
+    pendingReveal.current = null;
+    if (id) revealTrayCard(id);
+  });
 
   // Runs a menu item. Hiding or clearing the tray moves what the menu was anchored to, so it
   // goes at once rather than folding closed in the wrong place.
@@ -2814,6 +3041,27 @@ export default function Editor() {
       }
     });
 
+  // The top bar with the logo (placed by the layout below)
+  const topBar = (
+    <header
+      // (inert while viewing a card, as the sidebar column is)
+      inert={viewing !== null}
+      className={`${styles.top} ${folded ? styles.topFolded : ''}`}
+      // Rising away as the sidebar folds
+      style={
+        fold > 0 && !folded
+          ? {
+              marginTop: `calc((var(--tb-top-height) + env(safe-area-inset-top)) * ${-fold})`,
+            }
+          : undefined
+      }
+    >
+      <Link href="/" className={styles.brand}>
+        <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
+      </Link>
+    </header>
+  );
+
   return (
     // The sidebar column (the logo header, then the sidebar) on the left of the board. On
     // narrow screens the column dissolves (Editor.module.css): the header stays at the top,
@@ -2855,6 +3103,10 @@ export default function Editor() {
             </span>
           </button>
         )}
+        {/* What the arrow keys picked or moved on the board, read out as it happens */}
+        <div role="status" className="sr-only">
+          {boardNews && <p key={boardNews.n}>{boardNews.text}</p>}
+        </div>
         {/* The toast's words for screen readers, in a live region that's always there (one
         that appears with its text in it is often not read out) */}
         <div role="status" className="sr-only">
@@ -2914,1070 +3166,1109 @@ export default function Editor() {
             <span aria-hidden className={styles.sidebarIcon} />
           </button>
         )}
-        <div
-          id="sidebar-column"
-          ref={sideColumnRef}
-          className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
-          inert={viewing !== null}
-        >
-          <header
-            className={`${styles.top} ${folded ? styles.topFolded : ''}`}
-            // Rising away as the sidebar folds
-            style={
-              fold > 0 && !folded
-                ? {
-                    marginTop: `calc((var(--tb-top-height) + env(safe-area-inset-top)) * ${-fold})`,
-                  }
-                : undefined
-            }
-          >
-            <Link href="/" className={styles.brand}>
-              <Image src="/tierbinder-combined-dark.svg" alt="TierBinder" width={114} height={25} />
-            </Link>
-          </header>
-          <SidebarHandle />
-          <aside
-            id="sidebar"
-            ref={sideRef}
-            className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
-            style={
-              foldingSideHeight !== null ? { flex: 'none', height: foldingSideHeight } : undefined
-            }
-          >
+        {/* The top bar: in the sidebar column beside the board; under b8 first in the page,
+        so the order the page is in (top bar, board, sidebar) is the order Tab and screen
+        readers go through it */}
+        {!wide && topBar}
+        {/* Beside the board, the sidebar column first; under b8 the board (the workspace)
+        comes before the sidebar, as it shows. Keyed, so switching moves them without
+        remounting the board */}
+        {(wide ? SIDE_FIRST : BOARD_FIRST).map((part) =>
+          part === 'side' ? (
             <div
-              ref={sideHeadRef}
-              className={`${styles.sideHead} flex gap-2 items-center`}
-              data-scrolled={panelScrolled || undefined}
-              // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
-              // is the one keyboards and screen readers get)
-              onClick={(e) => {
-                if (folded && !(e.target as Element).closest('button')) foldSidebar();
-              }}
+              key="side"
+              id="sidebar-column"
+              ref={sideColumnRef}
+              className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
+              inert={viewing !== null}
             >
-              {/* Folded on a phone: a bar at the page's foot, the light logo at its left and
-              the button to open it again at its right; the nav stays mounted, hidden */}
-              {folded && (
-                <div className={`${styles.foldedBrand} flex flex-1 min-w-0`}>
-                  <Image
-                    src="/tierbinder-combined-light.svg"
-                    alt="TierBinder"
-                    width={LIGHT_LOGO_WIDTH}
-                    height={LOGO_HEIGHT}
-                  />
-                </div>
-              )}
-              <div
-                className="flex-1 min-w-0"
-                hidden={folded}
-                // Folding, the nav fades out over the slide's last part, gone as it ends (then
-                // the logo fades in); opening, it fades back in over the first
+              {wide && topBar}
+              <SidebarHandle />
+              <aside
+                id="sidebar"
+                ref={sideRef}
+                className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
                 style={
-                  fold > 0 ? { opacity: Math.min(1, (1 - fold) / (fadeShare || 1)) } : undefined
+                  foldingSideHeight !== null
+                    ? { flex: 'none', height: foldingSideHeight }
+                    : undefined
                 }
               >
-                <RadioBar
-                  id={TAB_PREFIX}
-                  label="Editor sections"
-                  options={TABS}
-                  value={tab}
-                  onChange={(next, clicked) => {
-                    // Picking a tab, even the one showing, opens a folded sidebar
-                    setSidebarFolded(false);
-                    // Add Cards clicked or tapped while it's already showing: straight to
-                    // the search (in this click, so a phone brings up its keyboard).
-                    // Switching to it doesn't, nor do the arrow keys.
-                    if (next === 'add' && clicked && tab === 'add') {
-                      searchInputRef.current?.focus();
-                      return;
-                    }
-                    setTab(next);
+                <div
+                  ref={sideHeadRef}
+                  className={`${styles.sideHead} flex gap-2 items-center`}
+                  data-scrolled={panelScrolled || undefined}
+                  // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
+                  // is the one keyboards and screen readers get)
+                  onClick={(e) => {
+                    if (folded && !(e.target as Element).closest('button')) foldSidebar();
                   }}
-                  onFullWidth={fitSidebarToNav}
-                />
-              </div>
-              {/* On phones and tablets: the sidebar folds down to its nav under a bigger
-              board, and back */}
-              {!wide && (
-                <Button
-                  type="button"
-                  variant="quiet"
-                  className={styles.foldButton}
-                  // One name; aria-expanded says which way it is
-                  aria-label="Sidebar"
-                  aria-controls="sidebar"
-                  title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
-                  aria-expanded={!sidebarFolded}
-                  onClick={foldSidebar}
-                  // (rising with the slide to the folded bar's row, see foldHeights.shift; `translate`,
-                  // which the button doesn't transition, unlike its pressed `transform`)
-                  style={
-                    fold > 0 && !folded
-                      ? { translate: `0 ${-foldHeights.shift * fold}px` }
-                      : undefined
-                  }
                 >
-                  <span
-                    aria-hidden
-                    className={`${styles.foldIcon} ${sidebarFolded ? styles.foldIconUp : ''}`}
-                  />
-                </Button>
-              )}
-            </div>
-
-            {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
-            so the results scroll instead of widening the sidebar; on wide screens they
-            fill the sidebar's height and scroll on their own, and the panel scrolls when
-            the pools and Advanced don't fit */}
-            <section
-              role="tabpanel"
-              id={panelId(TAB_PREFIX, 'add')}
-              aria-labelledby={tabId(TAB_PREFIX, 'add')}
-              hidden={tab !== 'add'}
-              onScroll={onPanelScroll('add')}
-              className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
-            >
-              <h2 className="sr-only">Add Cards</h2>
-              {/* Grows to fill the sidebar while it shows search results */}
-              <div
-                className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'flex-1 min-h-0' : ''}`}
-              >
-                <h3 id="card-search-heading" className="tierbinder-heading">
-                  Add a Card
-                </h3>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    search(query);
-                  }}
-                  className={`${styles.searchRow} flex gap-3`}
-                >
-                  <label className={styles.search}>
-                    <span className={styles.searchIcon} aria-hidden />
-                    <input
-                      ref={searchInputRef}
-                      className="tierbinder-field"
-                      aria-labelledby="card-search-heading"
-                      // Card names aren't real words: don't let phones "fix" them. Nor
-                      // offer to fill them in: Safari reads "Card name" as a contact's
-                      // name and ignores autoComplete="off", but not a field named search
-                      autoCorrect="off"
-                      autoCapitalize="off"
-                      autoComplete="off"
-                      name="search"
-                      spellCheck={false}
-                      enterKeyHint="search"
-                      placeholder="Card name"
-                      value={query}
-                      onChange={(e) => {
-                        setQuery(e.target.value);
-                        // Emptying the field clears the results, bringing the other sections
-                        // back, or goes back to listing the filter's sets
-                        if (!e.target.value.trim()) search('');
-                      }}
-                    />
-                    {query && (
-                      <button
-                        type="button"
-                        className="tierbinder-clear"
-                        aria-label="Clear search"
-                        title="Clear search"
-                        onClick={() => {
-                          setQuery('');
-                          search('');
-                          searchInputRef.current?.focus();
-                        }}
-                      >
-                        <span aria-hidden />
-                      </button>
-                    )}
-                  </label>
-                  <Button variant="primary">Search</Button>
-                </form>
-                {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
-                picker when there's a choice (a blank canvas has one place for cards),
-                always; and while there are results (or none found), Sort, at the right */}
-                <div className="flex flex-wrap gap-3 items-center">
-                  {/* Sets and Add to stay on one line, their names cut short with an ellipsis
-                      when they don't fit rather than wrapping */}
-                  <div className="flex flex-1 min-w-0 gap-3 items-center">
-                    <SearchFilters
-                      options={searchOptions}
-                      colors={tickColors}
-                      onChange={changeSearchOptions}
-                    />
-                    {(!picking || splitPicker) && targets.length > 1 && (
-                      <Dropdown
-                        label="Add to"
-                        hideLabel
-                        chevron={false}
-                        value={targetIndex}
-                        options={targets.map((t, i) => ({
-                          value: i,
-                          label: t.name.replaceAll('\n', ' '),
-                          color: t.color,
-                          // The tray's color is a shade of the board, so it gets a stroke
-                          outlined: 'outlined' in t && t.outlined,
-                        }))}
-                        // While a split card is being made, it says so, with a white card as its
-                        // swatch; picking a target cancels the split
-                        current={
-                          splitPicker && pickingCard
-                            ? {
-                                label: `Splitting ${pickingCard.name}`,
-                                color: SPLIT_SWATCH,
-                                shape: 'card',
-                              }
-                            : undefined
-                        }
-                        onChange={(i) => {
-                          setTarget(i);
-                          if (splitPicker) setPicking(null);
-                        }}
-                      />
-                    )}
-                  </div>
-                  {/* The thumbnails' size, while there are results to show */}
-                  {searchShown && shownResults.length > 0 && (
-                    <div className="ml-auto">
-                      <Segmented
-                        compact
-                        label="Thumbnail size"
-                        value={resultSize}
-                        options={RESULT_SIZES}
-                        onChange={setResultSize}
+                  {/* Folded on a phone: a bar at the page's foot, the light logo at its left and
+              the button to open it again at its right; the nav stays mounted, hidden */}
+                  {folded && (
+                    <div className={`${styles.foldedBrand} flex flex-1 min-w-0`}>
+                      <Image
+                        src="/tierbinder-combined-light.svg"
+                        alt="TierBinder"
+                        width={LIGHT_LOGO_WIDTH}
+                        height={LOGO_HEIGHT}
                       />
                     </div>
                   )}
-                  {/* Flips the order: newest or oldest set first, and each set's numbers
-                  (hidden for now: SORT_BUTTON) */}
-                  {SORT_BUTTON && searchShown && (
+                  <div
+                    className="flex-1 min-w-0"
+                    hidden={folded}
+                    // Folding, the nav fades out over the slide's last part, gone as it ends (then
+                    // the logo fades in); opening, it fades back in over the first
+                    style={
+                      fold > 0 ? { opacity: Math.min(1, (1 - fold) / (fadeShare || 1)) } : undefined
+                    }
+                  >
+                    <RadioBar
+                      id={TAB_PREFIX}
+                      label="Editor sections"
+                      options={TABS}
+                      value={tab}
+                      onChange={(next, clicked) => {
+                        // Picking a tab, even the one showing, opens a folded sidebar
+                        setSidebarFolded(false);
+                        // Add Cards clicked or tapped while it's already showing: straight to
+                        // the search (in this click, so a phone brings up its keyboard).
+                        // Switching to it doesn't, nor do the arrow keys.
+                        if (next === 'add' && clicked && tab === 'add') {
+                          searchInputRef.current?.focus();
+                          return;
+                        }
+                        setTab(next);
+                      }}
+                      onFullWidth={fitSidebarToNav}
+                    />
+                  </div>
+                  {/* On phones and tablets: the sidebar folds down to its nav under a bigger
+              board, and back */}
+                  {!wide && (
                     <Button
                       type="button"
-                      variant="icon"
-                      className={shownResults.length > 0 ? undefined : 'ml-auto'}
-                      aria-label={`Sort: ${sortDirection}`}
-                      title={`Sort: ${sortDirection}`}
-                      onClick={() =>
-                        changeSearchOptions({ ...searchOptions, reverse: !searchOptions.reverse })
+                      variant="quiet"
+                      className={styles.foldButton}
+                      // One name; aria-expanded says which way it is
+                      aria-label="Sidebar"
+                      aria-controls="sidebar"
+                      title={sidebarFolded ? 'Expand sidebar' : 'Collapse sidebar'}
+                      aria-expanded={!sidebarFolded}
+                      onClick={foldSidebar}
+                      // (rising with the slide to the folded bar's row, see foldHeights.shift; `translate`,
+                      // which the button doesn't transition, unlike its pressed `transform`)
+                      style={
+                        fold > 0 && !folded
+                          ? { translate: `0 ${-foldHeights.shift * fold}px` }
+                          : undefined
                       }
                     >
                       <span
                         aria-hidden
-                        className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                        className={`${styles.foldIcon} ${sidebarFolded ? styles.foldIconUp : ''}`}
                       />
                     </Button>
                   )}
                 </div>
-                {/* What the search was for, and with sets ticked, a way to search them all */}
-                {searchError && !importing && !searching && (
-                  <p role="alert" className="text-(--tb-muted)">
-                    {searchError}
-                  </p>
-                )}
-                {noResults && !importing && !searching && (
-                  <div role="status" className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1">
-                      <p className="font-semibold">No Cards Found</p>
-                      {(noResults.query || noResults.sets.length > 0) && (
-                        <p className="text-(--tb-muted)">
-                          {noResults.query && `For “${noResults.query}”`}
-                          {noResults.query && noResults.sets.length > 0 && ' '}
-                          {noResults.sets.length > 0 &&
-                            `${noResults.query ? 'in' : 'In'} ${new Intl.ListFormat('en').format(noResults.sets)}`}
-                        </p>
+
+                {/* The panels stay mounted, so tabbing away keeps a search or import text. min-w-0
+            so the results scroll instead of widening the sidebar; on wide screens they
+            fill the sidebar's height and scroll on their own, and the panel scrolls when
+            the pools and Advanced don't fit */}
+                <section
+                  role="tabpanel"
+                  id={panelId(TAB_PREFIX, 'add')}
+                  aria-labelledby={tabId(TAB_PREFIX, 'add')}
+                  hidden={tab !== 'add'}
+                  onScroll={onPanelScroll('add')}
+                  className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
+                >
+                  <h2 className="sr-only">Add Cards</h2>
+                  {/* Grows to fill the sidebar while it shows search results */}
+                  <div
+                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'flex-1 min-h-0' : ''}`}
+                  >
+                    <h3 id="card-search-heading" className="tierbinder-heading">
+                      Add a Card
+                    </h3>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        search(query);
+                      }}
+                      className={`${styles.searchRow} flex gap-3`}
+                    >
+                      <label className={styles.search}>
+                        <span className={styles.searchIcon} aria-hidden />
+                        <input
+                          ref={searchInputRef}
+                          className="tierbinder-field"
+                          aria-labelledby="card-search-heading"
+                          // Card names aren't real words: don't let phones "fix" them. Nor
+                          // offer to fill them in: Safari reads "Card name" as a contact's
+                          // name and ignores autoComplete="off", but not a field named search
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          autoComplete="off"
+                          name="search"
+                          spellCheck={false}
+                          enterKeyHint="search"
+                          placeholder="Card name"
+                          value={query}
+                          onChange={(e) => {
+                            setQuery(e.target.value);
+                            // Emptying the field clears the results, bringing the other sections
+                            // back, or goes back to listing the filter's sets
+                            if (!e.target.value.trim()) search('');
+                          }}
+                        />
+                        {query && (
+                          <button
+                            type="button"
+                            className="tierbinder-clear"
+                            aria-label="Clear search"
+                            title="Clear search"
+                            onClick={() => {
+                              setQuery('');
+                              search('');
+                              searchInputRef.current?.focus();
+                            }}
+                          >
+                            <span aria-hidden />
+                          </button>
+                        )}
+                      </label>
+                      <Button variant="primary">Search</Button>
+                    </form>
+                    {/* One row: Sets (with no search, it lists the sets ticked) and the Add to
+                picker when there's a choice (a blank canvas has one place for cards),
+                always; and while there are results (or none found), Sort, at the right */}
+                    <div className="flex flex-wrap gap-3 items-center">
+                      {/* Sets and Add to stay on one line, their names cut short with an ellipsis
+                      when they don't fit rather than wrapping */}
+                      <div className="flex flex-1 min-w-0 gap-3 items-center">
+                        <SearchFilters
+                          options={searchOptions}
+                          colors={tickColors}
+                          onChange={changeSearchOptions}
+                        />
+                        {(!picking || splitPicker) && targets.length > 1 && (
+                          <Dropdown
+                            label="Add to"
+                            hideLabel
+                            chevron={false}
+                            value={targetIndex}
+                            options={targets.map((t, i) => ({
+                              value: i,
+                              label: t.name.replaceAll('\n', ' '),
+                              color: t.color,
+                              // The tray's color is a shade of the board, so it gets a stroke
+                              outlined: 'outlined' in t && t.outlined,
+                            }))}
+                            // While a split card is being made, it says so, with a white card as its
+                            // swatch; picking a target cancels the split
+                            current={
+                              splitPicker && pickingCard
+                                ? {
+                                    label: `Splitting ${pickingCard.name}`,
+                                    color: SPLIT_SWATCH,
+                                    shape: 'card',
+                                  }
+                                : undefined
+                            }
+                            onChange={(i) => {
+                              setTarget(i);
+                              if (splitPicker) setPicking(null);
+                            }}
+                          />
+                        )}
+                      </div>
+                      {/* The thumbnails' size, while there are results to show */}
+                      {searchShown && shownResults.length > 0 && (
+                        <div className="ml-auto">
+                          <Segmented
+                            compact
+                            label="Thumbnail size"
+                            value={resultSize}
+                            options={RESULT_SIZES}
+                            onChange={setResultSize}
+                          />
+                        </div>
+                      )}
+                      {/* Flips the order: newest or oldest set first, and each set's numbers
+                  (hidden for now: SORT_BUTTON) */}
+                      {SORT_BUTTON && searchShown && (
+                        <Button
+                          type="button"
+                          variant="icon"
+                          className={shownResults.length > 0 ? undefined : 'ml-auto'}
+                          aria-label={`Sort: ${sortDirection}`}
+                          title={`Sort: ${sortDirection}`}
+                          onClick={() =>
+                            changeSearchOptions({
+                              ...searchOptions,
+                              reverse: !searchOptions.reverse,
+                            })
+                          }
+                        >
+                          <span
+                            aria-hidden
+                            className={`${styles.sortIcon} ${searchOptions.reverse ? styles.reversed : ''}`}
+                          />
+                        </Button>
                       )}
                     </div>
-                    {noResults.sets.length > 0 && (
-                      <Button
-                        type="button"
-                        className="self-start"
-                        onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
-                      >
-                        {noResults.query ? 'Search All Sets' : 'Clear Sets'}
-                      </Button>
+                    {/* What the search was for, and with sets ticked, a way to search them all */}
+                    {searchError && !importing && !searching && (
+                      <p role="alert" className="text-(--tb-muted)">
+                        {searchError}
+                      </p>
                     )}
-                  </div>
-                )}
-                {picking && pickingCard && !splitPicker && (
-                  <p className="flex gap-3 items-center">
-                    {picking.part === 'top'
-                      ? pickingCard.split
-                        ? `Replacing the Top Half (${pickingCard.name})`
-                        : `Replacing ${pickingCard.name}`
-                      : pickingCard.split
-                        ? `Replacing the Bottom Half (${pickingCard.split.name})`
-                        : `Splitting ${pickingCard.name}: Pick the Bottom Card`}
-                    <Button onClick={() => setPicking(null)}>Cancel</Button>
-                  </p>
-                )}
-                {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
+                    {noResults && !importing && !searching && (
+                      <div role="status" className="flex flex-col gap-3">
+                        <div className="flex flex-col gap-1">
+                          <p className="font-semibold">No Cards Found</p>
+                          {(noResults.query || noResults.sets.length > 0) && (
+                            <p className="text-(--tb-muted)">
+                              {noResults.query && `For “${noResults.query}”`}
+                              {noResults.query && noResults.sets.length > 0 && ' '}
+                              {noResults.sets.length > 0 &&
+                                `${noResults.query ? 'in' : 'In'} ${new Intl.ListFormat('en').format(noResults.sets)}`}
+                            </p>
+                          )}
+                        </div>
+                        {noResults.sets.length > 0 && (
+                          <Button
+                            type="button"
+                            className="self-start"
+                            onClick={() => changeSearchOptions({ ...searchOptions, sets: [] })}
+                          >
+                            {noResults.query ? 'Search All Sets' : 'Clear Sets'}
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {picking && pickingCard && !splitPicker && (
+                      <p className="flex gap-3 items-center">
+                        {picking.part === 'top'
+                          ? pickingCard.split
+                            ? `Replacing the Top Half (${pickingCard.name})`
+                            : `Replacing ${pickingCard.name}`
+                          : pickingCard.split
+                            ? `Replacing the Bottom Half (${pickingCard.split.name})`
+                            : `Splitting ${pickingCard.name}: Pick the Bottom Card`}
+                        <Button onClick={() => setPicking(null)}>Cancel</Button>
+                      </p>
+                    )}
+                    {/* Tiles as many per row as fit (Editor.module.css): placeholders while a
                 search is under way, then the results. A shade over the top shows when
                 they're scrolled. */}
-                {/* The skeleton and results are visual; this says what they show */}
-                {/* Making a split card shows only on the Add to picker; this says it */}
-                <p role="status" className="sr-only">
-                  {splitPicker && pickingCard
-                    ? `Splitting ${pickingCard.name}: pick the bottom card from the results, or a tier to cancel.`
-                    : ''}
-                </p>
-                <p role="status" className="sr-only">
-                  {showingSkeleton
-                    ? 'Searching…'
-                    : showingResults
-                      ? `${shownResults.length} cards`
-                      : ''}
-                </p>
-                {(showingResults || showingSkeleton) && (
-                  <div className={`${styles.resultsBox} flex-1`} data-size={resultSize}>
-                    <div
-                      ref={resultsRef}
-                      className={`${styles.results} overflow-y-auto overflow-x-hidden`}
-                      style={
-                        { '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}` } as React.CSSProperties
-                      }
-                      onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
-                    >
+                    {/* The skeleton and results are visual; this says what they show */}
+                    {/* Making a split card shows only on the Add to picker; this says it */}
+                    <p role="status" className="sr-only">
+                      {splitPicker && pickingCard
+                        ? `Splitting ${pickingCard.name}: pick the bottom card from the results, or a tier to cancel.`
+                        : ''}
+                    </p>
+                    <p role="status" className="sr-only">
                       {showingSkeleton
-                        ? Array.from({ length: SKELETON_TILES[resultSize] }, (_, i) => (
-                            <span key={i} aria-hidden className={styles.resultThumb} />
-                          ))
-                        : visibleResults.map((card) => (
-                            <div
-                              key={`${card.set}-${card.number}`}
-                              role="button"
-                              tabIndex={0}
-                              title={`${card.set} ${card.number}`}
-                              className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
-                              // Mouse and pen only: on touch, a press-and-move scrolls the results
-                              onPointerDown={(e) => {
-                                // A new press of any kind starts afresh (no click is fired
-                                // after a long press on some phones)
-                                longPressOpened.current = false;
-                                // On touch, a long press opens the result's menu (a press and
-                                // move scrolls the results instead)
-                                if (e.pointerType === 'touch') {
-                                  startLongPress(card, e.currentTarget, e.clientX, e.clientY);
-                                  return;
-                                }
-                                if (e.button !== 0) return;
-                                e.preventDefault();
-                                // The board draws the full-size image, not this thumbnail:
-                                // start loading it now, so it's usually there when the card
-                                // lands (a failure shows on the board, not here). Mouse and
-                                // pen only: on touch a press is often the start of a scroll,
-                                // and a tap's card loads as it lands
-                                loadImage(card.image).catch(() => {});
-                                resultPress.current = {
-                                  card,
-                                  x: e.clientX,
-                                  y: e.clientY,
-                                  dragging: false,
-                                };
-                              }}
-                              onPointerMove={(e) => {
-                                const press = longPress.current;
-                                if (
-                                  press &&
-                                  Math.hypot(e.clientX - press.x, e.clientY - press.y) > TOUCH_SLOP
-                                ) {
-                                  cancelLongPress();
-                                }
-                              }}
-                              onPointerUp={cancelLongPress}
-                              onPointerCancel={cancelLongPress}
-                              onClick={(e) => {
-                                // The tap that ends a long press doesn't also add the card
-                                if (longPressOpened.current) {
-                                  longPressOpened.current = false;
-                                  return;
-                                }
-                                if (!justDragged.current) pickResult(card, e.currentTarget);
-                              }}
-                              // Right-click (or the menu key) opens the result's own menu
-                              onContextMenu={(e) => {
-                                e.preventDefault();
-                                // Android also fires this on a long press: that one's open
-                                if (longPressOpened.current) return;
-                                const tile = e.currentTarget;
-                                const box = tile.getBoundingClientRect();
-                                openResultMenu(
-                                  card,
-                                  tile,
-                                  // The menu key reports no pointer: open at the result
-                                  e.clientX || box.left + box.width / 2,
-                                  e.clientY || box.top + box.height / 2
-                                );
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  pickResult(card, e.currentTarget);
-                                }
-                              }}
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
-                              <img
-                                // A new size is a new image, shimmering until it loads
-                                key={resultSize}
-                                src={resultSrc(card)}
-                                alt={`${card.name} (${card.set} ${card.number})`}
-                                className={`${styles.resultThumb} object-contain`}
-                                // Shimmers until it's loaded (Editor.module.css)
-                                onLoad={(e) => {
-                                  e.currentTarget.dataset.loaded = '';
-                                }}
-                                loading="lazy"
-                                draggable={false}
-                                // The CDN occasionally fails a load; retry once through the image
-                                // proxy (then a Large one's small image, both ways), and hide
-                                // the result if that fails too
-                                onError={(e) => {
-                                  const tries = [...new Set([resultSrc(card), card.thumb])].flatMap(
-                                    (src) => [src, proxied(src)]
-                                  );
-                                  const now = tries.findLastIndex((src) =>
-                                    e.currentTarget.src.endsWith(src)
-                                  );
-                                  if (now < tries.length - 1) {
-                                    e.currentTarget.src = tries[now + 1];
-                                    return;
-                                  }
-                                  const key = `${card.set} ${card.number}`;
-                                  setUnshown((u) => ({
-                                    of: results,
-                                    keys: new Set([...(u.of === results ? u.keys : []), key]),
-                                  }));
-                                }}
-                              />
-                            </div>
-                          ))}
-                      {/* Reaching it draws the next page */}
-                      {!showingSkeleton && visibleResults.length < shownResults.length && (
-                        <span ref={moreResultsRef} aria-hidden className="col-span-full" />
-                      )}
-                    </div>
-                    <span
-                      aria-hidden
-                      className={styles.resultsShade}
-                      data-shown={resultsScrolled}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Card pools and Advanced, until a search shows results or finds none; they come
-              back when the search is emptied or the board is cleared. Each pool is a button
-              that adds its cards to the card tray, or for a set's pool, lists the set. */}
-              {!searchShown && (
-                <div className="flex flex-col gap-3">
-                  <h3 className="tierbinder-heading">Featured Card Pools</h3>
-                  {FEATURED_POOLS.map((pool) => {
-                    const inTray = poolInTray(pool);
-                    // What clicking it does: list its set, add its cards, or take them back out
-                    const action = pool.filter ? 'filter' : inTray ? 'remove' : 'add';
-                    return (
-                      <button
-                        key={pool.name}
-                        type="button"
-                        className={styles.pool}
-                        aria-label={`${pool.name}: ${POOL_ACTIONS[action].aria}`}
-                        // Its cards past the preview load ahead of a click, so they fly showing
-                        // their own picture rather than an empty one
-                        onPointerEnter={() => preloadPool(pool)}
-                        onFocus={() => preloadPool(pool)}
-                        onClick={(e) => {
-                          // A double click's second click would take straight back what
-                          // its first added (under reduced motion nothing flies to wait for)
-                          if (e.detail > 1 && !pool.filter) return;
-                          if (pool.filter) filterToSet(pool.filter);
-                          else if (inTray) removePool(pool, inTray, e.currentTarget);
-                          else addPool(pool, e.currentTarget);
-                        }}
-                      >
-                        {/* Its name, and what clicking it does */}
-                        <span className={`${styles.poolName} text-caption`}>
-                          <span className="font-semibold">{pool.name}</span>
-                          <span className={styles.poolAction} aria-hidden>
-                            <span className={styles.poolIcon} data-action={action} />
-                            {POOL_ACTIONS[action].label}
-                          </span>
-                        </span>
-                        {/* A fixed number of columns, so every pool's cards are the same size */}
-                        <span
-                          className={styles.poolCards}
+                        ? 'Searching…'
+                        : showingResults
+                          ? `${shownResults.length} cards`
+                          : ''}
+                    </p>
+                    {(showingResults || showingSkeleton) && (
+                      <div className={`${styles.resultsBox} flex-1`} data-size={resultSize}>
+                        <div
+                          ref={resultsRef}
+                          className={`${styles.results} overflow-y-auto overflow-x-hidden`}
                           style={
                             {
-                              '--pool-columns': POOL_PREVIEW_CARDS,
                               '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
                             } as React.CSSProperties
                           }
+                          onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
                         >
-                          {poolPreview(pool).map((card) => (
-                            // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
-                            <img
-                              key={`${card.set}-${card.number}`}
-                              src={card.thumb}
-                              alt={`${card.name} (${card.set} ${card.number})`}
-                              title={`${card.name} (${card.set} ${card.number})`}
-                              className={styles.poolCard}
-                              // Shimmers until it's loaded, as search results do
-                              onLoad={(e) => {
-                                e.currentTarget.dataset.loaded = '';
-                              }}
-                              loading="lazy"
-                              draggable={false}
-                              // The CDN occasionally fails a load; retry once through the proxy, and
-                              // if that fails too, a placeholder takes its place
-                              onError={(e) => {
-                                const proxy = proxied(card.thumb);
-                                if (!e.currentTarget.src.endsWith(proxy))
-                                  e.currentTarget.src = proxy;
-                                else
-                                  setFailedPoolCards((failed) =>
-                                    new Set(failed).add(`${card.set} ${card.number}`)
-                                  );
-                              }}
-                            />
-                          ))}
-                          {/* Card-shaped placeholders fill the rest of the row */}
-                          {Array.from(
-                            { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
-                            (_, i) => (
-                              <span key={`empty-${i}`} className={styles.poolCard} aria-hidden />
-                            )
+                          {showingSkeleton
+                            ? Array.from({ length: SKELETON_TILES[resultSize] }, (_, i) => (
+                                <span key={i} aria-hidden className={styles.resultThumb} />
+                              ))
+                            : visibleResults.map((card) => (
+                                <div
+                                  key={`${card.set}-${card.number}`}
+                                  role="button"
+                                  tabIndex={0}
+                                  title={`${card.set} ${card.number}`}
+                                  className={`${styles.resultTile} cursor-grab select-none flex flex-col items-center`}
+                                  // Mouse and pen only: on touch, a press-and-move scrolls the results
+                                  onPointerDown={(e) => {
+                                    // A new press of any kind starts afresh (no click is fired
+                                    // after a long press on some phones)
+                                    longPressOpened.current = false;
+                                    // On touch, a long press opens the result's menu (a press and
+                                    // move scrolls the results instead)
+                                    if (e.pointerType === 'touch') {
+                                      startLongPress(card, e.currentTarget, e.clientX, e.clientY);
+                                      return;
+                                    }
+                                    if (e.button !== 0) return;
+                                    e.preventDefault();
+                                    // The board draws the full-size image, not this thumbnail:
+                                    // start loading it now, so it's usually there when the card
+                                    // lands (a failure shows on the board, not here). Mouse and
+                                    // pen only: on touch a press is often the start of a scroll,
+                                    // and a tap's card loads as it lands
+                                    loadImage(card.image).catch(() => {});
+                                    resultPress.current = {
+                                      card,
+                                      x: e.clientX,
+                                      y: e.clientY,
+                                      dragging: false,
+                                    };
+                                  }}
+                                  onPointerMove={(e) => {
+                                    const press = longPress.current;
+                                    if (
+                                      press &&
+                                      Math.hypot(e.clientX - press.x, e.clientY - press.y) >
+                                        TOUCH_SLOP
+                                    ) {
+                                      cancelLongPress();
+                                    }
+                                  }}
+                                  onPointerUp={cancelLongPress}
+                                  onPointerCancel={cancelLongPress}
+                                  onClick={(e) => {
+                                    // The tap that ends a long press doesn't also add the card
+                                    if (longPressOpened.current) {
+                                      longPressOpened.current = false;
+                                      return;
+                                    }
+                                    if (!justDragged.current) pickResult(card, e.currentTarget);
+                                  }}
+                                  // Right-click (or the menu key) opens the result's own menu
+                                  onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    // Android also fires this on a long press: that one's open
+                                    if (longPressOpened.current) return;
+                                    const tile = e.currentTarget;
+                                    const box = tile.getBoundingClientRect();
+                                    openResultMenu(
+                                      card,
+                                      tile,
+                                      // The menu key reports no pointer: open at the result
+                                      e.clientX || box.left + box.width / 2,
+                                      e.clientY || box.top + box.height / 2
+                                    );
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      pickResult(card, e.currentTarget);
+                                    }
+                                  }}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, no optimization needed */}
+                                  <img
+                                    // A new size is a new image, shimmering until it loads
+                                    key={resultSize}
+                                    src={resultSrc(card)}
+                                    alt={`${card.name} (${card.set} ${card.number})`}
+                                    className={`${styles.resultThumb} object-contain`}
+                                    // Shimmers until it's loaded (Editor.module.css)
+                                    onLoad={(e) => {
+                                      e.currentTarget.dataset.loaded = '';
+                                    }}
+                                    loading="lazy"
+                                    draggable={false}
+                                    // The CDN occasionally fails a load; retry once through the image
+                                    // proxy (then a Large one's small image, both ways), and hide
+                                    // the result if that fails too
+                                    onError={(e) => {
+                                      const tries = [
+                                        ...new Set([resultSrc(card), card.thumb]),
+                                      ].flatMap((src) => [src, proxied(src)]);
+                                      const now = tries.findLastIndex((src) =>
+                                        e.currentTarget.src.endsWith(src)
+                                      );
+                                      if (now < tries.length - 1) {
+                                        e.currentTarget.src = tries[now + 1];
+                                        return;
+                                      }
+                                      const key = `${card.set} ${card.number}`;
+                                      setUnshown((u) => ({
+                                        of: results,
+                                        keys: new Set([...(u.of === results ? u.keys : []), key]),
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                          {/* Reaching it draws the next page */}
+                          {!showingSkeleton && visibleResults.length < shownResults.length && (
+                            <span ref={moreResultsRef} aria-hidden className="col-span-full" />
                           )}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                        </div>
+                        <span
+                          aria-hidden
+                          className={styles.resultsShade}
+                          data-shown={resultsScrolled}
+                        />
+                      </div>
+                    )}
+                  </div>
 
-              {!searchShown && (
-                <div className="flex flex-col gap-3">
-                  <h3 className="tierbinder-heading">Advanced</h3>
-                  {/* A disclosure: the button names the import below it, which slides open */}
-                  <div className="flex flex-col">
-                    <Button
-                      id="bulk-import-label"
-                      variant="text"
-                      className="self-start"
-                      aria-expanded={importing}
-                      aria-controls="bulk-import"
-                      onClick={() => {
-                        setImporting(!importing);
-                        // The page follows it down as it slides open, so it isn't left
-                        // opening off screen under a phone's board
-                        if (!importing && importRef.current) followOpen(importRef.current);
-                      }}
-                    >
-                      Bulk Import
-                      <span aria-hidden className={styles.disclosureChevron} />
-                    </Button>
-                    <div
-                      ref={importRef}
-                      id="bulk-import"
-                      className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
-                      inert={!importing}
-                    >
-                      <div>
-                        <div className="flex flex-col gap-3 pt-3">
-                          <textarea
-                            rows={10}
-                            aria-labelledby="bulk-import-label"
-                            autoCorrect="off"
-                            autoCapitalize="off"
-                            spellCheck={false}
-                            className="tierbinder-field font-mono"
-                            placeholder={
-                              'Pikachu ex SSP 57\n# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
-                            }
-                            value={importText}
-                            onChange={(e) => setImportText(e.target.value)}
-                          />
-                          <Button
-                            variant="primary"
-                            className="self-start"
-                            onClick={runImport}
-                            disabled={busy || !importText.trim()}
+                  {/* Card pools and Advanced, until a search shows results or finds none; they come
+              back when the search is emptied or the board is cleared. Each pool is a button
+              that adds its cards to the card tray, or for a set's pool, lists the set. */}
+                  {!searchShown && (
+                    <div className="flex flex-col gap-3">
+                      <h3 className="tierbinder-heading">Featured Card Pools</h3>
+                      {FEATURED_POOLS.map((pool) => {
+                        const inTray = poolInTray(pool);
+                        // What clicking it does: list its set, add its cards, or take them back out
+                        const action = pool.filter ? 'filter' : inTray ? 'remove' : 'add';
+                        return (
+                          <button
+                            key={pool.name}
+                            type="button"
+                            className={styles.pool}
+                            aria-label={`${pool.name}: ${POOL_ACTIONS[action].aria}`}
+                            // Its cards past the preview load ahead of a click, so they fly showing
+                            // their own picture rather than an empty one
+                            onPointerEnter={() => preloadPool(pool)}
+                            onFocus={() => preloadPool(pool)}
+                            onClick={(e) => {
+                              // A double click's second click would take straight back what
+                              // its first added (under reduced motion nothing flies to wait for)
+                              if (e.detail > 1 && !pool.filter) return;
+                              if (pool.filter) filterToSet(pool.filter);
+                              else if (inTray) removePool(pool, inTray, e.currentTarget);
+                              else addPool(pool, e.currentTarget);
+                            }}
                           >
-                            Import
-                          </Button>
+                            {/* Its name, and what clicking it does */}
+                            <span className={`${styles.poolName} text-caption`}>
+                              <span className="font-semibold">{pool.name}</span>
+                              <span className={styles.poolAction} aria-hidden>
+                                <span className={styles.poolIcon} data-action={action} />
+                                {POOL_ACTIONS[action].label}
+                              </span>
+                            </span>
+                            {/* A fixed number of columns, so every pool's cards are the same size */}
+                            <span
+                              className={styles.poolCards}
+                              style={
+                                {
+                                  '--pool-columns': POOL_PREVIEW_CARDS,
+                                  '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
+                                } as React.CSSProperties
+                              }
+                            >
+                              {poolPreview(pool).map((card) => (
+                                // eslint-disable-next-line @next/next/no-img-element -- remote thumbnails, as in the results
+                                <img
+                                  key={`${card.set}-${card.number}`}
+                                  src={card.thumb}
+                                  alt={`${card.name} (${card.set} ${card.number})`}
+                                  title={`${card.name} (${card.set} ${card.number})`}
+                                  className={styles.poolCard}
+                                  // Shimmers until it's loaded, as search results do
+                                  onLoad={(e) => {
+                                    e.currentTarget.dataset.loaded = '';
+                                  }}
+                                  loading="lazy"
+                                  draggable={false}
+                                  // The CDN occasionally fails a load; retry once through the proxy, and
+                                  // if that fails too, a placeholder takes its place
+                                  onError={(e) => {
+                                    const proxy = proxied(card.thumb);
+                                    if (!e.currentTarget.src.endsWith(proxy))
+                                      e.currentTarget.src = proxy;
+                                    else
+                                      setFailedPoolCards((failed) =>
+                                        new Set(failed).add(`${card.set} ${card.number}`)
+                                      );
+                                  }}
+                                />
+                              ))}
+                              {/* Card-shaped placeholders fill the rest of the row */}
+                              {Array.from(
+                                { length: POOL_PREVIEW_CARDS - poolPreview(pool).length },
+                                (_, i) => (
+                                  <span
+                                    key={`empty-${i}`}
+                                    className={styles.poolCard}
+                                    aria-hidden
+                                  />
+                                )
+                              )}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {!searchShown && (
+                    <div className="flex flex-col gap-3">
+                      <h3 className="tierbinder-heading">Advanced</h3>
+                      {/* A disclosure: the button names the import below it, which slides open */}
+                      <div className="flex flex-col">
+                        <Button
+                          id="bulk-import-label"
+                          variant="text"
+                          className="self-start"
+                          aria-expanded={importing}
+                          aria-controls="bulk-import"
+                          onClick={() => {
+                            setImporting(!importing);
+                            // The page follows it down as it slides open, so it isn't left
+                            // opening off screen under a phone's board
+                            if (!importing && importRef.current) followOpen(importRef.current);
+                          }}
+                        >
+                          Bulk Import
+                          <span aria-hidden className={styles.disclosureChevron} />
+                        </Button>
+                        <div
+                          ref={importRef}
+                          id="bulk-import"
+                          className={`${styles.reveal} ${importing ? styles.revealed : ''}`}
+                          inert={!importing}
+                        >
+                          <div>
+                            <div className="flex flex-col gap-3 pt-3">
+                              <textarea
+                                rows={10}
+                                aria-labelledby="bulk-import-label"
+                                autoCorrect="off"
+                                autoCapitalize="off"
+                                spellCheck={false}
+                                className="tierbinder-field font-mono"
+                                placeholder={
+                                  'Pikachu ex SSP 57\n# Goated\nMew ex MEW 151\nAlakazam\n# Solid\nDragapult ex TWM 130'
+                                }
+                                value={importText}
+                                onChange={(e) => setImportText(e.target.value)}
+                              />
+                              <Button
+                                variant="primary"
+                                className="self-start"
+                                onClick={runImport}
+                                disabled={busy || !importText.trim()}
+                              >
+                                Import
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-            </section>
+                  )}
+                </section>
 
-            <section
-              role="tabpanel"
-              id={panelId(TAB_PREFIX, 'customize')}
-              aria-labelledby={tabId(TAB_PREFIX, 'customize')}
-              hidden={tab !== 'customize'}
-              onScroll={onPanelScroll('customize')}
-              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
-            >
-              <h2 className="sr-only">Customize</h2>
-              {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
+                <section
+                  role="tabpanel"
+                  id={panelId(TAB_PREFIX, 'customize')}
+                  aria-labelledby={tabId(TAB_PREFIX, 'customize')}
+                  hidden={tab !== 'customize'}
+                  onScroll={onPanelScroll('customize')}
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
+                >
+                  <h2 className="sr-only">Customize</h2>
+                  {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
               hairline between sections (.tierbinder-sections), and every setting a row
               with its label muted at the left and its control at the right
               (.tierbinder-prop). Board first, what the board is: its type and shape (where
               it's posted: it sets the board's width and the image's size), with Clear at
               the end of its heading. Then the graphic's own sections (what's on it), then
               Style (how it looks), then the card tray. */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="tierbinder-heading">Board</h3>
-                  {/* Asks first with a menu of only the clears that would change something */}
-                  <ClearButton
-                    quiet
-                    label="Clear board"
-                    choices={boardClears}
-                    // Nothing left to clear: the button's disabled, so focus goes to the board
-                    onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
-                  >
-                    Clear
-                  </ClearButton>
-                </div>
-                <Dropdown
-                  label="Type"
-                  prop
-                  value={doc.kind}
-                  options={GRAPHIC_TYPES.map((t) => ({
-                    value: t.kind,
-                    label: t.label,
-                    icon: t.icon,
-                  }))}
-                  onChange={(kind) => {
-                    if (kind !== doc.kind) showBoard(kind);
-                  }}
-                />
-                <Dropdown
-                  label="Shape"
-                  prop
-                  value={graphic.shape}
-                  options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
-                  onChange={(shape) => {
-                    if (shape !== graphic.shape)
-                      setGraphic((g) => typeOf(g.kind).reshape(g, shape));
-                  }}
-                />
-              </div>
-              <type.Settings
-                graphic={graphic}
-                onChange={setGraphic}
-                focus={settingsFocus}
-                onNotify={showToast}
-              />
-              {/* How the board itself looks: its sizes, colors and borders (a tier's color is
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h3 className="tierbinder-heading">Board</h3>
+                      {/* Asks first with a menu of only the clears that would change something */}
+                      <ClearButton
+                        quiet
+                        label="Clear board"
+                        choices={boardClears}
+                        // Nothing left to clear: the button's disabled, so focus goes to the board
+                        onEmptied={() => boardBoxRef.current?.focus({ preventScroll: true })}
+                      >
+                        Clear
+                      </ClearButton>
+                    </div>
+                    <Dropdown
+                      label="Type"
+                      prop
+                      value={doc.kind}
+                      options={GRAPHIC_TYPES.map((t) => ({
+                        value: t.kind,
+                        label: t.label,
+                        icon: t.icon,
+                      }))}
+                      onChange={(kind) => {
+                        if (kind !== doc.kind) showBoard(kind);
+                      }}
+                    />
+                    <Dropdown
+                      label="Shape"
+                      prop
+                      value={graphic.shape}
+                      options={SHAPES.map((s) => ({ value: s.id, label: s.label }))}
+                      onChange={(shape) => {
+                        if (shape !== graphic.shape)
+                          setGraphic((g) => typeOf(g.kind).reshape(g, shape));
+                      }}
+                    />
+                  </div>
+                  <type.Settings
+                    graphic={graphic}
+                    onChange={setGraphic}
+                    focus={settingsFocus}
+                    onNotify={showToast}
+                  />
+                  {/* How the board itself looks: its sizes, colors and borders (a tier's color is
                   with its name, the tray's with the tray) */}
-              <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Style</h3>
-                <type.BoardSettings
-                  graphic={graphic}
-                  onChange={setGraphic}
-                  focus={settingsFocus}
-                  onNotify={showToast}
-                />
-              </div>
-              <div ref={traySectionRef} className="flex flex-col gap-3">
-                {/* Its switch turns the whole section on or off, so the heading is the
+                  <div className="flex flex-col gap-3">
+                    <h3 className="tierbinder-heading">Style</h3>
+                    <type.BoardSettings
+                      graphic={graphic}
+                      onChange={setGraphic}
+                      focus={settingsFocus}
+                      onNotify={showToast}
+                    />
+                  </div>
+                  <div ref={traySectionRef} className="flex flex-col gap-3">
+                    {/* Its switch turns the whole section on or off, so the heading is the
                     switch: its name, then the switch at the row's end, as every toggle has
                     it; its other rows show only while the tray is on */}
-                <h3 className="tierbinder-heading flex flex-col">
-                  <Toggle
-                    checked={graphic.tray.enabled}
-                    onChange={(on) => {
-                      showTray(on);
-                      // Its rows come into view once they and the tray are laid out: on
-                      // phones the tray growing under the board moves the sidebar down too,
-                      // so once it has slid in
-                      if (on)
-                        setTimeout(
-                          () => {
-                            if (traySectionRef.current) revealBelow(traySectionRef.current);
-                          },
-                          matchMedia('(prefers-reduced-motion: reduce)').matches
-                            ? 0
-                            : readDuration('--duration-move')
-                        );
-                    }}
-                    heading
-                  >
-                    Card Tray
-                  </Toggle>
-                </h3>
-                {graphic.tray.enabled && (
-                  <ColorField
-                    name="Tray Color"
-                    label="Card tray color"
-                    value={graphic.tray.color}
-                    onChange={(color) => setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))}
-                  />
-                )}
-              </div>
-            </section>
+                    <h3 className="tierbinder-heading flex flex-col">
+                      <Toggle
+                        checked={graphic.tray.enabled}
+                        onChange={(on) => {
+                          showTray(on);
+                          // Its rows come into view once they and the tray are laid out: on
+                          // phones the tray growing under the board moves the sidebar down too,
+                          // so once it has slid in
+                          if (on)
+                            setTimeout(
+                              () => {
+                                if (traySectionRef.current) revealBelow(traySectionRef.current);
+                              },
+                              matchMedia('(prefers-reduced-motion: reduce)').matches
+                                ? 0
+                                : readDuration('--duration-move')
+                            );
+                        }}
+                        heading
+                      >
+                        Card Tray
+                      </Toggle>
+                    </h3>
+                    {graphic.tray.enabled && (
+                      <ColorField
+                        name="Tray Color"
+                        label="Card tray color"
+                        value={graphic.tray.color}
+                        onChange={(color) =>
+                          setGraphic((g) => ({ ...g, tray: { ...g.tray, color } }))
+                        }
+                      />
+                    )}
+                  </div>
+                </section>
 
-            <section
-              role="tabpanel"
-              id={panelId(TAB_PREFIX, 'save')}
-              aria-labelledby={tabId(TAB_PREFIX, 'save')}
-              hidden={tab !== 'save'}
-              onScroll={onPanelScroll('save')}
-              className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
-            >
-              <h2 className="sr-only">Save &amp; Share</h2>
-              {/* Sections as in Customize, a hairline between them and each setting a row: the
+                <section
+                  role="tabpanel"
+                  id={panelId(TAB_PREFIX, 'save')}
+                  aria-labelledby={tabId(TAB_PREFIX, 'save')}
+                  hidden={tab !== 'save'}
+                  onScroll={onPanelScroll('save')}
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
+                >
+                  <h2 className="sr-only">Save &amp; Share</h2>
+                  {/* Sections as in Customize, a hairline between them and each setting a row: the
               image (its size and format, whether the card tray goes in it, and exporting
               or copying it), then the share link. Each section's buttons act on it, so they
               sit in it, as Import does in Advanced. */}
-              <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Image</h3>
-                <div className="tierbinder-prop">
-                  Size
-                  <span className="text-(--tb-text)">
-                    {exported.width} × {exported.height}
-                  </span>
-                </div>
-                <div className="tierbinder-prop">
-                  Format
-                  <span className="text-(--tb-text)">PNG</span>
-                </div>
-                {trayShown && (
-                  <Toggle checked={includeTray} onChange={setIncludeTray}>
-                    Include Card Tray
-                  </Toggle>
-                )}
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="primary"
-                    onClick={exportPng}
-                    disabled={busy}
-                    aria-busy={working === 'export'}
-                  >
-                    <Working active={working === 'export'} label="Exporting">
-                      Export PNG
-                    </Working>
-                  </Button>
-                  <Button onClick={copyPng} disabled={busy} aria-busy={working === 'copy'}>
-                    <Working active={working === 'copy'} label="Copying">
-                      Copy PNG
-                    </Working>
-                  </Button>
-                </div>
-              </div>
-              {/* A link that opens this board, card tray and all, on anyone's device */}
-              <div className="flex flex-col gap-3">
-                <h3 className="tierbinder-heading">Link</h3>
-                <p className="text-(--tb-muted) text-pretty">
-                  Opens this board and its card tray for anyone you send it to.
-                </p>
-                <div className="flex">
-                  <Button onClick={copyLink} aria-busy={working === 'link'}>
-                    <Working active={working === 'link'} label="Copying">
-                      <span aria-hidden className={styles.linkIcon} />
-                      Copy Link
-                    </Working>
-                  </Button>
-                </div>
-              </div>
-            </section>
+                  <div className="flex flex-col gap-3">
+                    <h3 className="tierbinder-heading">Image</h3>
+                    <div className="tierbinder-prop">
+                      Size
+                      <span className="text-(--tb-text)">
+                        {exported.width} × {exported.height}
+                      </span>
+                    </div>
+                    <div className="tierbinder-prop">
+                      Format
+                      <span className="text-(--tb-text)">PNG</span>
+                    </div>
+                    {trayShown && (
+                      <Toggle checked={includeTray} onChange={setIncludeTray}>
+                        Include Card Tray
+                      </Toggle>
+                    )}
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        variant="primary"
+                        onClick={exportPng}
+                        disabled={busy}
+                        aria-busy={working === 'export'}
+                      >
+                        <Working active={working === 'export'} label="Exporting">
+                          Export PNG
+                        </Working>
+                      </Button>
+                      <Button onClick={copyPng} disabled={busy} aria-busy={working === 'copy'}>
+                        <Working active={working === 'copy'} label="Copying">
+                          Copy PNG
+                        </Working>
+                      </Button>
+                    </div>
+                  </div>
+                  {/* A link that opens this board, card tray and all, on anyone's device */}
+                  <div className="flex flex-col gap-3">
+                    <h3 className="tierbinder-heading">Link</h3>
+                    <p className="text-(--tb-muted) text-pretty">
+                      Opens this board and its card tray for anyone you send it to.
+                    </p>
+                    <div className="flex">
+                      <Button onClick={copyLink} aria-busy={working === 'link'}>
+                        <Working active={working === 'link'} label="Copying">
+                          <span aria-hidden className={styles.linkIcon} />
+                          Copy Link
+                        </Working>
+                      </Button>
+                    </div>
+                  </div>
+                </section>
 
-            {/* The credits, and from b8 up the button that hides the sidebar at its other end:
+                {/* The credits, and from b8 up the button that hides the sidebar at its other end:
             at the sidebar's foot under every tab beside the board, and under b8 only in
             Save & Share, where the sidebar's height is too short to spend on them */}
-            <footer ref={footRef} className={styles.foot} hidden={footHidden}>
-              <Credits />
-              {wide && (
-                <button
-                  ref={hideSidebarRef}
-                  type="button"
-                  className={styles.sidebarToggle}
-                  aria-label="Hide sidebar"
-                  title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
-                  aria-keyshortcuts="Control+\ Meta+\"
-                  aria-controls="sidebar-column"
-                  onClick={toggleSidebar}
-                >
-                  <span aria-hidden className={styles.sidebarIcon} />
-                </button>
-              )}
-            </footer>
-          </aside>
-        </div>
-
-        <div
-          ref={workspaceRef}
-          // With the sidebar hidden, more room at the left, so the board stays clear of the show
-          // button at the bottom left
-          className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
-          // Folding, it takes over the status bar's inset from the rising top bar
-          style={
-            fold > 0
-              ? { paddingTop: `calc(var(--spacing-4) + env(safe-area-inset-top) * ${fold})` }
-              : undefined
-          }
-          inert={viewing !== null}
-        >
-          {/* Under b8 the toolbar takes the page's width, so a board narrowed to fit its height
+                <footer ref={footRef} className={styles.foot} hidden={footHidden}>
+                  <Credits />
+                  {wide && (
+                    <button
+                      ref={hideSidebarRef}
+                      type="button"
+                      className={styles.sidebarToggle}
+                      aria-label="Hide sidebar"
+                      title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
+                      aria-keyshortcuts="Control+\ Meta+\"
+                      aria-controls="sidebar-column"
+                      onClick={toggleSidebar}
+                    >
+                      <span aria-hidden className={styles.sidebarIcon} />
+                    </button>
+                  )}
+                </footer>
+              </aside>
+            </div>
+          ) : (
+            <div
+              key="board"
+              ref={workspaceRef}
+              // With the sidebar hidden, more room at the left, so the board stays clear of the show
+              // button at the bottom left
+              className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+              // Folding, it takes over the status bar's inset from the rising top bar
+              style={
+                fold > 0
+                  ? { paddingTop: `calc(var(--spacing-4) + env(safe-area-inset-top) * ${fold})` }
+                  : undefined
+              }
+              inert={viewing !== null}
+            >
+              {/* Under b8 the toolbar takes the page's width, so a board narrowed to fit its height
           share doesn't wrap the toolbar (which would narrow the board further); beside the
           sidebar it's the board's width */}
-          <div
-            ref={boardRef}
-            className="flex flex-col gap-4 self-stretch b8:self-auto"
-            style={wide ? { width: stageWidth * scale } : undefined}
-          >
-            <div
-              ref={boardBoxRef}
-              tabIndex={-1}
-              className={`${styles.boardBox} self-center relative`}
-              style={{ width: stageWidth * scale }}
-            >
-              {/* The board for screen readers, to whom the canvas is one image: each tier (or
-              the canvas) and the card tray, with their cards in order */}
-              <div className="sr-only">
-                <h2>{type.label}</h2>
-                <ul>
-                  {describeBoard(graphic).map((line, i) => (
-                    <li key={i}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-              <Stage
-                ref={(stage) => {
-                  stageRef.current = stage;
-                }}
-                width={stageWidth * scale}
-                // Shifted so the board, centered over a wider card tray, starts at x = 0
-                x={boardLeft * scale}
-                height={BOARD_HEIGHT * scale + TRAY_GAP * trayOpen + shownTrayHeight * scale}
-                scaleX={scale}
-                scaleY={scale}
-                // Before the press below can deselect it: a tier or the tray clicked with a
-                // card selected moves the card there (pickTargetOnBoard)
-                // (not while a replacement is being picked, which keeps its card selected)
-                onPointerDown={() => {
-                  pressSelection.current = selectedShown && !picking ? selectedId : null;
-                }}
-                onMouseDown={(e) => {
-                  // A double click's second press (a tier label opening its name) moves nothing
-                  if (e.evt.detail > 1) pressSelection.current = null;
-                  if (e.target === e.target.getStage() || e.target.hasName('background')) {
-                    setSelectedId(null);
-                  }
-                }}
-                // A card menu a long press opened closes once the finger drags the card on
-                onDragStart={() => setCardMenu(null)}
-                onDragMove={moveOutline}
-                // After the card's own dragend has put it back at its laid-out spot; React only
-                // moves the outline when that spot changes
-                onDragEnd={moveOutline}
+              <div
+                ref={boardRef}
+                className="flex flex-col gap-4 self-stretch b8:self-auto"
+                style={wide ? { width: stageWidth * scale } : undefined}
               >
-                <type.Canvas
-                  graphic={graphic}
-                  fontFamily={fontFamily}
-                  onChange={(next) => setGraphic(() => next)}
-                  onSelect={setSelectedId}
-                  onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-                  onCardDrop={boardCardDrop}
-                  cardDragWidth={cardDragWidth}
-                  arriving={arriving}
-                  onPickTarget={(i, emptySpace) => pickTargetOnBoard(i, emptySpace)}
-                  selectedId={selectedId}
-                  onEditSetting={(key) => {
-                    setTab('customize');
-                    setSidebarHidden(false);
-                    setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
-                  }}
-                  tool={tool}
-                />
-                {trayDrawn && (
-                  <CardTray
-                    tray={graphic.tray}
-                    width={shownTrayWidth}
-                    left={trayLeft}
-                    top={trayTop}
-                    scale={scale}
-                    border={graphic.border}
-                    fontFamily={fontFamily}
-                    onSelect={setSelectedId}
-                    onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
-                    onCardDrop={trayCardDrop}
-                    onPick={() => pickTargetOnBoard(boardTargets.length, true)}
-                    selectedId={selectedId}
-                    oneRow={oneRowTray}
-                    pan={trayPan}
-                    // (closing a card menu, which would no longer point at its card)
-                    onPan={(next) => {
-                      setTrayPan(next);
-                      setCardMenu(null);
-                    }}
-                    onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
-                    boardCardWidth={boardCardWidth}
-                    hintFont={interfaceFont}
-                    showHint={!trayHintSeen}
-                    arriving={arriving}
-                    // Ignores presses while drawing (pen, eraser), as the board does, and while
-                    // it slides away
-                    listening={trayShown && tool === DEFAULT_TOOL}
-                    opacity={trayOpacity}
-                  />
-                )}
-                {/* Editor-only layer: hidden while exporting */}
-                {/* Listening, so the dragged card's events (moved here) still reach the stage and
-                move the outline with it; the outline itself takes no presses */}
-                <Layer name="editor">
-                  {/* The card being dragged, over the board and the tray and under the outline
-                  (CardNode moves it here) */}
-                  <Group name="drag" />
-                  {placements
-                    .filter((p) => p.item.id === selectedId)
-                    .map((p) => (
-                      <Rect
-                        key={p.item.id}
-                        ref={outlineRef}
-                        x={p.x - OUTLINE.width}
-                        y={p.y - OUTLINE.width}
-                        width={p.width + 2 * OUTLINE.width}
-                        height={p.height + 2 * OUTLINE.width}
-                        stroke={OUTLINE.color}
-                        strokeWidth={OUTLINE.width}
-                        cornerRadius={OUTLINE.radius}
-                        listening={false}
-                      />
+                {/* The board for screen readers, to whom the canvas is one image: each tier (or
+            the canvas) and the card tray, with their cards in order, and its keys */}
+                <div className="sr-only">
+                  <h2>{type.label}</h2>
+                  <p id="board-keys">
+                    Arrow keys pick a card, Alt and the arrow keys move it, Enter opens its menu,
+                    Delete removes it
+                  </p>
+                  <ul>
+                    {describeBoard(graphic).map((line, i) => (
+                      <li key={i}>{line}</li>
                     ))}
-                </Layer>
-              </Stage>
-              {shownMenu &&
-                (menuClosing ||
-                  findCard(shownMenu.id) ||
-                  (shownMenu.id === TRAY_MENU && trayShown)) && (
-                  <div
-                    // A new element for each menu, so each one plays the opening animation
-                    key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
-                    ref={cardMenuRef}
-                    role="menu"
-                    onContextMenu={(e) => e.preventDefault()}
-                    onKeyDown={onCardMenuKey}
-                    // Its flyout reaches past it (cardMenu in Editor.module.css)
-                    className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list ${styles.cardMenu} flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
-                    // Kept inside the board's right edge
-                    style={{
-                      minWidth: MENU_WIDTH,
-                      left: Math.max(0, Math.min(shownMenu.x, stageWidth * scale - MENU_WIDTH)),
-                      // In the card tray, at the board's foot, it opens upward from the pointer;
-                      // elsewhere down from it, raised where it wouldn't fit in the window
-                      ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
-                        ? { bottom: `calc(100% - ${shownMenu.y}px)` }
-                        : {
-                            top:
-                              raisedMenu?.key === menuKey(shownMenu) ? raisedMenu.top : shownMenu.y,
-                          }),
+                  </ul>
+                </div>
+                <div
+                  ref={boardBoxRef}
+                  // One Tab stop: the arrow keys pick its cards (onBoardKey). An application,
+                  // so screen readers pass the arrows on; what's on it is in the list before it
+                  tabIndex={0}
+                  role="application"
+                  aria-roledescription="board"
+                  aria-label={type.label}
+                  aria-describedby="board-keys"
+                  data-selected={selectedShown ? '' : undefined}
+                  onKeyDown={onBoardKey}
+                  className={`${styles.boardBox} self-center relative`}
+                  style={{ width: stageWidth * scale }}
+                >
+                  <Stage
+                    ref={(stage) => {
+                      stageRef.current = stage;
                     }}
+                    width={stageWidth * scale}
+                    // Shifted so the board, centered over a wider card tray, starts at x = 0
+                    x={boardLeft * scale}
+                    height={BOARD_HEIGHT * scale + TRAY_GAP * trayOpen + shownTrayHeight * scale}
+                    scaleX={scale}
+                    scaleY={scale}
+                    // Before the press below can deselect it: a tier or the tray clicked with a
+                    // card selected moves the card there (pickTargetOnBoard)
+                    // (not while a replacement is being picked, which keeps its card selected)
+                    onPointerDown={() => {
+                      pressSelection.current = selectedShown && !picking ? selectedId : null;
+                    }}
+                    onMouseDown={(e) => {
+                      // A double click's second press (a tier label opening its name) moves nothing
+                      if (e.evt.detail > 1) pressSelection.current = null;
+                      if (e.target === e.target.getStage() || e.target.hasName('background')) {
+                        setSelectedId(null);
+                      }
+                    }}
+                    // A card menu a long press opened closes once the finger drags the card on
+                    onDragStart={() => setCardMenu(null)}
+                    onDragMove={moveOutline}
+                    // After the card's own dragend has put it back at its laid-out spot; React only
+                    // moves the outline when that spot changes
+                    onDragEnd={moveOutline}
                   >
-                    {cardMenuItems(shownMenu).map((label) =>
-                      label === 'Clear card tray' || label === MOVE_TO ? (
-                        // Opens on a click (or Enter), not on hover; a second click closes it.
-                        // Escape in it goes back to the row.
-                        <div key={label} className={styles.flyoutAnchor}>
-                          <button
-                            ref={trayFlyoutRowRef}
-                            role="menuitem"
-                            aria-haspopup="menu"
-                            aria-expanded={!!shownMenu.flyout}
-                            data-row={label}
-                            className={`tierbinder-option ${styles.flyoutItem}`}
-                            onClick={() => toggleTrayFlyout(shownMenu, label === MOVE_TO)}
-                          >
-                            {titleCase(label === MOVE_TO ? moveLabel(shownMenu.id) : label)}
-                            <span aria-hidden className={styles.menuChevron} />
-                          </button>
-                          {shownTrayFlyout !== null && (
-                            <div
-                              data-flyout
-                              role="menu"
-                              aria-label={
-                                label === MOVE_TO ? moveLabel(shownMenu.id) : 'Clear card tray'
-                              }
-                              // Add to's choices, by their index in `targets` (one handler
-                              // here rather than one per choice)
-                              onClick={(e) => {
-                                const choice = (e.target as HTMLElement).closest<HTMLElement>(
-                                  '[data-target]'
-                                );
-                                if (choice)
-                                  moveFromMenu(shownMenu.id, Number(choice.dataset.target));
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key !== 'Escape') return;
-                                // Not the page's Escape, which would close the whole menu
-                                e.stopPropagation();
-                                // Not a menu already closing (it stays closed)
-                                setCardMenu((m) => m && { ...m, flyout: undefined });
-                                trayFlyoutRowRef.current?.focus();
-                              }}
-                              className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${trayFlyoutClosing ? 'closing pointer-events-none' : ''}`}
-                            >
-                              {label === MOVE_TO ? (
-                                // Every place the card can go, with its swatch, as the
-                                // result menu's Add to has
-                                moveChoices(shownMenu.id).map((i) => (
-                                  <button
-                                    key={i}
-                                    role="menuitem"
-                                    className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
-                                    data-target={i}
-                                  >
-                                    <Swatch
-                                      color={targets[i].color}
-                                      outlined={'outlined' in targets[i] && targets[i].outlined}
-                                    />
-                                    {targets[i].name.replaceAll('\n', ' ')}
-                                  </button>
-                                ))
-                              ) : (
-                                <button
-                                  role="menuitem"
-                                  className="tierbinder-option whitespace-nowrap"
-                                  onClick={() => {
-                                    clearTray();
-                                    setShownMenu(null);
-                                    setCardMenu(null);
-                                    // The menu is gone: focus goes to the board, not lost
-                                    boardBoxRef.current?.focus({ preventScroll: true });
+                    <type.Canvas
+                      graphic={graphic}
+                      fontFamily={fontFamily}
+                      onChange={(next) => setGraphic(() => next)}
+                      onSelect={setSelectedId}
+                      onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                      onCardDrop={boardCardDrop}
+                      cardDragWidth={cardDragWidth}
+                      arriving={arriving}
+                      onPickTarget={(i, emptySpace) => pickTargetOnBoard(i, emptySpace)}
+                      selectedId={selectedId}
+                      onEditSetting={(key) => {
+                        setTab('customize');
+                        setSidebarHidden(false);
+                        setSettingsFocus((f) => ({ key, n: (f?.n ?? 0) + 1 }));
+                      }}
+                      tool={tool}
+                    />
+                    {trayDrawn && (
+                      <CardTray
+                        tray={graphic.tray}
+                        width={shownTrayWidth}
+                        left={trayLeft}
+                        top={trayTop}
+                        scale={scale}
+                        border={graphic.border}
+                        fontFamily={fontFamily}
+                        onSelect={setSelectedId}
+                        onCardMenu={(id, x, y) => setCardMenu({ id, x, y })}
+                        onCardDrop={trayCardDrop}
+                        onPick={() => pickTargetOnBoard(boardTargets.length, true)}
+                        selectedId={selectedId}
+                        oneRow={oneRowTray}
+                        pan={trayPan}
+                        // (closing a card menu, which would no longer point at its card)
+                        onPan={(next) => {
+                          setTrayPan(next);
+                          setCardMenu(null);
+                        }}
+                        onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
+                        boardCardWidth={boardCardWidth}
+                        hintFont={interfaceFont}
+                        showHint={!trayHintSeen}
+                        arriving={arriving}
+                        // Ignores presses while drawing (pen, eraser), as the board does, and while
+                        // it slides away
+                        listening={trayShown && tool === DEFAULT_TOOL}
+                        opacity={trayOpacity}
+                      />
+                    )}
+                    {/* Editor-only layer: hidden while exporting */}
+                    {/* Listening, so the dragged card's events (moved here) still reach the stage and
+                move the outline with it; the outline itself takes no presses */}
+                    <Layer name="editor">
+                      {/* The card being dragged, over the board and the tray and under the outline
+                  (CardNode moves it here) */}
+                      <Group name="drag" />
+                      {placements
+                        .filter((p) => p.item.id === selectedId)
+                        .map((p) => (
+                          <Rect
+                            key={p.item.id}
+                            ref={outlineRef}
+                            x={p.x - OUTLINE.width}
+                            y={p.y - OUTLINE.width}
+                            width={p.width + 2 * OUTLINE.width}
+                            height={p.height + 2 * OUTLINE.width}
+                            stroke={OUTLINE.color}
+                            strokeWidth={OUTLINE.width}
+                            cornerRadius={OUTLINE.radius}
+                            listening={false}
+                          />
+                        ))}
+                    </Layer>
+                  </Stage>
+                  {shownMenu &&
+                    (menuClosing ||
+                      findCard(shownMenu.id) ||
+                      (shownMenu.id === TRAY_MENU && trayShown)) && (
+                      <div
+                        // A new element for each menu, so each one plays the opening animation
+                        key={`${shownMenu.id} ${shownMenu.x} ${shownMenu.y}`}
+                        ref={cardMenuRef}
+                        role="menu"
+                        onContextMenu={(e) => e.preventDefault()}
+                        onKeyDown={onCardMenuKey}
+                        // Its flyout reaches past it (cardMenu in Editor.module.css)
+                        className={`tierbinder-menu absolute z-10 tierbinder-popup tierbinder-list ${styles.cardMenu} flex flex-col ${menuClosing ? 'closing pointer-events-none' : ''}`}
+                        // Kept inside the board's right edge
+                        style={{
+                          minWidth: MENU_WIDTH,
+                          left: Math.max(0, Math.min(shownMenu.x, stageWidth * scale - MENU_WIDTH)),
+                          // In the card tray, at the board's foot, it opens upward from the pointer;
+                          // elsewhere down from it, raised where it wouldn't fit in the window
+                          ...(trayShown && shownMenu.y > BOARD_HEIGHT * scale
+                            ? { bottom: `calc(100% - ${shownMenu.y}px)` }
+                            : {
+                                top:
+                                  raisedMenu?.key === menuKey(shownMenu)
+                                    ? raisedMenu.top
+                                    : shownMenu.y,
+                              }),
+                        }}
+                      >
+                        {cardMenuItems(shownMenu).map((label) =>
+                          label === 'Clear card tray' || label === MOVE_TO ? (
+                            // Opens on a click (or Enter), not on hover; a second click closes it.
+                            // Escape in it goes back to the row.
+                            <div key={label} className={styles.flyoutAnchor}>
+                              <button
+                                // The open flyout's row, for its placement and to go back to
+                                ref={shownFlyoutRow === label ? trayFlyoutRowRef : undefined}
+                                role="menuitem"
+                                tabIndex={-1}
+                                aria-haspopup="menu"
+                                aria-expanded={!!shownMenu.flyout && shownMenu.flyoutRow === label}
+                                data-row={label}
+                                className={`tierbinder-option ${styles.flyoutItem}`}
+                                onClick={() => toggleTrayFlyout(shownMenu, label === MOVE_TO)}
+                              >
+                                {titleCase(label === MOVE_TO ? moveLabel(shownMenu.id) : label)}
+                                <span aria-hidden className={styles.menuChevron} />
+                              </button>
+                              {shownTrayFlyout !== null && shownFlyoutRow === label && (
+                                <div
+                                  data-flyout
+                                  role="menu"
+                                  aria-label={
+                                    label === MOVE_TO ? moveLabel(shownMenu.id) : 'Clear card tray'
+                                  }
+                                  // Add to's choices, by their index in `targets` (one handler
+                                  // here rather than one per choice)
+                                  onClick={(e) => {
+                                    const choice = (e.target as HTMLElement).closest<HTMLElement>(
+                                      '[data-target]'
+                                    );
+                                    if (choice)
+                                      moveFromMenu(shownMenu.id, Number(choice.dataset.target));
                                   }}
+                                  onKeyDown={(e) => {
+                                    if (e.key !== 'Escape') return;
+                                    // Not the page's Escape, which would close the whole menu
+                                    e.stopPropagation();
+                                    // Not a menu already closing (it stays closed)
+                                    setCardMenu(
+                                      (m) => m && { ...m, flyout: undefined, flyoutRow: undefined }
+                                    );
+                                    trayFlyoutRowRef.current?.focus();
+                                  }}
+                                  className={`tierbinder-menu tierbinder-popup tierbinder-list ${styles.flyout} flex flex-col ${trayFlyoutClosing ? 'closing pointer-events-none' : ''}`}
                                 >
-                                  {`Clear ${cardCount(shownTrayFlyout)}`}
-                                </button>
+                                  {label === MOVE_TO ? (
+                                    // Every place the card can go, with its swatch, as the
+                                    // result menu's Add to has
+                                    moveChoices(shownMenu.id).map((i) => (
+                                      <button
+                                        key={i}
+                                        role="menuitem"
+                                        tabIndex={-1}
+                                        className="tierbinder-option flex gap-2 items-center whitespace-nowrap"
+                                        data-target={i}
+                                      >
+                                        <Swatch
+                                          color={targets[i].color}
+                                          outlined={'outlined' in targets[i] && targets[i].outlined}
+                                        />
+                                        {targets[i].name.replaceAll('\n', ' ')}
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <button
+                                      role="menuitem"
+                                      tabIndex={-1}
+                                      className="tierbinder-option whitespace-nowrap"
+                                      onClick={() => {
+                                        clearTray();
+                                        setShownMenu(null);
+                                        setCardMenu(null);
+                                        // The menu is gone: focus goes to the board, not lost
+                                        boardBoxRef.current?.focus({ preventScroll: true });
+                                      }}
+                                    >
+                                      {`Clear ${cardCount(shownTrayFlyout)}`}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          )}
-                        </div>
-                      ) : (
-                        <button
-                          key={label}
-                          role="menuitem"
-                          className="tierbinder-option"
-                          onClick={() => {
-                            runCardMenuItem(shownMenu, label);
-                            setCardMenu(null);
-                          }}
-                        >
-                          {titleCase(label)}
-                        </button>
-                      )
+                          ) : (
+                            <button
+                              key={label}
+                              role="menuitem"
+                              tabIndex={-1}
+                              className="tierbinder-option"
+                              onClick={() => {
+                                runCardMenuItem(shownMenu, label);
+                                setCardMenu(null);
+                              }}
+                            >
+                              {titleCase(label)}
+                            </button>
+                          )
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
-            </div>
+                </div>
 
-            {type.Toolbar && (
-              <type.Toolbar graphic={graphic} onChange={setGraphic} tool={tool} onTool={setTool} />
-            )}
-          </div>
-        </div>
+                {type.Toolbar && (
+                  <type.Toolbar
+                    graphic={graphic}
+                    onChange={setGraphic}
+                    tool={tool}
+                    onTool={setTool}
+                  />
+                )}
+              </div>
+            </div>
+          )
+        )}
 
         {shownResultMenu && (
           <div
