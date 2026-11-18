@@ -6,6 +6,7 @@ import { Group, Image as KonvaImage, Rect, Text } from 'react-konva';
 import { loadImage, type CardFace, type CardItem } from '../cards';
 import type { Point } from '../graphics/types';
 import { readDuration } from '../ui/motion';
+import { LONG_PRESS, TOUCH_SLOP } from '../ui/pointer';
 import { CARD_BORDER_WIDTH, CARD_CORNER_RADIUS, CARD_HEIGHT, CARD_WIDTH } from './size';
 
 // A card on the board, shared by every graphic: its image (or both halves of a split
@@ -289,6 +290,58 @@ export default function CardNode({
     if (pointer) onMenu(pointer.x, pointer.y);
   };
 
+  // A touch (or pen) held LONG_PRESS without moving past TOUCH_SLOP opens the menu, as a right-click
+  // does; moving, lifting or the card starting to drag cancels it. Android also fires its
+  // own contextmenu for a long press, which is ignored once this one has opened the menu.
+  const longPress = React.useRef<{ timer: number; stop: () => void } | null>(null);
+  const longPressed = React.useRef(false);
+  const cancelLongPress = () => {
+    longPress.current?.stop();
+    longPress.current = null;
+  };
+  const startLongPress = (e: Konva.KonvaEventObject<PointerEvent>) => {
+    cancelLongPress();
+    longPressed.current = false;
+    // A mouse drags after Konva's few pixels; a finger or pen after TOUCH_SLOP, so the
+    // wobble of a held finger doesn't start a drag and cancel the long press
+    const mouse = e.evt.pointerType === 'mouse';
+    e.currentTarget.dragDistance(mouse ? Konva.dragDistance : TOUCH_SLOP);
+    // (a finger or a pen; a mouse has its right button)
+    if (mouse) return;
+    const { pointerId, clientX, clientY } = e.evt;
+    // Where the menu opens: where this finger went down, not wherever another is later
+    const at = e.target.getStage()?.getPointerPosition();
+    const move = (ev: PointerEvent) => {
+      if (
+        ev.pointerId === pointerId &&
+        Math.hypot(ev.clientX - clientX, ev.clientY - clientY) > TOUCH_SLOP
+      )
+        cancelLongPress();
+    };
+    const end = (ev: PointerEvent) => {
+      if (ev.pointerId === pointerId) cancelLongPress();
+    };
+    const timer = window.setTimeout(() => {
+      cancelLongPress();
+      longPressed.current = true;
+      onSelect();
+      if (at) onMenu(at.x, at.y);
+    }, LONG_PRESS);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    longPress.current = {
+      timer,
+      stop: () => {
+        clearTimeout(timer);
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', end);
+      },
+    };
+  };
+  React.useEffect(() => () => cancelLongPress(), []);
+
   return (
     <Group
       name="card"
@@ -313,25 +366,22 @@ export default function CardNode({
         if (dragWidth) resizeTo(this, dragWidth(center));
         return cornerAt(stage, center, drag.current.scale);
       }}
+      // A click or tap selects the card; its menu opens on a right-click (in place of the
+      // browser's) or a long press, so selecting a card to move or delete it doesn't
       onMouseDown={onSelect}
-      // Konva fires click/tap only when the card wasn't dragged. It also fires click for
-      // the right button; that opens the menu through contextmenu instead, or the menu
-      // would open under the pointer before contextmenu and take that event.
-      onClick={(e) => {
-        if (e.evt.button === 0) openMenu(e.target.getStage());
-      }}
-      onTap={(e) => {
-        onSelect();
-        openMenu(e.target.getStage());
-      }}
-      // Right-click opens the same menu in place of the browser's
+      onTap={onSelect}
+      onPointerDown={startLongPress}
       onContextMenu={(e) => {
         e.evt.preventDefault();
+        // (Android's own long press can come first: this one then doesn't open it again)
+        cancelLongPress();
+        if (longPressed.current) return;
         onSelect();
         openMenu(e.target.getStage());
       }}
       // Above everything while dragging, then back in order (later cards overlap earlier)
       onDragStart={(e) => {
+        cancelLongPress();
         const node = e.target;
         const stage = node.getStage();
         const parent = node.getParent();

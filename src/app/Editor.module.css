@@ -461,6 +461,11 @@
   animation: view-fade var(--duration-fade) ease-out;
 }
 
+/* A long press on a card opens its menu (CardNode.tsx), not iOS's own callout */
+.boardBox {
+  -webkit-touch-callout: none;
+}
+
 /* Focused when View closes, to hand focus back to the board and its selected card; the
    selection outline already shows where it is */
 .boardBox:focus-visible {
