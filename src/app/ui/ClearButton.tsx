@@ -46,7 +46,9 @@ export default function ClearButton({
   }, [open]);
 
   return (
-    <div ref={boxRef} className="relative">
+    // A flex box, not a block, so it holds no line of text of its own: the button alone sets
+    // its height and baseline, which keeps a heading beside it where headings always are
+    <div ref={boxRef} className="relative flex">
       <Button
         ref={buttonRef}
         variant={quiet ? 'text' : 'default'}
@@ -66,7 +68,7 @@ export default function ClearButton({
         }}
       >
         <span aria-hidden className={styles.icon} />
-        {children}
+        <span className={styles.words}>{children}</span>
       </Button>
       {shown && (
         <div

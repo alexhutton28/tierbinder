@@ -14,19 +14,39 @@
   }
 }
 
-/* Quiet: muted until hovered (Button's text hover brightens it); on touch screens its 44px
-   target gives the extra height back, so the heading it sits beside keeps its line */
+/* Quiet: muted until hovered (Button's text hover brightens it), as tall as the heading
+   beside it: its words are trimmed to their capitals as headings are, and its icon centered
+   on them takes no more height, so the row is the heading's and its words share the
+   heading's baseline (they're the button's baseline: the icon doesn't take part). On touch
+   screens a 44px target reaches out around it without taking room */
 button.quiet {
+  position: relative;
+  align-items: baseline;
+  min-height: 0;
+
+  /* No box, so no border above or below to make it taller than its words */
+  border-block-width: 0;
   color: var(--tb-muted);
+}
+
+button.quiet .words {
+  text-box: trim-both cap alphabetic;
+}
+
+button.quiet .icon {
+  align-self: center;
+  margin-block: calc((1cap - var(--tb-icon)) / 2);
+}
+
+@media (pointer: coarse) {
+  button.quiet::before {
+    position: absolute;
+    inset: calc((1cap - var(--tb-touch-target)) / 2) 0;
+    content: '';
+  }
 }
 
 /* Lit while its menu is open, as every button with an open popup is */
 button.quiet[aria-expanded='true'] {
   color: var(--tb-heading);
-}
-
-@media (pointer: coarse) {
-  button.quiet {
-    margin-block: calc((1lh - var(--tb-touch-target)) / 2);
-  }
 }
