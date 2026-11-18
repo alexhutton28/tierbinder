@@ -28,7 +28,11 @@ const blank: GraphicType<BlankCanvas> = {
   cardWidth: (canvas) => canvas.cardWidth,
   layout: layoutCards,
   describe: (canvas) => [
-    { name: 'Canvas', items: canvas.items, note: canvas.strokes.length ? 'drawing' : undefined },
+    {
+      name: 'Canvas',
+      items: canvas.items,
+      note: canvas.strokes.length ? 'ink drawn on it' : undefined,
+    },
   ],
   mapCards,
   hasContents: (canvas) => canvas.items.length > 0 || canvas.strokes.length > 0,

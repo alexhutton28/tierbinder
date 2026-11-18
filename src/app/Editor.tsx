@@ -252,7 +252,9 @@ function describeBoard(graphic: Graphic) {
   return places.map(({ name, items, note }) => {
     const cards = items.length
       ? `${items.length} ${items.length === 1 ? 'card' : 'cards'}: ${items.map(cardLabel).join(', ')}`
-      : 'empty';
+      : note
+        ? 'no cards'
+        : 'empty';
     return `${name}: ${cards}${note ? `; ${note}` : ''}`;
   });
 }
@@ -3730,15 +3732,13 @@ export default function Editor() {
             <div
               ref={boardBoxRef}
               tabIndex={-1}
-              role="group"
-              aria-labelledby="board-heading"
               className={`${styles.boardBox} self-center relative`}
               style={{ width: stageWidth * scale }}
             >
               {/* The board for screen readers, to whom the canvas is one image: each tier (or
               the canvas) and the card tray, with their cards in order */}
               <div className="sr-only">
-                <h2 id="board-heading">{type.label}</h2>
+                <h2>{type.label}</h2>
                 <ul>
                   {describeBoard(graphic).map((line, i) => (
                     <li key={i}>{line}</li>
