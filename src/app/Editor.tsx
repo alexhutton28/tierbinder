@@ -17,6 +17,7 @@ import {
   CARD_WIDTH,
 } from './canvas/size';
 import {
+  cardLabel,
   faceOf,
   loadImage,
   mapLimit,
@@ -63,7 +64,7 @@ import Toggle from './ui/Toggle';
 import Working from './ui/Working';
 import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
-import RadioBar from './ui/RadioBar';
+import RadioBar, { panelId, tabId } from './ui/RadioBar';
 import SearchFilters from './ui/SearchFilters';
 import Credits from './ui/Credits';
 import SidebarHandle from './ui/SidebarHandle';
@@ -241,6 +242,23 @@ function shortcutKey(e: KeyboardEvent) {
   return /^[a-z]$/.test(key) ? key : e.code.replace(/^Key/, '').toLowerCase();
 }
 
+// The board for screen readers, a line for each place (a tier, the canvas, the card tray
+// while it shows): its name, then its cards in order, or that it's empty
+function describeBoard(graphic: Graphic) {
+  const places = [
+    ...typeOf(graphic.kind).describe(graphic),
+    ...(graphic.tray.enabled ? [{ name: 'Card Tray', items: graphic.tray.items }] : []),
+  ];
+  return places.map(({ name, items, note }) => {
+    const cards = items.length
+      ? `${items.length} ${items.length === 1 ? 'card' : 'cards'}: ${items.map(cardLabel).join(', ')}`
+      : note
+        ? 'no cards'
+        : 'empty';
+    return `${name}: ${cards}${note ? `; ${note}` : ''}`;
+  });
+}
+
 // From b8 up, where the board has the room beside the sidebar
 function wideQuery() {
   const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
@@ -262,6 +280,8 @@ const TABS = [
   { value: 'save', label: 'Save & Share', icon: 'share', color: 'var(--color-tier-solid)' },
 ] as const;
 type Tab = (typeof TABS)[number]['value'];
+// The main nav's tab ids, and its panels' (RadioBar's tabId and panelId)
+const TAB_PREFIX = 'sidebar-tab';
 
 // Card pools shown in Add Cards before a search: each previews its first POOL_PREVIEW_CARDS
 // cards in a row, or card-shaped placeholders while it has none. Clicking one adds all its
@@ -2804,6 +2824,9 @@ export default function Editor() {
         ref={pageRef}
         className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
       >
+        {/* The page's title for screen readers' heading list (the logo is an image, and hides
+        with the sidebar): the panels and the board are its h2s, their sections h3s */}
+        <h1 className="sr-only">TierBinder</h1>
         {logoMounted && (
           <button
             ref={floatingLogoRef}
@@ -2953,6 +2976,7 @@ export default function Editor() {
                 }
               >
                 <RadioBar
+                  id={TAB_PREFIX}
                   label="Editor sections"
                   options={TABS}
                   value={tab}
@@ -3006,10 +3030,13 @@ export default function Editor() {
             the pools and Advanced don't fit */}
             <section
               role="tabpanel"
+              id={panelId(TAB_PREFIX, 'add')}
+              aria-labelledby={tabId(TAB_PREFIX, 'add')}
               hidden={tab !== 'add'}
               onScroll={onPanelScroll('add')}
               className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
+              <h2 className="sr-only">Add Cards</h2>
               {/* Grows to fill the sidebar while it shows search results */}
               <div
                 className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'flex-1 min-h-0' : ''}`}
@@ -3486,10 +3513,13 @@ export default function Editor() {
 
             <section
               role="tabpanel"
+              id={panelId(TAB_PREFIX, 'customize')}
+              aria-labelledby={tabId(TAB_PREFIX, 'customize')}
               hidden={tab !== 'customize'}
               onScroll={onPanelScroll('customize')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
+              <h2 className="sr-only">Customize</h2>
               {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
               hairline between sections (.tierbinder-sections), and every setting a row
               with its label muted at the left and its control at the right
@@ -3592,10 +3622,13 @@ export default function Editor() {
 
             <section
               role="tabpanel"
+              id={panelId(TAB_PREFIX, 'save')}
+              aria-labelledby={tabId(TAB_PREFIX, 'save')}
               hidden={tab !== 'save'}
               onScroll={onPanelScroll('save')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
+              <h2 className="sr-only">Save &amp; Share</h2>
               {/* Sections as in Customize, a hairline between them and each setting a row: the
               image (its size and format, whether the card tray goes in it, and exporting
               or copying it), then the share link. Each section's buttons act on it, so they
@@ -3702,6 +3735,16 @@ export default function Editor() {
               className={`${styles.boardBox} self-center relative`}
               style={{ width: stageWidth * scale }}
             >
+              {/* The board for screen readers, to whom the canvas is one image: each tier (or
+              the canvas) and the card tray, with their cards in order */}
+              <div className="sr-only">
+                <h2>{type.label}</h2>
+                <ul>
+                  {describeBoard(graphic).map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </div>
               <Stage
                 ref={(stage) => {
                   stageRef.current = stage;

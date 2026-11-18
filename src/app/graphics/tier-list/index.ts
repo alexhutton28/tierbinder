@@ -25,6 +25,9 @@ const tierList: GraphicType<TierList> = {
   BoardSettings: TierListBoardSettings,
   Settings: TierListSettings,
   layout: layoutCards,
+  // A tier whose name was cleared is named by its place
+  describe: (list) =>
+    list.tiers.map((t, i) => ({ name: t.name.trim() || `Tier ${i + 1}`, items: t.items })),
   mapCards: (list, change) => ({
     ...list,
     tiers: list.tiers.map((t) => ({ ...t, items: t.items.flatMap((i) => change(i) ?? []) })),

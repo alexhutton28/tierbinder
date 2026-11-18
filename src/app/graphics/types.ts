@@ -99,6 +99,9 @@ export type GraphicType<G extends { kind: string }> = {
   cardWidth?: (graphic: G) => number;
   // Every card and where it's drawn
   layout: (graphic: G) => CardPlacement[];
+  // What's on the board for screen readers (the canvas is one image to them): its places
+  // in order, each with its cards, and `note` for anything else there (ink)
+  describe: (graphic: G) => { name: string; items: CardItem[]; note?: string }[];
   // Changes cards, or removes them (null)
   mapCards: (graphic: G, change: (item: CardItem) => CardItem | null) => G;
   // Whether anything's on the board (cards, ink), and the board with all of it gone, its

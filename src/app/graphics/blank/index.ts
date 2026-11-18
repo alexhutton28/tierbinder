@@ -27,6 +27,13 @@ const blank: GraphicType<BlankCanvas> = {
   toolSettings: ['penColor', 'penWidth', 'eraserWidth'],
   cardWidth: (canvas) => canvas.cardWidth,
   layout: layoutCards,
+  describe: (canvas) => [
+    {
+      name: 'Canvas',
+      items: canvas.items,
+      note: canvas.strokes.length ? 'ink drawn on it' : undefined,
+    },
+  ],
   mapCards,
   hasContents: (canvas) => canvas.items.length > 0 || canvas.strokes.length > 0,
   clear: (canvas) => ({ ...canvas, items: [], strokes: [] }),

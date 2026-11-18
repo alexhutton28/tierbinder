@@ -13,8 +13,14 @@ const TRIED_MODES = ['full', 'selected'] as const;
 
 type BlockBox = { top: number; left: number; width: number; height: number; transition?: string };
 
+// A tab's id, and the id of the panel it controls (which should be labelled by the tab)
+export const tabId = (prefix: string, value: string) => `${prefix}-${value}`;
+export const panelId = (prefix: string, value: string) => `${tabId(prefix, value)}-panel`;
+
 type Props<T extends string> = {
   label: string;
+  // Prefixes each tab's id and its panel's (`tabId`, `panelId`)
+  id: string;
   options: readonly Option<T>[];
   value: T;
   // `clicked`: picked with a click or tap, not moved to with the arrow keys
@@ -34,6 +40,7 @@ type Props<T extends string> = {
 // selected in turn and needs the widest, so switching tabs never changes the mode.
 export default function RadioBar<T extends string>({
   label,
+  id,
   options,
   value,
   onChange,
@@ -201,6 +208,8 @@ export default function RadioBar<T extends string>({
             key={option.value}
             type="button"
             role="tab"
+            id={tabId(id, option.value)}
+            aria-controls={panelId(id, option.value)}
             aria-selected={option.value === value}
             tabIndex={option.value === value ? 0 : -1}
             className={styles.option}
