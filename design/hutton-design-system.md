@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.33 · November 18, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.34 · November 18, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -340,6 +340,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 18, 2026 · v1.34:** The sidebar's tab panels start right under the main nav's header, with no space of their own above (it was 16px), so each tab's first heading is 8px under the nav and the content scrolls straight under it.
 - **November 18, 2026 · v1.33:** A share sheet iOS refused says "Sharing Didn't Open; Try Again". Copying or sharing a board link no longer notes when it's too long for a Discord message. Images are named `tierbinder-tier-list.png` (after the board type). Each shape's "best for" names only image platforms: Wide for X and Bluesky posts, Story for Instagram and Facebook Stories.
 - **November 18, 2026 · v1.32:** On phones and tablets that share, Copy Image takes Save Image's place beside Share Image: a web page can't save to Photos, only download to Files on iOS, and the share sheet's own Save Image already saves to Photos.
 - **November 18, 2026 · v1.31:** Save & Share's design pass (picked from three options: Tidy). The Size and Format rows become help text under the Image heading naming the board's shape and where it's best posted, Include Card Tray in Export follows the buttons, and Link is Board Link, "Opens an editable copy of this board." Phones and tablets that can share lead with Share Image, Save Image and Share Board Link through the system's share sheet ([#2](https://github.com/alexhutton28/tierbinder/issues/2)); elsewhere it's Download, Copy Image and Copy Board Link. Settings' labels are a step lighter, Petrel 300 (`--tb-label`), than the muted help text, which stays Petrel 400 and is 12px (`text-caption`). Below `b7`, a section's closing action is a large button, 44px tall and spanning the panel (Save & Share, Import, the shared-board dialog). Added Feather's `download` and `copy`.
