@@ -1,5 +1,5 @@
-// Scrolls what just opened into view: the sidebar's tab panel, which scrolls on its own at
-// every width. Only scrolls down, only as far as needed to show it with REVEAL_MARGIN under
+// Scrolls what just opened into view in whatever scrolls it: the sidebar's tab panel beside
+// the board, the whole sidebar under b8. Only scrolls down, only as far as needed to show it with REVEAL_MARGIN under
 // it, and never past the top of `el`, so whatever opened it stays in sight when it's taller
 // than the panel.
 
@@ -65,9 +65,9 @@ export function followOpen(el: HTMLElement) {
 // scrollend comes (a hidden tab)
 const TOP_WAIT = 800;
 
-// Scrolls a panel back to its top (smoothly, unless motion is reduced), then runs `then`:
-// what changes the panel's contents (clearing the search) waits until it's there, so the
-// scroll isn't cut short by the panel shrinking under it. Done once the top is reached
+// Scrolls a box (the sidebar, under b8) back to its top (smoothly, unless motion is
+// reduced), then runs `then`: what changes its contents (clearing the search) waits until
+// it's there, so the scroll isn't cut short by the contents shrinking under it. Done once the top is reached
 // (Safari has no scrollend), at scrollend, or after TOP_WAIT
 export function toTopThen(box: HTMLElement, then: () => void) {
   if (box.scrollTop <= 0 || matchMedia('(prefers-reduced-motion: reduce)').matches) {

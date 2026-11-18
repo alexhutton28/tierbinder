@@ -282,6 +282,14 @@
   display: flex;
   align-items: center;
 
+  /* Under b8, where the whole sidebar scrolls, the credits' 44px touch target would hang
+     past the sidebar's foot and let it scroll by the overhang: cut to the foot there */
+  overflow-y: clip;
+
+  @variant b8 {
+    overflow-y: visible;
+  }
+
   & > :first-child {
     flex: 1;
     min-width: 0;
@@ -393,16 +401,25 @@
 /* Below the board on narrow screens (the column's header stays first); beside it, under
    the header. The edge line is the sidebar's, so the header runs over it, as wide as the
    sidebar with its line. */
+
+/* Under b8 it's sticky at the page's foot, which changes nothing on screen (the page doesn't
+   scroll) but has iOS Safari (26 up, which ignores theme-color) tint its bottom toolbar in
+   the sidebar's color: it takes it from a fixed or sticky element at the window's edge.
+   The top bar takes the body's background color (globals.css) */
 .side {
+  position: sticky;
+  bottom: 0;
   order: 1;
   border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
 
-  /* At the window's foot under b8: the credits' 44px touch target reaches past it, which
-     would let the page scroll by the difference */
-  overflow-y: clip;
+  /* Under b8 it scrolls as one, its nav with it, so the nav moves out of the way as the
+     finger does (the tab panels grow to their content there; beside the board each
+     scrolls on its own under the nav) */
+  overflow-y: auto;
 
   @variant b8 {
+    position: static;
     overflow-y: visible;
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
@@ -445,11 +462,12 @@
   height: auto;
 }
 
-/* The pinned search's Add to swatch button (phones): it takes no room until the row is
-   pinned, then grows to its square beside Search as the nav slides away, on the same
-   ease-slide over duration-move, fading in, and shrinks back as the row unpins; while closed
-   its gap in the row is given back. Clipped to its growing box (out past it by a focus
-   ring's reach, so the ring shows) rather than by overflow, which would cut the ring off */
+/* The pinned search's Add to swatch button (phones): it takes no room until the row holding
+   the Add to picker has gone under the pinned search, then grows to its width beside
+   Search, fading in, on ease-slide over duration-move, and shrinks back the same way as
+   that row comes back out; while
+   closed its gap in the row is given back. Clipped to its growing box (out past it by a
+   focus ring's reach, so the ring shows) rather than by overflow, which would cut it off */
 .pinnedTarget {
   display: grid;
   grid-template-columns: 0fr;
@@ -459,7 +477,7 @@
   transition:
     grid-template-columns var(--duration-move) var(--ease-slide),
     margin-inline-start var(--duration-move) var(--ease-slide),
-    opacity var(--duration-fade) ease-out;
+    opacity var(--duration-move) var(--ease-slide);
 
   & > * {
     min-width: 0;
@@ -476,35 +494,46 @@
   .pinnedTarget {
     transition: none;
   }
+
+  /* (its hairline with it) */
+  .searchRow {
+    transition: none;
+  }
 }
 
-/* Under b8, where the whole panel scrolls, the search sticks to the panel's top during a
-   search (data-pinned: results, placeholders or none found showing) as the rest goes under it, on the sidebar's color with 8px above and below (given back as negative
-   margin, so the layout keeps its spacing), and the hairline the nav carries while it's
-   tucked away (data-tucked). It sticks a line's width above the panel's top (and is that much
-   taller), so no sliver of what scrolls under it shows at a fractional pixel */
+/* Under b8, where the whole sidebar scrolls, the search sticks to its top during a search
+   (data-pinned: results, placeholders or none found showing) as the rest goes under it, the
+   nav included, on the sidebar's color with 8px above and below (given back as negative
+   margin, so the layout keeps its spacing), and a hairline once the row under it (Sets,
+   Add to) is wholly under it too (data-stuck). It sticks a line's width above the sidebar's
+   top (and is that much taller), so no sliver of what scrolls under it shows at a
+   fractional pixel */
 .searchRow {
   --overlap: var(--tb-line-width);
 
   top: calc(-1 * var(--overlap));
-  z-index: 1;
-  margin-block: calc(-1 * (var(--spacing-3) + var(--overlap)))
-    calc(-1 * (var(--spacing-3) + var(--tb-line-width)));
-  padding-block: calc(var(--spacing-3) + var(--overlap)) var(--spacing-3);
+  margin-block: calc(-1 * (var(--spacing-3) + var(--overlap))) calc(-1 * var(--spacing-3));
+
+  /* (8px below, its hairline included, so it ends where the row under it starts) */
+  padding-block: calc(var(--spacing-3) + var(--overlap))
+    calc(var(--spacing-3) - var(--tb-line-width));
   border-bottom: var(--tb-line-width) solid transparent;
   background: var(--tb-bar);
-  transition: border-color var(--duration-fade) ease-out;
 
+  /* (on the swatch button's slide, so the line comes and goes with it) */
+  transition: border-color var(--duration-move) var(--ease-slide);
+
+  /* Above what scrolls under it only while pinned, so it never covers the row under it */
   &[data-pinned] {
     position: sticky;
+    z-index: 1;
   }
 
-  &[data-tucked] {
+  &[data-stuck] {
     border-bottom-color: var(--tb-line);
   }
 
   @variant b8 {
-    z-index: auto;
     margin-block: 0;
     padding-block: 0;
     border-bottom: 0;
@@ -616,10 +645,10 @@
   }
 }
 
-/* A true header over the tab panel, which scrolls under it: 8px around the nav (the
-   panel's first heading starts right under that), and a hairline below once
-   the panel is scrolled from its top (data-scrolled), fading in, so
-   what scrolls up disappears at the line rather than beside the nav. Its
+/* The sidebar's header: 8px around the nav (the panel's first heading starts right under
+   that). Beside the board the tab panel scrolls under it, and a hairline below fades in
+   once it's scrolled from its top (data-scrolled), so what scrolls up disappears at the
+   line rather than beside the nav; under b8 it scrolls with the rest of the sidebar. Its
    scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
    before it folds (.sideFolded) */
 .sideHead {
@@ -627,25 +656,10 @@
   padding: var(--spacing-3);
   border-bottom: var(--tb-line-width) solid transparent;
   scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
-  transition:
-    border-color var(--duration-fade) ease-out,
-    margin-block-start var(--duration-move) var(--ease-slide),
-    opacity var(--duration-fade) ease-out;
+  transition: border-color var(--duration-fade) ease-out;
 
   &[data-scrolled] {
     border-bottom-color: var(--tb-line);
-  }
-
-  /* Slid up out of the way (its height as negative margin, set from Editor.tsx) while Add
-     Cards is scrolled on a phone, fading out as it goes; the sidebar clips it */
-  &[data-tucked] {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sideHead {
-    transition: border-color var(--duration-fade) ease-out;
   }
 }
 
@@ -875,12 +889,17 @@
   height: var(--tb-thumb-height);
 }
 
-/* The browser skips drawing results scrolled out of view, keeping a thumbnail's size in
-   their place (and each one's real size once it has been drawn) */
+/* Beside the board, where they scroll in their own box, the browser skips drawing results
+   scrolled out of view, keeping a thumbnail's size in their place (and each one's real size
+   once it has been drawn). Not under b8, where the whole panel scrolls: iOS Safari drew the
+   tiles coming in a moment late, so they flashed at the edge being scrolled toward (a page
+   is at most RESULTS_PAGE more tiles) */
 .resultTile {
-  content-visibility: auto;
-  contain-intrinsic-size: auto var(--result-width) auto
-    calc(var(--result-width) * var(--tb-thumb-ratio));
+  @variant b8 {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--result-width) auto
+      calc(var(--result-width) * var(--tb-thumb-ratio));
+  }
 }
 
 /* A long press opens the result's menu (Editor.tsx), not iOS's own image callout */

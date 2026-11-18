@@ -3,7 +3,7 @@
 import type Konva from 'konva';
 import React from 'react';
 import { Circle, Group, Layer, Line, Rect, Text } from 'react-konva';
-import { TOUCH_SLOP } from '../ui/pointer';
+import { LONG_PRESS, TOUCH_SLOP } from '../ui/pointer';
 import { readDuration } from '../ui/motion';
 import { PETREL_50, PETREL_950, darkReadsBetter } from '../color';
 import { selectedLast } from '../graphics/types';
@@ -355,6 +355,49 @@ export default function CardTray({
   };
   const touchPans = isOneRow && matchMedia('(pointer: coarse)').matches;
 
+  // The tray's own menu on a touch screen: a touch (or pen) held LONG_PRESS on its space,
+  // moving less than TOUCH_SLOP, opens it where the finger went down, as a right-click
+  // does; moving (panning the tray) or lifting first cancels it, and the tap it ends with
+  // doesn't also pick the tray. Android's own contextmenu for it is ignored once it's open.
+  const trayPress = React.useRef<(() => void) | null>(null);
+  const trayLongPressed = React.useRef(false);
+  const cancelTrayPress = () => {
+    trayPress.current?.();
+    trayPress.current = null;
+  };
+  const startTrayPress = (e: Konva.KonvaEventObject<PointerEvent>) => {
+    cancelTrayPress();
+    trayLongPressed.current = false;
+    if (e.evt.pointerType === 'mouse') return;
+    const { pointerId, clientX, clientY } = e.evt;
+    const at = e.target.getStage()?.getPointerPosition();
+    const move = (ev: PointerEvent) => {
+      if (
+        ev.pointerId === pointerId &&
+        Math.hypot(ev.clientX - clientX, ev.clientY - clientY) > TOUCH_SLOP
+      )
+        cancelTrayPress();
+    };
+    const end = (ev: PointerEvent) => {
+      if (ev.pointerId === pointerId) cancelTrayPress();
+    };
+    const timer = window.setTimeout(() => {
+      cancelTrayPress();
+      trayLongPressed.current = true;
+      if (at) onTrayMenu(at.x, at.y);
+    }, LONG_PRESS);
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    trayPress.current = () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  };
+  React.useEffect(() => () => cancelTrayPress(), []);
+
   return (
     <Layer listening={listening} opacity={opacity}>
       <Group
@@ -397,11 +440,17 @@ export default function CardTray({
           onClick={(e) => {
             if (e.evt.button === 0) onPick();
           }}
+          onPointerDown={startTrayPress}
           onTap={() => {
-            if (!panned.current) onPick();
+            // (not the tap a long press ends with, which opened the menu)
+            if (trayLongPressed.current) trayLongPressed.current = false;
+            else if (!panned.current) onPick();
           }}
           onContextMenu={(e) => {
             e.evt.preventDefault();
+            // (Android's own long press can come before the timer: this one opens the menu)
+            cancelTrayPress();
+            if (trayLongPressed.current) return;
             const pointer = e.target.getStage()?.getPointerPosition();
             if (pointer) onTrayMenu(pointer.x, pointer.y);
           }}

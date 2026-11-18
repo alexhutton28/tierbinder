@@ -49,8 +49,19 @@
   mask: url('/chevron-down.svg') center / contain no-repeat;
 }
 
-/* Only the swatch, in a square button as tall as what's beside it (swatchOnly) */
+/* Only the swatch, in a button as tall as what's beside it (swatchOnly), with the room the
+   search field has around its words (8px) at its sides. Not squared by aspect-ratio: Safari
+   doesn't size a width from a stretched height, which left it no wider than the swatch */
 .swatchOnly {
   justify-content: center;
   height: auto;
+  aspect-ratio: auto;
+  padding-inline: var(--spacing-3);
+}
+
+/* At least a touch target wide on touch screens */
+@media (pointer: coarse) {
+  .swatchOnly {
+    min-width: var(--tb-touch-target);
+  }
 }
