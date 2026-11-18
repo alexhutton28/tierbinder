@@ -9,6 +9,7 @@ import { Group, Layer, Rect, Stage } from 'react-konva';
 import {
   BOARD_HEIGHT,
   SHAPES,
+  shapeLabel,
   boardWidth,
   exportScale,
   exportSize,
@@ -4048,11 +4049,19 @@ export default function Editor() {
               leads (Share Image, Save Image, Share Link); elsewhere Download does (Download,
               Copy Image, Copy Link). Below b7 the buttons are touch-sized and span the panel. */}
                   <div className="flex flex-col gap-3">
-                    <div className="flex justify-between items-baseline gap-3">
-                      <h3 className="tierbinder-heading">Image</h3>
-                      <span className="text-caption text-(--tb-muted)">
-                        {exported.width} × {exported.height} PNG
-                      </span>
+                    {/* The heading, its size and format at its end, and right under it where
+                        that size comes from: the board's shape, which Customize sets */}
+                    <div className="flex flex-col">
+                      <div className="flex justify-between items-baseline gap-3">
+                        <h3 className="tierbinder-heading">Image</h3>
+                        <span className="text-caption text-(--tb-muted)">
+                          {exported.width} × {exported.height} PNG
+                        </span>
+                      </div>
+                      <p className="text-caption text-(--tb-muted) text-pretty">
+                        Sized by the board&rsquo;s shape: {shapeLabel(graphic.shape)}, set in
+                        Customize.
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3 b7:flex b7:flex-wrap">
                       {shareSheet ? (

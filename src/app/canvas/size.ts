@@ -19,6 +19,9 @@ export const DEFAULT_SHAPE: ShapeId = '16:9';
 
 const shapeOf = (id: ShapeId) => SHAPES.find((s) => s.id === id) ?? SHAPES[0];
 
+// A shape's name, as the Shape dropdown shows it ("Story (9:16)")
+export const shapeLabel = (id: ShapeId) => shapeOf(id).label;
+
 // A saved shape, or the default for a board saved before shapes
 export function parseShape(value: unknown): ShapeId {
   return SHAPES.find((s) => s.id === value)?.id ?? DEFAULT_SHAPE;
