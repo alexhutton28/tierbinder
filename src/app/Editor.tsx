@@ -130,6 +130,8 @@ const removedMessage = (n: number) => `Removed ${cardCount(n)} From the Card Tra
 // Presentation mode's card menu row that moves the card (shown as "Move to Tier", or "Add
 // to Tier" for a tray card: moveLabel), opening a flyout of the places it can go
 const MOVE_TO = 'Move to';
+// The card menu's item for a card with only one place to go, then its index in `targets`
+const MOVE_ONE = 'Move to one:';
 // The card menu's id while it's the card tray's own menu (Clear Card Tray), not a card's
 const TRAY_MENU = 'tray';
 
@@ -192,6 +194,9 @@ const HISTORY_LIMIT = 100;
 // Changes this close together are one step to undo: a color dragged in the picker (once a
 // frame), a name typed
 const HISTORY_MERGE = 400;
+// How soon another Alt+arrow move of the same card joins its step: longer than a held
+// key's first repeat (about 500ms on a Mac)
+const NUDGE_MERGE = 800;
 type History = { past: Graphic[]; future: Graphic[] };
 const NO_HISTORY: History = { past: [], future: [] };
 
@@ -819,7 +824,7 @@ export default function Editor() {
     setRaisedMenu({ key: menuKey(shownMenu), top });
   }, [shownMenu]);
   // Opening focuses its first item, as the search result menu does; closing with focus in
-  // it (Escape, Tab, an item that leaves focus nowhere) hands focus back to the board
+  // it (an item that leaves focus nowhere, a press elsewhere) hands focus back to the board
   const openMenuKey = cardMenu && menuKey(cardMenu);
   React.useEffect(() => {
     if (!openMenuKey) return;
@@ -900,6 +905,30 @@ export default function Editor() {
   // Known from the first render (the editor only renders in the browser), so the board's
   // first fit already uses the wide layout
   const [wide, setWide] = React.useState(() => wideQuery().matches);
+  // Crossing b8 moves the sidebar column or the workspace in the page (see the layout), and
+  // a moved element loses what the browser kept for it: open popups (closed here, as a
+  // press outside them does), focus (put back) and scroll positions (read again)
+  const lastFocus = React.useRef<Element | null>(null);
+  React.useEffect(() => {
+    const onFocus = (e: FocusEvent) => {
+      lastFocus.current = e.target instanceof Element ? e.target : null;
+    };
+    window.addEventListener('focusin', onFocus);
+    return () => window.removeEventListener('focusin', onFocus);
+  }, []);
+  const laidOutWide = React.useRef(wide);
+  React.useLayoutEffect(() => {
+    if (laidOutWide.current === wide) return;
+    laidOutWide.current = wide;
+    boardBoxRef.current?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    const focused = lastFocus.current;
+    if (document.activeElement === document.body && focused instanceof HTMLElement) {
+      if (focused.isConnected) focused.focus({ preventScroll: true });
+    }
+    pageRef.current
+      ?.querySelectorAll('[role=tabpanel], [data-results]')
+      .forEach((el) => el.dispatchEvent(new Event('scroll')));
+  }, [wide]);
   // The sidebar column hidden with Ctrl+\ (Cmd+\ on a Mac, as in Notion and Figma) or the
   // button at the sidebar's foot, sliding out to leave the window to the board; from b8 up
   // only, where it's beside the board. Not saved: a reload, or a narrower window, shows it.
@@ -1393,6 +1422,8 @@ export default function Editor() {
     );
     if (restoring.current === now) {
       restoring.current = null;
+      // (a move after an undo or redo is a step of its own)
+      lastNudge.current = null;
       return;
     }
     const at = performance.now();
@@ -1406,8 +1437,9 @@ export default function Editor() {
     if (
       nudged &&
       lastNudged?.id === nudged &&
-      at - lastNudged.at < HISTORY_MERGE &&
-      h0.past.length
+      at - lastNudged.at < NUDGE_MERGE &&
+      h0.past.length &&
+      !h0.future.length
     ) {
       lastChange.current = 0;
       return;
@@ -2184,11 +2216,12 @@ export default function Editor() {
     }
     // Presentation mode (the sidebar folded on a phone): only what doesn't need the
     // sidebar, moving the card through a flyout of the places it can go
-    if (presenting) {
-      return moveChoices(id).length ? ['View', MOVE_TO, 'Remove card'] : ['View', 'Remove card'];
-    }
-    // Move To (a flyout of the places it can go) also moves it from the keyboard
-    const move = moveChoices(id).length ? [MOVE_TO] : [];
+    // Move To (a flyout of the places it can go; with one place, a plain item naming it:
+    // "Move to Card Tray") also moves it from the keyboard
+    const choices = moveChoices(id);
+    const move =
+      choices.length === 1 ? [`${MOVE_ONE}${choices[0]}`] : choices.length ? [MOVE_TO] : [];
+    if (presenting) return ['View', ...move, 'Remove card'];
     const items = split
       ? [
           'View',
@@ -2225,8 +2258,9 @@ export default function Editor() {
   }
 
   // The card menu's keys, as the search result menu's: arrows and Home/End move through its
-  // items (or the flyout's), right opens Clear Card Tray's flyout and left goes back from it;
-  // Escape in the flyout is its own, and elsewhere the page's (closing the menu)
+  // items (or the flyout's), right opens a row's flyout (Move To, Clear Card Tray) and left
+  // goes back from it; Escape in the flyout is its own; Escape or Tab elsewhere closes the
+  // menu back to the board
   const onCardMenuKey = (e: React.KeyboardEvent) => {
     const target = e.target as HTMLElement;
     const flyout = target.closest<HTMLElement>('[data-flyout]');
@@ -2236,9 +2270,12 @@ export default function Editor() {
     // flyout's own goes back to its row) back to the board, keeping the card selected,
     // rather than going on to the page's, which would deselect it
     if (e.key === 'Delete' || e.key === 'Backspace') e.stopPropagation();
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' || e.key === 'Tab') {
+      e.preventDefault();
       e.stopPropagation();
       setCardMenu(null);
+      // (Escape still cancels picking a replacement, as the page's does)
+      if (e.key === 'Escape') setPicking(null);
       boardBoxRef.current?.focus({ preventScroll: true });
       return;
     }
@@ -2309,21 +2346,38 @@ export default function Editor() {
     const shown = placements.filter((p) => !arriving.has(p.item.id));
     const selected = shown.find((p) => p.item.id === selectedId);
     const direction: Direction | undefined = ARROWS[e.key];
-    const menuKey =
-      e.key === 'Enter' ||
-      e.key === ' ' ||
-      e.key === 'ContextMenu' ||
-      (e.key === 'F10' && e.shiftKey);
-    if (!direction && !menuKey && e.key !== 'Home' && e.key !== 'End') return;
-    // (Alt+Left would go back a page on Windows; Space would scroll)
+    // (not Space: Firefox can click the menu's first item on its keyup)
+    const openMenu =
+      e.key === 'Enter' || e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey);
+    const remove = e.key === 'Delete' || e.key === 'Backspace';
+    if (!direction && !openMenu && !remove && e.key !== 'Home' && e.key !== 'End') return;
+    // (Alt+Left would go back a page on Windows)
     e.preventDefault();
+    if (remove && selected) {
+      // Not the page's Delete, which would leave nothing picked: the next card in its place
+      // (or the one before) takes the selection, so the arrows go on from there
+      e.stopPropagation();
+      const items = placesOf(graphic).find((p) =>
+        p.items.some((i) => i.id === selected.item.id)
+      )?.items;
+      const at = items?.findIndex((i) => i.id === selected.item.id) ?? -1;
+      const neighbor = items?.[at + 1] ?? items?.[at - 1];
+      removeCard(selected.item.id);
+      setCardMenu(null);
+      if (neighbor) setSelectedId(neighbor.id);
+      announce(
+        `Removed ${cardLabel(selected.item)}${neighbor ? `; picked ${cardLabel(neighbor)}` : ''}`
+      );
+      return;
+    }
+    if (remove) return;
     if (!selected) {
       if (!shown.length) announce('No cards on the board');
       else if (direction || e.key === 'Home' || e.key === 'End') pickByKey(shown[0].item.id);
       return;
     }
     const id = selected.item.id;
-    if (menuKey) {
+    if (openMenu) {
       setCardMenu({
         id,
         x: (boardLeft + selected.x + selected.width / 2) * scale,
@@ -2436,6 +2490,10 @@ export default function Editor() {
   // goes at once rather than folding closed in the wrong place.
   function runCardMenuItem(menu: CardMenu, label: string) {
     const { id, dropped } = menu;
+    if (label.startsWith(MOVE_ONE)) {
+      moveFromMenu(id, Number(label.slice(MOVE_ONE.length)));
+      return;
+    }
     if (label === 'Hide card tray') {
       showTray(false);
       setShownMenu(null);
@@ -3490,6 +3548,7 @@ export default function Editor() {
                               '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
                             } as React.CSSProperties
                           }
+                          data-results
                           onScroll={(e) => setResultsScrolled(e.currentTarget.scrollTop > 0)}
                         >
                           {showingSkeleton
@@ -4249,7 +4308,11 @@ export default function Editor() {
                                 setCardMenu(null);
                               }}
                             >
-                              {titleCase(label)}
+                              {label.startsWith(MOVE_ONE)
+                                ? `${moveLabel(shownMenu.id).split(' ')[0]} to ${targets[
+                                    Number(label.slice(MOVE_ONE.length))
+                                  ]?.name.replaceAll('\n', ' ')}`
+                                : titleCase(label)}
                             </button>
                           )
                         )}

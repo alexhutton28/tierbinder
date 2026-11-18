@@ -41,7 +41,8 @@ export function nextCard(
     const across = Math.abs(horizontal ? c.y - from.y : c.x - from.x);
     // (on the same line, drawing order decides which way it is)
     if (along < 0 || (along === 0 && (across > 0 || (at - fromAt) * sign < 0))) return;
-    const score = along + 2 * across;
+    // (a tie goes to the card nearest in drawing order)
+    const score = along + 2 * across + Math.abs(at - fromAt) * 1e-6;
     if (!best || score < best.score) best = { id: p.item.id, score };
   });
   return (best as { id: string } | null)?.id ?? null;
