@@ -1710,7 +1710,7 @@ export default function Editor() {
             );
           else
             showToast(
-              kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Save Image"
+              kind === 'link' ? "Couldn't Share the Link" : "Couldn't Share; Use Copy Image"
             );
         }
       );
@@ -3189,15 +3189,22 @@ export default function Editor() {
       setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY);
     });
 
+  // The clipboard gets the image as a promise in a ClipboardItem made inside the click, since
+  // Safari refuses a write made after an await (as Copy Board Link does)
   const copyPng = () =>
     whileWorking('copy', async () => {
-      const blob = await renderBlob();
-      if (!blob) return;
       try {
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'image/png': renderBlob().then((blob) => {
+              if (!blob) throw new Error('No image');
+              return blob;
+            }),
+          }),
+        ]);
         showToast('Copied to Clipboard');
       } catch {
-        showToast("Couldn't Copy; Use Download");
+        showToast(shareSheet ? "Couldn't Copy; Use Share Image" : "Couldn't Copy; Use Download");
       }
     });
 
@@ -4056,7 +4063,7 @@ export default function Editor() {
                   {/* Sections as in Customize, a hairline between them: the image (its size and
               format at the end of the heading, its buttons, then whether the card tray goes in
               it), then the board's link. On phones and tablets that have a share sheet, Share
-              leads (Share Image, Save Image, Share Board Link); elsewhere Download does (Download,
+              leads (Share Image, Copy Image, Share Board Link); elsewhere Download does (Download,
               Copy Image, Copy Board Link). Below b7 the buttons are touch-sized and span the panel. */}
                   <div className="flex flex-col gap-3">
                     {/* The heading, and right under it the board's shape, which sets the
@@ -4068,67 +4075,46 @@ export default function Editor() {
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3 b7:flex b7:flex-wrap">
+                      {/* The main action: the share sheet where there is one, which also
+                          saves to Photos; else the download */}
                       {shareSheet ? (
-                        <>
-                          <Button
-                            variant="primary"
-                            size="large"
-                            onClick={shareImage}
-                            disabled={busy}
-                            aria-busy={working === 'share'}
-                          >
-                            <Working active={working === 'share'} label="Sharing">
-                              <span aria-hidden className={styles.buttonIcon} data-icon="share" />
-                              Share Image
-                            </Working>
-                          </Button>
-                          <Button
-                            size="large"
-                            onClick={exportPng}
-                            disabled={busy}
-                            aria-busy={working === 'export'}
-                          >
-                            <Working active={working === 'export'} label="Saving">
-                              <span
-                                aria-hidden
-                                className={styles.buttonIcon}
-                                data-icon="download"
-                              />
-                              Save Image
-                            </Working>
-                          </Button>
-                        </>
+                        <Button
+                          variant="primary"
+                          size="large"
+                          onClick={shareImage}
+                          disabled={busy}
+                          aria-busy={working === 'share'}
+                        >
+                          <Working active={working === 'share'} label="Sharing">
+                            <span aria-hidden className={styles.buttonIcon} data-icon="share" />
+                            Share Image
+                          </Working>
+                        </Button>
                       ) : (
-                        <>
-                          <Button
-                            variant="primary"
-                            size="large"
-                            onClick={exportPng}
-                            disabled={busy}
-                            aria-busy={working === 'export'}
-                          >
-                            <Working active={working === 'export'} label="Downloading">
-                              <span
-                                aria-hidden
-                                className={styles.buttonIcon}
-                                data-icon="download"
-                              />
-                              Download
-                            </Working>
-                          </Button>
-                          <Button
-                            size="large"
-                            onClick={copyPng}
-                            disabled={busy}
-                            aria-busy={working === 'copy'}
-                          >
-                            <Working active={working === 'copy'} label="Copying">
-                              <span aria-hidden className={styles.buttonIcon} data-icon="copy" />
-                              Copy Image
-                            </Working>
-                          </Button>
-                        </>
+                        <Button
+                          variant="primary"
+                          size="large"
+                          onClick={exportPng}
+                          disabled={busy}
+                          aria-busy={working === 'export'}
+                        >
+                          <Working active={working === 'export'} label="Downloading">
+                            <span aria-hidden className={styles.buttonIcon} data-icon="download" />
+                            Download
+                          </Working>
+                        </Button>
                       )}
+                      <Button
+                        size="large"
+                        onClick={copyPng}
+                        disabled={busy}
+                        aria-busy={working === 'copy'}
+                      >
+                        <Working active={working === 'copy'} label="Copying">
+                          <span aria-hidden className={styles.buttonIcon} data-icon="copy" />
+                          Copy Image
+                        </Working>
+                      </Button>
                     </div>
                     {/* After the buttons rather than before, as toggles usually are: the
                         buttons are what the tab is for, and this adjusts them */}
