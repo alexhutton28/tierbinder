@@ -26,7 +26,8 @@ body {
    through) it's the top bar's color above and the sidebar's below, as at the page's own top
    and foot on a phone. */
 html {
-  background: linear-gradient(var(--color-storm-400) 50%, var(--color-petrel-900) 50%);
+  background: linear-gradient(var(--color-storm-400) 50%, var(--color-petrel-900) 50%)
+    var(--color-storm-400);
   line-height: normal;
 }
 
@@ -161,13 +162,17 @@ body {
      home indicator and toolbar are the top bar's color and the sidebar's, so the page runs
      on into them: the top stays the header's color while the sidebar is folded and the top
      bar has gone, and the foot is the sidebar's (the main's bottom padding). Beside the
-     board, the page's own color */
+     board, the page's own color. Under the gradient, a background color for iOS Safari to
+     tint its bars with (26 up ignores theme-color and reads the body's background-color,
+     where a gradient alone left them white): the top bar's, for the top while the sidebar
+     is folded and the top bar has gone; the sticky sidebar gives the bottom its color */
   background: linear-gradient(
-    var(--tb-top) env(safe-area-inset-top),
-    var(--tb-page) env(safe-area-inset-top),
-    var(--tb-page) calc(100% - env(safe-area-inset-bottom)),
-    var(--tb-bar) calc(100% - env(safe-area-inset-bottom))
-  );
+      var(--tb-top) env(safe-area-inset-top),
+      var(--tb-page) env(safe-area-inset-top),
+      var(--tb-page) calc(100% - env(safe-area-inset-bottom)),
+      var(--tb-bar) calc(100% - env(safe-area-inset-bottom))
+    )
+    var(--tb-top);
 
   @variant b8 {
     background: var(--tb-page);

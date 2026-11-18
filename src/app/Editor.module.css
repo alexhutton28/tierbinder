@@ -393,7 +393,14 @@
 /* Below the board on narrow screens (the column's header stays first); beside it, under
    the header. The edge line is the sidebar's, so the header runs over it, as wide as the
    sidebar with its line. */
+
+/* Under b8 it's sticky at the page's foot, which changes nothing on screen (the page doesn't
+   scroll) but has iOS Safari (26 up, which ignores theme-color) tint its bottom toolbar in
+   the sidebar's color: it takes it from a fixed or sticky element at the window's edge.
+   The top bar takes the body's background color (globals.css) */
 .side {
+  position: sticky;
+  bottom: 0;
   order: 1;
   border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
@@ -403,6 +410,7 @@
   overflow-y: clip;
 
   @variant b8 {
+    position: static;
     overflow-y: visible;
     border-top: 0;
     border-right: var(--tb-line-width) solid var(--tb-line);
@@ -487,16 +495,19 @@
   --overlap: var(--tb-line-width);
 
   top: calc(-1 * var(--overlap));
-  z-index: 1;
-  margin-block: calc(-1 * (var(--spacing-3) + var(--overlap)))
-    calc(-1 * (var(--spacing-3) + var(--tb-line-width)));
-  padding-block: calc(var(--spacing-3) + var(--overlap)) var(--spacing-3);
+  margin-block: calc(-1 * (var(--spacing-3) + var(--overlap))) calc(-1 * var(--spacing-3));
+
+  /* (8px below, its hairline included, so it ends where the row under it starts) */
+  padding-block: calc(var(--spacing-3) + var(--overlap))
+    calc(var(--spacing-3) - var(--tb-line-width));
   border-bottom: var(--tb-line-width) solid transparent;
   background: var(--tb-bar);
   transition: border-color var(--duration-fade) ease-out;
 
+  /* Above what scrolls under it only while pinned, so it never covers the row under it */
   &[data-pinned] {
     position: sticky;
+    z-index: 1;
   }
 
   &[data-tucked] {
@@ -504,7 +515,6 @@
   }
 
   @variant b8 {
-    z-index: auto;
     margin-block: 0;
     padding-block: 0;
     border-bottom: 0;
