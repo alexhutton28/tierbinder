@@ -181,13 +181,13 @@
    Button's own text hover, hence the toast's class too) */
 .toast .toastUndo {
   flex: none;
-  color: var(--tb-primary);
+  color: var(--tb-primary-ink);
   font-weight: 600;
 }
 
 @media (hover: hover) {
   .toast .toastUndo:hover:not(:disabled) {
-    color: var(--tb-primary-hover);
+    color: var(--tb-primary-ink-hover);
   }
 }
 

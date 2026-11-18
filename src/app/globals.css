@@ -42,45 +42,52 @@ canvas,
    so the page background can use it too. The board keeps its own colors (see Exceptions
    there). */
 body {
-  --tb-page: var(--color-petrel-950);
+  /* Light mode (an experiment on the light-mode branch): the dark theme's roles turned
+     over, the page a pale Petrel with the sidebar and popups white over it, and the
+     primary color a step darker so it reads as text on white */
+  --tb-page: var(--color-petrel-100);
   --tb-top: var(--color-storm-400);
-  --tb-bar: var(--color-petrel-900);
-  --tb-line: var(--color-petrel-800);
-  --tb-text: var(--color-petrel-100);
-  --tb-heading: var(--color-petrel-50);
-  --tb-muted: var(--color-petrel-400);
-  --tb-control-hover: var(--color-petrel-800);
-  --tb-control-text: var(--color-petrel-100);
-  --tb-control-border: var(--color-petrel-700);
-  --tb-field: var(--color-petrel-950);
-  --tb-field-border: var(--color-petrel-700);
+  --tb-bar: white;
+  --tb-line: var(--color-petrel-200);
+  --tb-text: var(--color-petrel-900);
+  --tb-heading: var(--color-petrel-950);
+  --tb-muted: var(--color-petrel-600);
+  --tb-control-hover: var(--color-petrel-100);
+  --tb-control-text: var(--color-petrel-900);
+  --tb-control-border: var(--color-petrel-200);
+  --tb-field: var(--color-petrel-50);
+  --tb-field-border: var(--color-petrel-200);
 
   /* An unticked checkbox under the pointer */
-  --tb-field-border-hover: var(--color-petrel-600);
+  --tb-field-border-hover: var(--color-petrel-400);
 
   /* The color picker's handles: a light ring, with a faint dark edge (Petrel 950 at
      35%, enough to show on white without darkening the ring) and the popup's shadow */
   --tb-picker-handle: var(--color-petrel-50);
   --tb-handle-edge: color-mix(in srgb, var(--color-petrel-950) 35%, transparent);
   --tb-handle-shadow: 0 0 0 var(--tb-line-width) var(--tb-handle-edge), var(--tb-popup-shadow);
-  --tb-primary: var(--color-storm-300);
-  --tb-primary-hover: var(--color-storm-200);
+  --tb-primary: var(--color-storm-400);
+  --tb-primary-hover: var(--color-storm-300);
   --tb-primary-text: var(--color-petrel-950);
-  --tb-selected: var(--color-petrel-100);
-  --tb-selected-text: var(--color-petrel-950);
-  --tb-popup: var(--color-petrel-850);
-  --tb-option-hover: var(--color-petrel-700);
-  --tb-segment-on: var(--color-petrel-700);
-  --tb-popup-shadow: 0 8px 24px color-mix(in srgb, var(--color-petrel-950) 45%, transparent);
-  --tb-focus: var(--color-storm-200);
-  --tb-icon-rest: var(--color-petrel-600);
-  --tb-icon-lit: var(--color-storm-300);
-  --tb-scroll-thumb: var(--color-petrel-700);
-  --tb-scroll-thumb-hover: var(--color-petrel-600);
-  --tb-scroll-shade: color-mix(in srgb, var(--color-petrel-950) 60%, transparent);
-  --tb-skeleton: var(--color-petrel-850);
-  --tb-view-backdrop: color-mix(in srgb, var(--color-petrel-950) 75%, transparent);
-  --tb-skeleton-shine: var(--color-petrel-800);
+
+  /* The primary color as words on white (the toast's Undo) */
+  --tb-primary-ink: var(--color-storm-600);
+  --tb-primary-ink-hover: var(--color-storm-800);
+  --tb-selected: var(--color-petrel-800);
+  --tb-selected-text: var(--color-petrel-50);
+  --tb-popup: white;
+  --tb-option-hover: var(--color-petrel-100);
+  --tb-segment-on: var(--color-petrel-200);
+  --tb-popup-shadow: 0 8px 24px color-mix(in srgb, var(--color-petrel-950) 15%, transparent);
+  --tb-focus: var(--color-storm-600);
+  --tb-icon-rest: var(--color-petrel-400);
+  --tb-icon-lit: var(--color-storm-600);
+  --tb-scroll-thumb: var(--color-petrel-300);
+  --tb-scroll-thumb-hover: var(--color-petrel-400);
+  --tb-scroll-shade: color-mix(in srgb, white 85%, transparent);
+  --tb-skeleton: var(--color-petrel-100);
+  --tb-view-backdrop: color-mix(in srgb, var(--color-petrel-950) 60%, transparent);
+  --tb-skeleton-shine: var(--color-petrel-50);
   --tb-radius: var(--radius-small);
 
   /* Sizes the design fixes, each named once (No magic numbers, in section 12 of
@@ -159,7 +166,7 @@ body {
   padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   color: var(--tb-text);
   font-family: var(--font-figtree), system-ui, sans-serif;
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 /* Scrollbars, the page's own included: a thin, fully rounded thumb in the controls' border color, on no track.

@@ -2824,7 +2824,7 @@ export default function Editor() {
           >
             <span className={styles.lightLogo}>
               <Image
-                src="/tierbinder-combined-light.svg"
+                src="/tierbinder-combined-ink.svg"
                 alt=""
                 width={LIGHT_LOGO_WIDTH}
                 height={LOGO_HEIGHT}
@@ -2936,7 +2936,7 @@ export default function Editor() {
               {folded && (
                 <div className={`${styles.foldedBrand} flex flex-1 min-w-0`}>
                   <Image
-                    src="/tierbinder-combined-light.svg"
+                    src="/tierbinder-combined-ink.svg"
                     alt="TierBinder"
                     width={LIGHT_LOGO_WIDTH}
                     height={LOGO_HEIGHT}
