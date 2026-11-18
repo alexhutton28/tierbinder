@@ -282,6 +282,14 @@
   display: flex;
   align-items: center;
 
+  /* Under b8, where the whole sidebar scrolls, the credits' 44px touch target would hang
+     past the sidebar's foot and let it scroll by the overhang: cut to the foot there */
+  overflow-y: clip;
+
+  @variant b8 {
+    overflow-y: visible;
+  }
+
   & > :first-child {
     flex: 1;
     min-width: 0;

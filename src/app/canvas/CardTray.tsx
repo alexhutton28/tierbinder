@@ -448,6 +448,8 @@ export default function CardTray({
           }}
           onContextMenu={(e) => {
             e.evt.preventDefault();
+            // (Android's own long press can come before the timer: this one opens the menu)
+            cancelTrayPress();
             if (trayLongPressed.current) return;
             const pointer = e.target.getStage()?.getPointerPosition();
             if (pointer) onTrayMenu(pointer.x, pointer.y);

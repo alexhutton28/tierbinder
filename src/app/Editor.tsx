@@ -1037,7 +1037,9 @@ export default function Editor() {
     const form = searchInputRef.current?.form;
     const row = form?.nextElementSibling;
     if (!form || !row) return Infinity;
-    const rowFoot = row.getBoundingClientRect().bottom - side.getBoundingClientRect().top;
+    // (from inside the sidebar's border, where the pinned search's `top` is measured)
+    const rowFoot =
+      row.getBoundingClientRect().bottom - side.getBoundingClientRect().top - side.clientTop;
     const pinnedFoot = form.offsetHeight + parseFloat(getComputedStyle(form).top);
     return side.scrollTop + rowFoot - pinnedFoot;
   };
