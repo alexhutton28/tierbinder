@@ -4056,7 +4056,7 @@ export default function Editor() {
                       <p className="text-caption text-(--tb-muted) text-pretty">
                         {shapeOf(graphic.shape).label}, best for {shapeOf(graphic.shape).bestFor}:{' '}
                         <span className="whitespace-nowrap">
-                          {exported.width} × {exported.height} PNG
+                          {exported.width} × {exported.height}
                         </span>
                       </p>
                     </div>
