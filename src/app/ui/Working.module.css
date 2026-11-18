@@ -1,0 +1,69 @@
+/* Both labels in one cell, so the button is as wide as the wider one */
+.stack {
+  display: inline-grid;
+}
+
+.layer {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  gap: var(--spacing-2);
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+}
+
+.layer[data-shown] {
+  visibility: visible;
+}
+
+/* Three dots after the words, each hopping in turn, a third of a cycle apart */
+.dots {
+  --dots-cycle: 1s;
+  --dot-size: 0.25em;
+  --dot-gap: 0.15em;
+
+  /* The dots rest on the words' baseline, and hop up to about their x-height */
+  --dot-baseline: 0.35lh;
+  --dot-hop: 0.3lh;
+
+  display: inline-flex;
+  gap: var(--dot-gap);
+  align-items: flex-end;
+  height: 1lh;
+  padding-bottom: var(--dot-baseline);
+}
+
+.dots span {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: currentcolor;
+  animation: hop var(--dots-cycle) var(--ease-flight) infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: calc(var(--dots-cycle) / 6);
+}
+
+.dots span:nth-child(3) {
+  animation-delay: calc(var(--dots-cycle) / 3);
+}
+
+@keyframes hop {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(calc(-1 * var(--dot-hop)));
+  }
+}
+
+/* Still dots under reduced motion: the words say it's under way */
+@media (prefers-reduced-motion: reduce) {
+  .dots span {
+    animation: none;
+  }
+}

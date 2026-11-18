@@ -1,0 +1,94 @@
+@reference "./globals.css";
+
+/* The editor's frame while its code loads (Loader.tsx), laid out as the editor is: under
+   b8 the top bar, the board, then the sidebar; from b8 up the top bar over the sidebar at
+   its default width, and the workspace beside them */
+.page {
+  display: grid;
+  grid-template:
+    'top' auto
+    'workspace' auto
+    'side' 1fr / 1fr;
+  width: 100%;
+  height: 100%;
+  background: var(--tb-page);
+
+  @variant b8 {
+    grid-template:
+      'top workspace' auto
+      'side workspace' 1fr / var(--tb-sidebar-default) 1fr;
+  }
+}
+
+.top {
+  display: flex;
+  grid-area: top;
+  align-items: center;
+  height: calc(var(--tb-top-height) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+  padding-inline: var(--spacing-4);
+  background: var(--tb-top);
+}
+
+.side {
+  grid-area: side;
+  background: var(--tb-bar);
+
+  @variant b8 {
+    border-right: var(--tb-line-width) solid var(--tb-line);
+  }
+}
+
+.workspace {
+  display: grid;
+  grid-area: workspace;
+  place-items: center;
+  min-height: 0;
+  padding: var(--spacing-4);
+
+  @variant b8 {
+    container-type: size;
+  }
+}
+
+/* What went wrong, if the editor's code couldn't load */
+.failed {
+  color: var(--tb-muted);
+  text-align: center;
+}
+
+/* A board-shaped placeholder shimmering as the search results' do (Editor.module.css):
+   the page's width under b8, and from b8 up as big as fits the workspace */
+.board {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(
+      100deg,
+      var(--tb-skeleton) 40%,
+      var(--tb-skeleton-shine) 50%,
+      var(--tb-skeleton) 60%
+    )
+    var(--tb-skeleton);
+  background-size: 300% 100%;
+  animation: shimmer var(--tb-shimmer) linear infinite;
+
+  @variant b8 {
+    width: min(100cqw, 100cqh * 16 / 9);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board {
+    animation: none;
+  }
+}

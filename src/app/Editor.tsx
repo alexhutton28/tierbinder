@@ -60,6 +60,7 @@ import { TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
+import Working from './ui/Working';
 import ColorField from './ui/ColorField';
 import Dropdown, { Swatch } from './ui/Dropdown';
 import RadioBar from './ui/RadioBar';
@@ -75,6 +76,9 @@ import { titleCase, cardCount } from './text';
 // the top bar and sidebar shared by every graphic.
 
 const STORAGE_KEY = 'tierbinder-doc';
+const SAVE_FAILED = "Couldn't Save Changes on This Device";
+// The shortest a Save & Share button says it's working (ms), so a quick export doesn't flicker
+const WORKING_MIN = 600;
 // The most characters a Discord message holds: a longer share link gets a note that it won't
 // fit in one
 const DISCORD_MESSAGE_LIMIT = 2000;
@@ -1494,27 +1498,49 @@ export default function Editor() {
   // Copies a link to the board showing, card tray and all
   // (one too big for a link to open isn't made). The clipboard gets the link as a promise
   // inside the click, since Safari refuses a write made after an await.
-  async function copyLink() {
+  function copyLink() {
     if (sharedCards(graphic) > MAX_SHARED_CARDS) {
       showToast(`Too Many Cards to Share (${MAX_SHARED_CARDS} at Most)`);
       return;
     }
-    const link = shareLink(graphic);
+    // whileWorking runs this at once, so the clipboard write is still inside the click
+    whileWorking('link', async () => {
+      const link = shareLink(graphic);
+      try {
+        if (typeof ClipboardItem === 'undefined') await navigator.clipboard.writeText(await link);
+        else
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/plain': link.then((text) => new Blob([text], { type: 'text/plain' })),
+            }),
+          ]);
+        showToast(
+          (await link).length > DISCORD_MESSAGE_LIMIT
+            ? 'Link Copied\nToo Long for a Discord Message'
+            : 'Link Copied'
+        );
+      } catch {
+        showToast("Couldn't Copy the Link");
+      }
+    });
+  }
+
+  // Save & Share's export, copy or link under way: its button says so ("Exporting" and
+  // bouncing dots, ui/Working.tsx) for at least WORKING_MIN, so a quick one doesn't just
+  // flicker, and the others wait for it
+  const [working, setWorking] = React.useState<'export' | 'copy' | 'link' | null>(null);
+  const workingRef = React.useRef(false);
+  async function whileWorking(kind: 'export' | 'copy' | 'link', task: () => Promise<void>) {
+    if (workingRef.current) return;
+    workingRef.current = true;
+    setWorking(kind);
+    // Started at once, so a clipboard write in it is still inside the click
+    const done = task();
     try {
-      if (typeof ClipboardItem === 'undefined') await navigator.clipboard.writeText(await link);
-      else
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/plain': link.then((text) => new Blob([text], { type: 'text/plain' })),
-          }),
-        ]);
-      showToast(
-        (await link).length > DISCORD_MESSAGE_LIMIT
-          ? 'Link Copied\nToo Long for a Discord Message'
-          : 'Link Copied'
-      );
-    } catch {
-      showToast("Couldn't Copy the Link");
+      await Promise.all([done, new Promise((resolve) => setTimeout(resolve, WORKING_MIN))]);
+    } finally {
+      workingRef.current = false;
+      setWorking(null);
     }
   }
 
@@ -1527,11 +1553,30 @@ export default function Editor() {
     setGraphic(() => placed);
   };
 
-  // Autosave
+  // Autosave, silently. If saving fails (storage full or blocked), a toast says so once,
+  // and again only after a save has worked since. The change that failed to save may have
+  // just shown its own toast (a clear, with Undo): the failure joins it as a line rather
+  // than replacing it, restarting its timer and read out again
+  const saveFailed = React.useRef(false);
   React.useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
-    } catch {}
+      saveFailed.current = false;
+    } catch {
+      if (!saveFailed.current)
+        setToast((t) =>
+          t && !t.closing
+            ? { ...t, message: `${t.message}\n${SAVE_FAILED}`, n: t.n + 1 }
+            : {
+                message: SAVE_FAILED,
+                id: (t?.id ?? 0) + 1,
+                n: (t?.n ?? 0) + 1,
+                closing: false,
+                stay: false,
+              }
+        );
+      saveFailed.current = true;
+    }
   }, [doc]);
 
   // The board fills the workspace, leaving room for the toolbar around it: from b8 up as
@@ -2730,27 +2775,29 @@ export default function Editor() {
     return blob;
   }
 
-  async function exportPng() {
-    const blob = await renderBlob();
-    if (!blob) return;
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${graphic.kind}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  const exportPng = () =>
+    whileWorking('export', async () => {
+      const blob = await renderBlob();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${graphic.kind}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
 
-  async function copyPng() {
-    const blob = await renderBlob();
-    if (!blob) return;
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-      showToast('Copied to Clipboard');
-    } catch {
-      showToast("Couldn't Copy; Use Export PNG");
-    }
-  }
+  const copyPng = () =>
+    whileWorking('copy', async () => {
+      const blob = await renderBlob();
+      if (!blob) return;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('Copied to Clipboard');
+      } catch {
+        showToast("Couldn't Copy; Use Export PNG");
+      }
+    });
 
   return (
     // The sidebar column (the logo header, then the sidebar) on the left of the board. On
@@ -3192,6 +3239,12 @@ export default function Editor() {
                                 }
                                 if (e.button !== 0) return;
                                 e.preventDefault();
+                                // The board draws the full-size image, not this thumbnail:
+                                // start loading it now, so it's usually there when the card
+                                // lands (a failure shows on the board, not here). Mouse and
+                                // pen only: on touch a press is often the start of a scroll,
+                                // and a tap's card loads as it lands
+                                loadImage(card.image).catch(() => {});
                                 resultPress.current = {
                                   card,
                                   x: e.clientX,
@@ -3570,11 +3623,20 @@ export default function Editor() {
                   </Toggle>
                 )}
                 <div className="flex flex-wrap gap-3">
-                  <Button variant="primary" onClick={exportPng} disabled={busy}>
-                    Export PNG
+                  <Button
+                    variant="primary"
+                    onClick={exportPng}
+                    disabled={busy}
+                    aria-busy={working === 'export'}
+                  >
+                    <Working active={working === 'export'} label="Exporting">
+                      Export PNG
+                    </Working>
                   </Button>
-                  <Button onClick={copyPng} disabled={busy}>
-                    Copy PNG
+                  <Button onClick={copyPng} disabled={busy} aria-busy={working === 'copy'}>
+                    <Working active={working === 'copy'} label="Copying">
+                      Copy PNG
+                    </Working>
                   </Button>
                 </div>
               </div>
@@ -3585,9 +3647,11 @@ export default function Editor() {
                   Opens this board and its card tray for anyone you send it to.
                 </p>
                 <div className="flex">
-                  <Button onClick={copyLink} className="flex gap-2 items-center">
-                    <span aria-hidden className={styles.linkIcon} />
-                    Copy Link
+                  <Button onClick={copyLink} aria-busy={working === 'link'}>
+                    <Working active={working === 'link'} label="Copying">
+                      <span aria-hidden className={styles.linkIcon} />
+                      Copy Link
+                    </Working>
                   </Button>
                 </div>
               </div>
