@@ -639,18 +639,16 @@
   scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
   transition:
     border-color var(--duration-fade) ease-out,
-    margin-block-start var(--duration-move) var(--ease-slide),
-    opacity var(--duration-fade) ease-out;
+    margin-block-start var(--duration-move) var(--ease-slide);
 
   &[data-scrolled] {
     border-bottom-color: var(--tb-line);
   }
 
   /* Slid up out of the way (its height as negative margin, set from Editor.tsx) while Add
-     Cards is scrolled on a phone, fading out as it goes; the sidebar clips it */
-  &[data-tucked] {
-    opacity: 0;
-  }
+     Cards is scrolled on a phone; the sidebar clips it. It doesn't fade as well: fading put
+     it on a layer of its own, which iOS Safari drew a second copy of for a frame or two
+     while it slid back in during a scroll */
 }
 
 @media (prefers-reduced-motion: reduce) {
