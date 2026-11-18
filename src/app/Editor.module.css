@@ -453,11 +453,11 @@
   height: auto;
 }
 
-/* The pinned search's Add to swatch button (phones): it takes no room until the row is
-   pinned, then grows to its width beside Search as the nav slides away, on the same
-   ease-slide over duration-move, fading in, and shrinks back as the row unpins; while closed
-   its gap in the row is given back. Clipped to its growing box (out past it by a focus
-   ring's reach, so the ring shows) rather than by overflow, which would cut the ring off */
+/* The pinned search's Add to swatch button (phones): it takes no room until the nav tucks
+   away, then grows to its width beside Search as the nav slides, fading in, all on the same
+   ease-slide over duration-move, and shrinks back the same way as the nav returns; while
+   closed its gap in the row is given back. Clipped to its growing box (out past it by a
+   focus ring's reach, so the ring shows) rather than by overflow, which would cut it off */
 .pinnedTarget {
   display: grid;
   grid-template-columns: 0fr;
@@ -467,7 +467,7 @@
   transition:
     grid-template-columns var(--duration-move) var(--ease-slide),
     margin-inline-start var(--duration-move) var(--ease-slide),
-    opacity var(--duration-fade) ease-out;
+    opacity var(--duration-move) var(--ease-slide);
 
   & > * {
     min-width: 0;
@@ -502,7 +502,9 @@
     calc(var(--spacing-3) - var(--tb-line-width));
   border-bottom: var(--tb-line-width) solid transparent;
   background: var(--tb-bar);
-  transition: border-color var(--duration-fade) ease-out;
+
+  /* (on the nav's slide, so the line comes and goes with it) */
+  transition: border-color var(--duration-move) var(--ease-slide);
 
   /* Above what scrolls under it only while pinned, so it never covers the row under it */
   &[data-pinned] {

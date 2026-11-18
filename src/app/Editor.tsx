@@ -1025,16 +1025,32 @@ export default function Editor() {
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
     if (panelTab !== 'add' || wide) return;
     // Only during a search (results, placeholders or none found): the pools and Advanced
-    // just scroll
-    if (!scrolled || !searchShown) setNavTucked(0);
+    // just scroll. It tucks once the row under the search (Sets, Add to) has gone wholly
+    // under the pinned search, so the swatch button takes over from the Add to picker as
+    // it goes, and comes back as soon as that row starts to come out again: never with the
+    // nav gone and the row half in sight
+    if (!searchShown || panel.scrollTop < tuckAt(panel)) setNavTucked(0);
     else if (!navTucked) {
       const head = sideHeadRef.current;
       // (not while the keyboard's in it, or it'd slide away from under it; a tapped tab can
       // keep focus too, but that's no reason to stay)
       if (!head || head.querySelector(':focus-visible')) return;
-      if (panel.scrollHeight - panel.clientHeight > head.offsetHeight)
+      // Only when the panel can stay where it is with the nav gone, so tucking can't move
+      // it back above where it tucks and untuck it again
+      if (panel.scrollHeight - panel.clientHeight - head.offsetHeight >= panel.scrollTop)
         setNavTucked(head.offsetHeight);
     }
+  };
+  // How far the Add Cards panel scrolls before the row under the search (Sets, Add to) is
+  // wholly under the pinned search: that row's foot, in the panel's content, less the
+  // pinned search's (its height, less how far above the panel's top it sticks)
+  const tuckAt = (panel: HTMLElement) => {
+    const form = searchInputRef.current?.form;
+    const row = form?.nextElementSibling;
+    if (!form || !row) return 0;
+    const rowFoot = row.getBoundingClientRect().bottom - panel.getBoundingClientRect().top;
+    const pinnedFoot = form.offsetHeight + parseFloat(getComputedStyle(form).top);
+    return panel.scrollTop + rowFoot - pinnedFoot;
   };
   // The nav is tucked only while Add Cards shows under b8, open and not folding
   const tucked =
