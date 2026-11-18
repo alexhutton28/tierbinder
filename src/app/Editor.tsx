@@ -17,6 +17,7 @@ import {
   CARD_WIDTH,
 } from './canvas/size';
 import {
+  cardLabel,
   faceOf,
   loadImage,
   mapLimit,
@@ -239,6 +240,21 @@ const UNDO_KEY = () => (/Mac|iPhone|iPad/.test(navigator.platform) ? 'Command+Z'
 function shortcutKey(e: KeyboardEvent) {
   const key = e.key.toLowerCase();
   return /^[a-z]$/.test(key) ? key : e.code.replace(/^Key/, '').toLowerCase();
+}
+
+// The board for screen readers, a line for each place (a tier, the canvas, the card tray
+// while it shows): its name, then its cards in order, or that it's empty
+function describeBoard(graphic: Graphic) {
+  const places = [
+    ...typeOf(graphic.kind).describe(graphic),
+    ...(graphic.tray.enabled ? [{ name: 'Card Tray', items: graphic.tray.items }] : []),
+  ];
+  return places.map(({ name, items, note }: { name: string; items: CardItem[]; note?: string }) => {
+    const cards = items.length
+      ? `${items.length} ${items.length === 1 ? 'card' : 'cards'}: ${items.map(cardLabel).join(', ')}`
+      : 'empty';
+    return `${name}: ${cards}${note ? `; ${note}` : ''}`;
+  });
 }
 
 // From b8 up, where the board has the room beside the sidebar
@@ -2804,6 +2820,9 @@ export default function Editor() {
         ref={pageRef}
         className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
       >
+        {/* The page's title for screen readers' heading list (the logo is an image, and hides
+        with the sidebar): the panels and the board are its h2s, their sections h3s */}
+        <h1 className="sr-only">TierBinder</h1>
         {logoMounted && (
           <button
             ref={floatingLogoRef}
@@ -2953,6 +2972,7 @@ export default function Editor() {
                 }
               >
                 <RadioBar
+                  id="tab"
                   label="Editor sections"
                   options={TABS}
                   value={tab}
@@ -3006,10 +3026,13 @@ export default function Editor() {
             the pools and Advanced don't fit */}
             <section
               role="tabpanel"
+              id="tab-add-panel"
+              aria-labelledby="tab-add"
               hidden={tab !== 'add'}
               onScroll={onPanelScroll('add')}
               className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
+              <h2 className="sr-only">Add Cards</h2>
               {/* Grows to fill the sidebar while it shows search results */}
               <div
                 className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'flex-1 min-h-0' : ''}`}
@@ -3486,10 +3509,13 @@ export default function Editor() {
 
             <section
               role="tabpanel"
+              id="tab-customize-panel"
+              aria-labelledby="tab-customize"
               hidden={tab !== 'customize'}
               onScroll={onPanelScroll('customize')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
+              <h2 className="sr-only">Customize</h2>
               {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
               hairline between sections (.tierbinder-sections), and every setting a row
               with its label muted at the left and its control at the right
@@ -3592,10 +3618,13 @@ export default function Editor() {
 
             <section
               role="tabpanel"
+              id="tab-save-panel"
+              aria-labelledby="tab-save"
               hidden={tab !== 'save'}
               onScroll={onPanelScroll('save')}
               className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
             >
+              <h2 className="sr-only">Save &amp; Share</h2>
               {/* Sections as in Customize, a hairline between them and each setting a row: the
               image (its size and format, whether the card tray goes in it, and exporting
               or copying it), then the share link. Each section's buttons act on it, so they
@@ -3699,9 +3728,21 @@ export default function Editor() {
             <div
               ref={boardBoxRef}
               tabIndex={-1}
+              role="group"
+              aria-labelledby="board-heading"
               className={`${styles.boardBox} self-center relative`}
               style={{ width: stageWidth * scale }}
             >
+              {/* The board for screen readers, to whom the canvas is one image: each tier (or
+              the canvas) and the card tray, with their cards in order */}
+              <div className="sr-only">
+                <h2 id="board-heading">{type.label}</h2>
+                <ul>
+                  {describeBoard(graphic).map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </div>
               <Stage
                 ref={(stage) => {
                   stageRef.current = stage;

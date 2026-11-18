@@ -15,6 +15,9 @@ type BlockBox = { top: number; left: number; width: number; height: number; tran
 
 type Props<T extends string> = {
   label: string;
+  // Prefixes each tab's id (`<id>-<value>`), and the id of the panel it controls
+  // (`<id>-<value>-panel`), which should be labelled by the tab
+  id: string;
   options: readonly Option<T>[];
   value: T;
   // `clicked`: picked with a click or tap, not moved to with the arrow keys
@@ -34,6 +37,7 @@ type Props<T extends string> = {
 // selected in turn and needs the widest, so switching tabs never changes the mode.
 export default function RadioBar<T extends string>({
   label,
+  id,
   options,
   value,
   onChange,
@@ -201,6 +205,8 @@ export default function RadioBar<T extends string>({
             key={option.value}
             type="button"
             role="tab"
+            id={`${id}-${option.value}`}
+            aria-controls={`${id}-${option.value}-panel`}
             aria-selected={option.value === value}
             tabIndex={option.value === value ? 0 : -1}
             className={styles.option}

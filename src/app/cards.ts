@@ -21,6 +21,13 @@ export type CardItem = CardFace & {
   split?: CardFace;
 };
 
+// A card as screen readers hear it: its name, set and number, and a split card's halves
+export function cardLabel(item: CardItem) {
+  const face = ({ name, set, number }: CardFace) =>
+    set && number ? `${name} (${set} ${number})` : name;
+  return item.split ? `split card: ${face(item)} over ${face(item.split)}` : face(item);
+}
+
 export function faceOf({ name, set, number, image }: CardFace): CardFace {
   return { name, set, number, image };
 }
