@@ -89,6 +89,7 @@ export default function TierListCanvas({
           }
           dividerColor={list.tierCardBorders ? list.tiers[tierIndex].color : list.border}
           onSelect={() => onSelect(item.id)}
+          onDeselect={() => onSelect(null)}
           onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
           dragWidth={cardDragWidth}
           hidden={arriving.has(item.id)}

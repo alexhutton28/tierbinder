@@ -88,6 +88,7 @@ export default function BlankCanvasView({
             borderColor={item.split ? canvas.border : null}
             dividerColor={canvas.border}
             onSelect={() => onSelect(item.id)}
+            onDeselect={() => onSelect(null)}
             onMenu={(menuX, menuY) => onCardMenu(item.id, menuX, menuY)}
             dragWidth={cardDragWidth}
             hidden={arriving.has(item.id)}

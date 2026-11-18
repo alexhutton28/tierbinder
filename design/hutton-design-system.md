@@ -156,7 +156,7 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ### Menus
 
-- A click or tap on a card selects it (to delete it, or move it by clicking a tier); its menu opens on a right-click or a long press (half a second, moving less than 8px), as a search result's does, in presentation mode too, where dragging is the main way to rank cards.
+- A click or tap on a card selects it (to delete it, or move it by clicking a tier), and another click or tap on it, or on the tier or tray it's in, deselects it; its menu opens on a right-click or a long press (half a second, moving less than 8px), as a search result's does, in presentation mode too, where dragging is the main way to rank cards.
 - The board is one Tab stop: the arrow keys pick a card (the selection outline shows which; the board shows the focus ring only while none is picked), Alt and the arrows move it (along its tier or into the next, or nudged on the blank canvas, finer with Shift), Enter or the menu key opens its menu, which takes focus, and Delete removes it, picking the card beside it. Screen readers hear each card picked or moved, with its place ("Charizard ex (OBF 125), S, 2 of 3"). Every card's menu has Move to Tier, its flyout listing the places it can go (with one place, a plain item naming it: "Move to Card Tray"). Below `b8` the page is in the order it shows (top bar, board, sidebar) for Tab and screen readers too.
 - Options in menus and dropdowns light up while pressed on every device, in their hover color, so a tap shows.
 

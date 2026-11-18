@@ -223,7 +223,7 @@ export default function CardTray({
   // Split cards' divider and border: the graphic's border color
   border: string;
   fontFamily: string;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   onCardMenu: (id: string, x: number, y: number) => void;
   // A card was dropped with its top-left corner at x, y on the board (design pixels)
   onCardDrop: (id: string, x: number, y: number) => void;
@@ -482,6 +482,9 @@ export default function CardTray({
                   dividerColor={border}
                   onSelect={() => {
                     if (!panned.current) onSelect(item.id);
+                  }}
+                  onDeselect={() => {
+                    if (!panned.current) onSelect(null);
                   }}
                   onMenu={(menuX, menuY) => {
                     if (!panned.current) onCardMenu(item.id, menuX, menuY);
