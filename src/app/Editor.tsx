@@ -578,8 +578,6 @@ export default function Editor() {
   const resultsCount = resultsLimit.of === results ? resultsLimit.count : RESULTS_PAGE;
   const visibleResults = shownResults.slice(0, resultsCount);
   const resultsRef = React.useRef<HTMLDivElement>(null);
-  // The Add Cards panel, which scrolls the results under b8
-  const addPanelRef = React.useRef<HTMLElement>(null);
   const moreResultsRef = React.useRef<HTMLSpanElement>(null);
   React.useEffect(() => {
     const more = moreResultsRef.current;
@@ -590,10 +588,10 @@ export default function Editor() {
           setResultsLimit({ of: results, count: resultsCount + RESULTS_PAGE });
       },
       // Starts drawing the next page a little before the end comes into view: the end of
-      // the results' own scroll beside the board, or of the panel's under b8, where they
-      // don't scroll on their own
+      // the results' own scroll beside the board, or of the sidebar's under b8, where the
+      // whole sidebar scrolls
       {
-        root: wide ? resultsRef.current : addPanelRef.current,
+        root: wide ? resultsRef.current : sideRef.current,
         rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px`,
       }
     );
@@ -983,6 +981,8 @@ export default function Editor() {
     // (measured only from fully open: a reverse mid-slide keeps the last measure, not the
     // height it's passing through)
     if (!sidebarFolded && fold === 0 && side && head) {
+      // (from the sidebar's top under b8, where it scrolls as one: the nav must be in sight)
+      side.scrollTo({ top: 0 });
       const style = getComputedStyle(head);
       // The folded bar's row: the light logo and the button, not the nav it replaces, which
       // is taller, so the slide ends at the bar's own height instead of popping down to it
@@ -1010,59 +1010,48 @@ export default function Editor() {
   const foldingSideHeight =
     fold > 0 && !folded ? foldHeights.open + (foldHeights.bar - foldHeights.open) * fold : null;
   // The header's line shows only while the tab panel under it is scrolled from its top
-  // (each tab keeping its own scroll, so its own flag)
+  // (each tab keeping its own scroll, so its own flag). Beside the board only: under b8 the
+  // whole sidebar scrolls, the nav with it (see onSideScroll)
   const [scrolledTabs, setScrolledTabs] = React.useState<Partial<Record<Tab, boolean>>>({});
-  const panelScrolled = !!scrolledTabs[tab];
-  // Under b8 the whole Add Cards panel scrolls, and once it's scrolled from its top the main
-  // nav slides up out of the way (`navTucked`: the height it slides by), leaving the search,
-  // which sticks to the panel's top as the rest goes under it; back at the top, the nav slides
-  // down again. Only when the panel would still scroll with the nav gone, so tucking it can't
-  // bring the panel back to its top and untuck it again
-  const [navTucked, setNavTucked] = React.useState(0);
+  const panelScrolled = wide && !!scrolledTabs[tab];
   const onPanelScroll = (panelTab: Tab) => (e: React.UIEvent<HTMLElement>) => {
-    const panel = e.currentTarget;
-    const scrolled = panel.scrollTop > 0;
+    const scrolled = e.currentTarget.scrollTop > 0;
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
-    if (panelTab !== 'add' || wide) return;
-    // Only during a search (results, placeholders or none found): the pools and Advanced
-    // just scroll. It tucks once the row under the search (Sets, Add to) has gone wholly
-    // under the pinned search, so the swatch button takes over from the Add to picker as
-    // it goes, and comes back as soon as that row starts to come out again: never with the
-    // nav gone and the row half in sight
-    if (!searchShown || panel.scrollTop < tuckAt(panel)) setNavTucked(0);
-    else if (!navTucked) {
-      const head = sideHeadRef.current;
-      // (not while the keyboard's in it, or it'd slide away from under it; a tapped tab can
-      // keep focus too, but that's no reason to stay)
-      if (!head || head.querySelector(':focus-visible')) return;
-      // Only when the panel can stay where it is with the nav gone, so tucking can't move
-      // it back above where it tucks and untuck it again
-      if (panel.scrollHeight - panel.clientHeight - head.offsetHeight >= panel.scrollTop)
-        setNavTucked(head.offsetHeight);
-    }
   };
-  // How far the Add Cards panel scrolls before the row under the search (Sets, Add to) is
-  // wholly under the pinned search: that row's foot, in the panel's content, less the
-  // pinned search's (its height, less how far above the panel's top it sticks)
-  const tuckAt = (panel: HTMLElement) => {
+  // Under b8 the whole sidebar scrolls as one, its main nav with it, so scrolling down moves
+  // the nav out of the way exactly as the finger does, with no animation of its own to fight
+  // the scroll. During a search the search sticks to the sidebar's top as the rest goes
+  // under it, and once the row under it (Sets, Add to) is wholly under it too, it gets a
+  // hairline and the Add to picker joins it as a swatch button (`searchStuck`)
+  const [searchStuck, setSearchStuck] = React.useState(false);
+  const onSideScroll = (e: React.UIEvent<HTMLElement>) => {
+    if (wide) return;
+    const side = e.currentTarget;
+    const stuck = tab === 'add' && searchShown && side.scrollTop >= stuckAt(side);
+    setSearchStuck((was) => (was === stuck ? was : stuck));
+  };
+  // How far the sidebar scrolls before the row under the search (Sets, Add to) is wholly
+  // under the pinned search: that row's foot, in the sidebar's content, less the pinned
+  // search's (its height, less how far above the sidebar's top it sticks)
+  const stuckAt = (side: HTMLElement) => {
     const form = searchInputRef.current?.form;
     const row = form?.nextElementSibling;
-    if (!form || !row) return 0;
-    const rowFoot = row.getBoundingClientRect().bottom - panel.getBoundingClientRect().top;
+    if (!form || !row) return Infinity;
+    const rowFoot = row.getBoundingClientRect().bottom - side.getBoundingClientRect().top;
     const pinnedFoot = form.offsetHeight + parseFloat(getComputedStyle(form).top);
-    return panel.scrollTop + rowFoot - pinnedFoot;
+    return side.scrollTop + rowFoot - pinnedFoot;
   };
-  // The nav is tucked only while Add Cards shows under b8, open and not folding
-  const tucked =
-    !wide && tab === 'add' && searchShown && !sidebarFolded && fold === 0 ? navTucked : 0;
+  // Only while Add Cards shows a search under b8
+  const pinnedTarget = !wide && tab === 'add' && searchShown && searchStuck;
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
     setSidebarFolded(false);
-    // A hidden panel loses its scroll without a scroll event, so Add Cards comes back at its
-    // top with the nav out
-    setNavTucked(0);
   }
+  // Under b8, a tab picked starts at the sidebar's top (the tabs share its scroll)
+  React.useLayoutEffect(() => {
+    if (!wide) sideRef.current?.scrollTo({ top: 0 });
+  }, [tab, wide]);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
@@ -2147,9 +2136,8 @@ export default function Editor() {
     setSearched(text.trim());
     setSearching(true);
     setImporting(false);
-    // Under b8, where the whole panel scrolls, a new search starts from its first result
-    // (the scroll event that follows brings the nav back)
-    if (!wide) addPanelRef.current?.scrollTo({ top: 0 });
+    // Under b8, where the whole sidebar scrolls, a new search starts from its top
+    if (!wide) sideRef.current?.scrollTo({ top: 0 });
     try {
       const found = await searchCards(text.trim(), options, abort.signal);
       if (count !== searchCount.current) return;
@@ -3245,8 +3233,8 @@ export default function Editor() {
     });
 
   // The Add to picker (a tier, the canvas or the card tray): in the row under the search,
-  // and on phones also as a swatch button in the pinned search while the nav's tucked away,
-  // so where a tapped result goes stays in sight
+  // and on phones also as a swatch button in the pinned search once the row holding the
+  // picker has gone under it, so where a tapped result goes stays in sight
   const showAddTo = (!picking || splitPicker) && targets.length > 1;
   const addToPicker = (swatchOnly: boolean) => (
     <Dropdown
@@ -3427,6 +3415,7 @@ export default function Editor() {
                 id="sidebar"
                 ref={sideRef}
                 className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+                onScroll={onSideScroll}
                 style={
                   foldingSideHeight !== null
                     ? { flex: 'none', height: foldingSideHeight }
@@ -3437,14 +3426,6 @@ export default function Editor() {
                   ref={sideHeadRef}
                   className={`${styles.sideHead} flex gap-2 items-center`}
                   data-scrolled={panelScrolled || undefined}
-                  // Slid up out of the way while Add Cards is scrolled on a phone (`navTucked`);
-                  // keyboard focus reaching it (Shift+Tab from the search) brings it back, so
-                  // the keyboard can still switch tabs or fold the sidebar
-                  data-tucked={tucked > 0 || undefined}
-                  style={tucked ? { marginBlockStart: -tucked } : undefined}
-                  onFocus={(e) => {
-                    if (e.target.matches(':focus-visible')) setNavTucked(0);
-                  }}
                   // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
                   // is the one keyboards and screen readers get)
                   onClick={(e) => {
@@ -3526,13 +3507,12 @@ export default function Editor() {
             fill the sidebar's height and scroll on their own, and the panel scrolls when
             the pools and Advanced don't fit */}
                 <section
-                  ref={addPanelRef}
                   role="tabpanel"
                   id={panelId(TAB_PREFIX, 'add')}
                   aria-labelledby={tabId(TAB_PREFIX, 'add')}
                   hidden={tab !== 'add'}
                   onScroll={onPanelScroll('add')}
-                  className="tierbinder-panel flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
+                  className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
                 >
                   <h2 className="sr-only">Add Cards</h2>
                   {/* Grows to fill the sidebar while it shows search results */}
@@ -3550,7 +3530,7 @@ export default function Editor() {
                       className={`${styles.searchRow} flex gap-3`}
                       // Pinned to the panel's top on phones only during a search
                       data-pinned={(!wide && searchShown) || undefined}
-                      data-tucked={tucked > 0 || undefined}
+                      data-stuck={pinnedTarget || undefined}
                     >
                       <label className={styles.search}>
                         <span className={styles.searchIcon} aria-hidden />
@@ -3589,10 +3569,10 @@ export default function Editor() {
                                 setQuery('');
                                 search('');
                               };
-                              // Under b8, where the whole panel scrolls, it glides back to the top
-                              // of Add a Card first, and the results go once it's there
-                              const panel = addPanelRef.current;
-                              if (!wide && panel) toTopThen(panel, clear);
+                              // Under b8, where the whole sidebar scrolls, it glides back to its top
+                              // first, and the results go once it's there
+                              const side = sideRef.current;
+                              if (!wide && side) toTopThen(side, clear);
                               else clear();
                             }}
                           >
@@ -3600,14 +3580,14 @@ export default function Editor() {
                           </button>
                         )}
                       </label>
-                      {/* On phones, once the search is pinned (the nav tucked away), where a
-                          tapped result goes: the Add to picker as a swatch button, sliding in
-                          beside Search and out again as the row unpins */}
+                      {/* On phones, once the row under the pinned search has gone under it:
+                          the Add to picker as a swatch button, sliding in beside Search, and out
+                          again as that row comes back out */}
                       {!wide && showAddTo && (
                         <div
                           className={styles.pinnedTarget}
-                          data-shown={tucked > 0 || undefined}
-                          inert={!tucked}
+                          data-shown={pinnedTarget || undefined}
+                          inert={!pinnedTarget}
                         >
                           {addToPicker(true)}
                         </div>
@@ -4022,7 +4002,7 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'customize')}
                   hidden={tab !== 'customize'}
                   onScroll={onPanelScroll('customize')}
-                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
                 >
                   <h2 className="sr-only">Customize</h2>
                   {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
@@ -4136,7 +4116,7 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'save')}
                   hidden={tab !== 'save'}
                   onScroll={onPanelScroll('save')}
-                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 flex-1 min-w-0 min-h-0 overflow-y-auto"
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
                 >
                   <h2 className="sr-only">Save &amp; Share</h2>
                   {/* Sections as in Customize, a hairline between them: the image (its size and

@@ -405,9 +405,10 @@
   border-top: var(--tb-line-width) solid var(--tb-line);
   background: var(--tb-bar);
 
-  /* At the window's foot under b8: the credits' 44px touch target reaches past it, which
-     would let the page scroll by the difference */
-  overflow-y: clip;
+  /* Under b8 it scrolls as one, its nav with it, so the nav moves out of the way as the
+     finger does (the tab panels grow to their content there; beside the board each
+     scrolls on its own under the nav) */
+  overflow-y: auto;
 
   @variant b8 {
     position: static;
@@ -453,9 +454,10 @@
   height: auto;
 }
 
-/* The pinned search's Add to swatch button (phones): it takes no room until the nav tucks
-   away, then grows to its width beside Search as the nav slides, fading in, all on the same
-   ease-slide over duration-move, and shrinks back the same way as the nav returns; while
+/* The pinned search's Add to swatch button (phones): it takes no room until the row holding
+   the Add to picker has gone under the pinned search, then grows to its width beside
+   Search, fading in, on ease-slide over duration-move, and shrinks back the same way as
+   that row comes back out; while
    closed its gap in the row is given back. Clipped to its growing box (out past it by a
    focus ring's reach, so the ring shows) rather than by overflow, which would cut it off */
 .pinnedTarget {
@@ -486,11 +488,13 @@
   }
 }
 
-/* Under b8, where the whole panel scrolls, the search sticks to the panel's top during a
-   search (data-pinned: results, placeholders or none found showing) as the rest goes under it, on the sidebar's color with 8px above and below (given back as negative
-   margin, so the layout keeps its spacing), and the hairline the nav carries while it's
-   tucked away (data-tucked). It sticks a line's width above the panel's top (and is that much
-   taller), so no sliver of what scrolls under it shows at a fractional pixel */
+/* Under b8, where the whole sidebar scrolls, the search sticks to its top during a search
+   (data-pinned: results, placeholders or none found showing) as the rest goes under it, the
+   nav included, on the sidebar's color with 8px above and below (given back as negative
+   margin, so the layout keeps its spacing), and a hairline once the row under it (Sets,
+   Add to) is wholly under it too (data-stuck). It sticks a line's width above the sidebar's
+   top (and is that much taller), so no sliver of what scrolls under it shows at a
+   fractional pixel */
 .searchRow {
   --overlap: var(--tb-line-width);
 
@@ -503,7 +507,7 @@
   border-bottom: var(--tb-line-width) solid transparent;
   background: var(--tb-bar);
 
-  /* (on the nav's slide, so the line comes and goes with it) */
+  /* (on the swatch button's slide, so the line comes and goes with it) */
   transition: border-color var(--duration-move) var(--ease-slide);
 
   /* Above what scrolls under it only while pinned, so it never covers the row under it */
@@ -512,7 +516,7 @@
     z-index: 1;
   }
 
-  &[data-tucked] {
+  &[data-stuck] {
     border-bottom-color: var(--tb-line);
   }
 
@@ -628,10 +632,10 @@
   }
 }
 
-/* A true header over the tab panel, which scrolls under it: 8px around the nav (the
-   panel's first heading starts right under that), and a hairline below once
-   the panel is scrolled from its top (data-scrolled), fading in, so
-   what scrolls up disappears at the line rather than beside the nav. Its
+/* The sidebar's header: 8px around the nav (the panel's first heading starts right under
+   that). Beside the board the tab panel scrolls under it, and a hairline below fades in
+   once it's scrolled from its top (data-scrolled), so what scrolls up disappears at the
+   line rather than beside the nav; under b8 it scrolls with the rest of the sidebar. Its
    scroll-margin-bottom is the folded bar's padding below, as a length Editor.tsx can read
    before it folds (.sideFolded) */
 .sideHead {
@@ -639,23 +643,10 @@
   padding: var(--spacing-3);
   border-bottom: var(--tb-line-width) solid transparent;
   scroll-margin-bottom: calc(var(--spacing-3) + env(safe-area-inset-bottom));
-  transition:
-    border-color var(--duration-fade) ease-out,
-    margin-block-start var(--duration-move) var(--ease-slide);
+  transition: border-color var(--duration-fade) ease-out;
 
   &[data-scrolled] {
     border-bottom-color: var(--tb-line);
-  }
-
-  /* Slid up out of the way (its height as negative margin, set from Editor.tsx) while Add
-     Cards is scrolled on a phone; the sidebar clips it. It doesn't fade as well: fading put
-     it on a layer of its own, which iOS Safari drew a second copy of for a frame or two
-     while it slid back in during a scroll */
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sideHead {
-    transition: border-color var(--duration-fade) ease-out;
   }
 }
 
