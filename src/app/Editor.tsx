@@ -56,7 +56,7 @@ import { DEFAULT_SEARCH, sortDirection as sortLabel, type SearchOptions } from '
 import Button from './ui/Button';
 import Segmented from './ui/Segmented';
 import ClearButton, { type ClearChoice } from './ui/ClearButton';
-import { TOUCH_SLOP } from './ui/pointer';
+import { LONG_PRESS, TOUCH_SLOP } from './ui/pointer';
 import { followOpen, revealBelow } from './ui/reveal';
 import { useReveal } from './ui/useReveal';
 import Toggle from './ui/Toggle';
@@ -134,10 +134,6 @@ const TRAY_MENU = 'tray';
 // The card menu's narrowest width; it opens left of the pointer when this wouldn't fit
 // inside the board's right edge
 const MENU_WIDTH = 160;
-
-// A touch press held this long (ms) opens a search result's menu, unless it moves more
-// than TOUCH_SLOP (px, ui/pointer.ts) first, as long presses go on phones
-const LONG_PRESS = 500;
 
 // Under b8 the board and the card tray stay on screen above the sidebar, which scrolls on
 // its own: they take at most this share of the page's height (top bar included), leaving
@@ -585,7 +581,7 @@ export default function Editor() {
   // Keyed by board type and pool, since each board has its own tray
   const poolAddsKey = (pool: Pool) => `${graphic.kind} ${pool.name}`;
   const [tab, setTab] = React.useState<Tab>('add');
-  // Menu for a clicked card, or for a search result dropped on a card (`dropped`: the
+  // Menu for a card (right-clicked or long-pressed), or for a search result dropped on a card (`dropped`: the
   // result, and the point it was dropped at), positioned in the board's on-screen pixels
   // The card tray's own menu shares it, with `id` TRAY_MENU (opened on the tray's space:
   // Hide Card Tray, and Clear Card Tray, which a tray card's menu has last too);
@@ -1787,7 +1783,7 @@ export default function Editor() {
     return () => window.removeEventListener('keydown', onKey);
   }, [removeSelected]);
 
-  // The card menu closes on any press outside it (a press on a card reopens it on click)
+  // The card menu closes on any press outside it (a right-click or long press on a card reopens it)
   React.useEffect(() => {
     if (!cardMenu) return;
     const onDown = (e: PointerEvent) => {
@@ -1983,9 +1979,6 @@ export default function Editor() {
 
   // The selected card as a press on the board began (before the press deselected it)
   const pressSelection = React.useRef<string | null>(null);
-  // Whether its menu was open then: a tap opens the menu, so a tap on another tier moves the
-  // card, but one on its own tier (or the tray it's in) only closes the menu
-  const pressMenuOpen = React.useRef(false);
 
   // A tier (or the card tray, the last target) clicked on the board: it's the Add to choice
   // from then on, and with a card selected, the card moves to its end and stays selected.
@@ -2001,7 +1994,9 @@ export default function Editor() {
     const ownPlace = toTray
       ? inTrayNow
       : !inTrayNow && 'tierIndex' in place && place.tierIndex === index;
-    if (pressMenuOpen.current && ownPlace) return;
+    // A press on its own tier (or the tray it's in) only deselects it, as pressing the
+    // board's empty space does, so tapping a card and then beside it doesn't reorder it
+    if (ownPlace) return;
     moveCardToTarget(id, index);
   }
 
@@ -2090,7 +2085,7 @@ export default function Editor() {
   const moveLabel = (id: string) =>
     `${trayPlacements.some((p) => p.item.id === id) ? 'Add' : 'Move'} to ${type.targetNoun}`;
 
-  // The card menu's items: the tray's own menu, a clicked card's (a tray card's ending with
+  // The card menu's items: the tray's own menu, a card's (a tray card's ending with
   // Clear Card Tray, a row opening a flyout), or a search result's dropped on a card
   const cardMenuItems = (menu: CardMenu) => {
     const { id, dropped } = menu;
@@ -3722,7 +3717,6 @@ export default function Editor() {
                 // (not while a replacement is being picked, which keeps its card selected)
                 onPointerDown={() => {
                   pressSelection.current = selectedShown && !picking ? selectedId : null;
-                  pressMenuOpen.current = !!cardMenu;
                 }}
                 onMouseDown={(e) => {
                   // A double click's second press (a tier label opening its name) moves nothing
@@ -3731,6 +3725,8 @@ export default function Editor() {
                     setSelectedId(null);
                   }
                 }}
+                // A card menu a long press opened closes once the finger drags the card on
+                onDragStart={() => setCardMenu(null)}
                 onDragMove={moveOutline}
                 // After the card's own dragend has put it back at its laid-out spot; React only
                 // moves the outline when that spot changes
@@ -3770,7 +3766,11 @@ export default function Editor() {
                     selectedId={selectedId}
                     oneRow={oneRowTray}
                     pan={trayPan}
-                    onPan={setTrayPan}
+                    // (closing a card menu, which would no longer point at its card)
+                    onPan={(next) => {
+                      setTrayPan(next);
+                      setCardMenu(null);
+                    }}
                     onTrayMenu={(x, y) => setCardMenu({ id: TRAY_MENU, x, y })}
                     boardCardWidth={boardCardWidth}
                     hintFont={interfaceFont}

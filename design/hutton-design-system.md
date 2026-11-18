@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.28 · November 17, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.29 · November 17, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -153,6 +153,10 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 - Tailwind's `hover:` variant applies only on devices that can hover.
 - Hover that must work everywhere uses plain `:hover` in CSS.
+
+### Menus
+
+- A click or tap on a card selects it (to delete it, or move it by clicking a tier); its menu opens on a right-click or a long press (half a second, moving less than 8px), as a search result's does, in presentation mode too, where dragging is the main way to rank cards.
 
 ### Focus
 
@@ -333,6 +337,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 17, 2026 · v1.29:** A card's menu opens on a right-click or a long press, not a click or tap, which now only selects it; in presentation mode too.
 - **November 17, 2026 · v1.28:** Feedback states: Save & Share's buttons say "Exporting" or "Copying" with hopping dots while they work; the page shows a shimmering board under the top bar while it first loads; a card on the board shimmers until its image loads, in place of its name; a failed save says so in a toast.
 - **November 17, 2026 · v1.27:** From phone testing: folding the sidebar is presentation mode, sliding smoothly to a bar at the foot that opens on a tap anywhere, with a shorter card menu (View, Move to Tier, Remove Card). The phone card tray spans the page while the board keeps its size, its cards bigger while folded, with shades and arrows at edges that scroll. Dragged cards resize around the pointer. The color picker is nine hues of five shades (the tier colors in the middle), a small icon switch to Spectrum that grows and shrinks the picker, and one color field typed as Hex, RGB or HSL. Replace Card is out for now; the sort button is hidden. The main nav is a header over the sidebar's panel, a hairline fading in under it once the panel is scrolled. Added `--tb-control-height-small`.
 - **November 16, 2026 · v1.26:** From a user test: the card tray slides in and out under the board as it's turned on and off. The selected card is drawn on top, and clicking a tier or the tray with a card selected moves it there. Search results come in three thumbnail sizes. The color picker opens to Swatches, a grid of recommended colors, with Custom (the square and hue bar) a switch away. On phones and tablets the card tray is one row of full-size cards that scrolls sideways, and the sidebar folds down under a bigger board (the top bar hiding with it). Clicking or tapping Add Cards always focuses the search, on phones too, where the keyboard then covers part of the page. Added `--tb-thumb-small`, `--tb-thumb-large` and `--tb-thumb-ratio`.
