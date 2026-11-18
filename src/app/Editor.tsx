@@ -1029,8 +1029,9 @@ export default function Editor() {
     if (!scrolled || !searchShown) setNavTucked(0);
     else if (!navTucked) {
       const head = sideHeadRef.current;
-      // (not while focus is in it: it'd slide away from under the keyboard)
-      if (!head || head.contains(document.activeElement)) return;
+      // (not while the keyboard's in it, or it'd slide away from under it; a tapped tab can
+      // keep focus too, but that's no reason to stay)
+      if (!head || head.querySelector(':focus-visible')) return;
       if (panel.scrollHeight - panel.clientHeight > head.offsetHeight)
         setNavTucked(head.offsetHeight);
     }
@@ -3421,11 +3422,13 @@ export default function Editor() {
                   className={`${styles.sideHead} flex gap-2 items-center`}
                   data-scrolled={panelScrolled || undefined}
                   // Slid up out of the way while Add Cards is scrolled on a phone (`navTucked`);
-                  // focus reaching it (Shift+Tab from the search) brings it back, so the
-                  // keyboard can still switch tabs or fold the sidebar
+                  // keyboard focus reaching it (Shift+Tab from the search) brings it back, so
+                  // the keyboard can still switch tabs or fold the sidebar
                   data-tucked={tucked > 0 || undefined}
                   style={tucked ? { marginBlockStart: -tucked } : undefined}
-                  onFocus={() => setNavTucked(0)}
+                  onFocus={(e) => {
+                    if (e.target.matches(':focus-visible')) setNavTucked(0);
+                  }}
                   // Folded, a press anywhere on the bar opens it (a pointer shortcut: its button
                   // is the one keyboards and screen readers get)
                   onClick={(e) => {
