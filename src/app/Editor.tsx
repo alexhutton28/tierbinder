@@ -4121,17 +4121,20 @@ export default function Editor() {
                         buttons are what the tab is for, and this adjusts them */}
                     {trayShown && (
                       <Toggle checked={includeTray} onChange={setIncludeTray}>
-                        Include Card Tray
+                        Include Card Tray in Export
                       </Toggle>
                     )}
                   </div>
                   {/* A link that opens an editable copy of this board, card tray and all, on
                       anyone's device */}
                   <div className="flex flex-col gap-3">
-                    <h3 className="tierbinder-heading">Board Link</h3>
-                    <p className="text-(--tb-muted) text-pretty">
-                      Opens an editable copy of this board.
-                    </p>
+                    {/* The help text sits 4px under its heading, closer to it than to the button */}
+                    <div className="flex flex-col gap-2">
+                      <h3 className="tierbinder-heading">Board Link</h3>
+                      <p className="text-(--tb-muted) text-pretty">
+                        Opens an editable copy of this board.
+                      </p>
+                    </div>
                     <div className="grid b7:flex">
                       <Button
                         size="large"
