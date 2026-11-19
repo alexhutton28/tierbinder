@@ -887,9 +887,10 @@ export default function Editor() {
   // nav, so it follows the labels and the font; a width the user dragged still wins.
   const sideColumnRef = React.useRef<HTMLDivElement>(null);
   const fitSidebarToNav = React.useCallback((navWidth: number) => {
+    // (and the hide button beside it, 4px after it: the header's gap)
     sideColumnRef.current?.style.setProperty(
       '--tb-sidebar-default',
-      `calc(${navWidth}px + 2 * var(--spacing-3) + var(--tb-line-width))`
+      `calc(${navWidth}px + var(--spacing-2) + var(--tb-control-height) + 2 * var(--spacing-3) + var(--tb-line-width))`
     );
   }, []);
   const boardRef = React.useRef<HTMLDivElement>(null);
@@ -1137,6 +1138,7 @@ export default function Editor() {
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
   }, []);
+  const hideSidebarRef = React.useRef<HTMLButtonElement>(null);
   // The sidebar's foot (the credits) shows only under Save & Share, at every width, so the
   // other tabs keep the height. Hiding it with focus inside (a tab switched from the
   // keyboard) would drop focus to the page, so it goes to the main nav's tab.
@@ -1149,14 +1151,10 @@ export default function Editor() {
   }, [footHidden]);
   const toggleSidebar = React.useCallback(() => {
     if (sidebarHidden) {
-      // The show button goes as the sidebar comes back: focus on it moves to the main nav's
-      // tab, the sidebar's first stop
+      // The show button goes as the sidebar comes back: focus on it moves to the hide button
       const fromShowButton = document.activeElement === showSidebarRef.current;
       flushSync(() => setSidebarHidden(false));
-      if (fromShowButton)
-        sideColumnRef.current
-          ?.querySelector<HTMLElement>('[role=tab][aria-selected=true]')
-          ?.focus({ preventScroll: true });
+      if (fromShowButton) hideSidebarRef.current?.focus({ preventScroll: true });
     } else {
       // Focus in the sidebar would be lost with it: the board takes it
       if (sideColumnRef.current?.contains(document.activeElement)) {
@@ -3499,6 +3497,23 @@ export default function Editor() {
                       onFullWidth={fitSidebarToNav}
                     />
                   </div>
+                  {/* Beside the board, the button that hides the sidebar (as Ctrl+\ or Cmd+\
+              does), so touch screens without a keyboard can too */}
+                  {wide && (
+                    <Button
+                      ref={hideSidebarRef}
+                      type="button"
+                      variant="quiet"
+                      className={styles.foldButton}
+                      aria-label="Hide sidebar"
+                      title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
+                      aria-keyshortcuts="Control+\ Meta+\"
+                      aria-controls="sidebar-column"
+                      onClick={toggleSidebar}
+                    >
+                      <span aria-hidden className={styles.sidebarIcon} />
+                    </Button>
+                  )}
                   {/* On phones and tablets: the sidebar folds down to its nav under a bigger
               board, and back */}
                   {!wide && (
