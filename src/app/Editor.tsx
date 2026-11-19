@@ -598,7 +598,7 @@ export default function Editor() {
       // the results' own scroll beside the board, or of the sidebar's under b8, where the
       // whole sidebar scrolls
       {
-        root: oneScroll ? (wide ? sideColumnRef.current : sideRef.current) : resultsRef.current,
+        root: oneScroll ? sideRef.current : resultsRef.current,
         rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px`,
       }
     );
@@ -954,8 +954,9 @@ export default function Editor() {
       ?.querySelectorAll('[role=tabpanel], [data-results]')
       .forEach((el) => el.dispatchEvent(new Event('scroll')));
   }, [wide]);
-  // The sidebar column hidden with Ctrl+\ (Cmd+\ on a Mac, as in Notion and Figma) or the
-  // button at the sidebar's foot, sliding out to leave the window to the board; from b8 up
+  // The sidebar column hidden with Ctrl+\ (Cmd+\ on a Mac, as in Notion and Figma), sliding
+  // out to leave the window to the board, and shown again with it or the button at the
+  // window's bottom left; from b8 up
   // only, where it's beside the board. Not saved: a reload, or a narrower window, shows it.
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
   // Under b8, the sidebar collapsed under a bigger board (and the top bar hidden), by the
@@ -1026,17 +1027,15 @@ export default function Editor() {
     const scrolled = e.currentTarget.scrollTop > 0;
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
   };
-  // Under b8, and on touch screens beside the board, the whole sidebar scrolls as one (the
-  // sidebar, or beside the board the column with the top bar: `sidebarScroller`), its main
-  // nav with it, so scrolling down moves
-  // the nav out of the way exactly as the finger does, with no animation of its own to fight
+  // Under b8, and on touch screens beside the board (where the top bar moves into it), the
+  // whole sidebar scrolls as one, its main nav with it, so scrolling down moves the nav out
+  // of the way exactly as the finger does, with no animation of its own to fight
   // the scroll. During a search the search sticks to the sidebar's top as the rest goes
   // under it, and once the row under it (Sets, Add to) is wholly under it too, it gets a
   // hairline and the Add to picker joins it as a swatch button (`searchStuck`)
   const [searchStuck, setSearchStuck] = React.useState(false);
-  const sidebarScroller = () => (wide ? sideColumnRef.current : sideRef.current);
   const onSideScroll = (e: React.UIEvent<HTMLElement>) => {
-    if (!oneScroll || e.currentTarget !== sidebarScroller()) return;
+    if (!oneScroll) return;
     const side = e.currentTarget;
     const stuck = tab === 'add' && searchShown && side.scrollTop >= stuckAt(side);
     setSearchStuck((was) => (was === stuck ? was : stuck));
@@ -1059,8 +1058,7 @@ export default function Editor() {
   // Measured again when the results change without a scroll (a new search, results
   // arriving, the tab coming back), so the swatch button isn't left in or out
   React.useEffect(() => {
-    if (oneScroll)
-      (wide ? sideColumnRef.current : sideRef.current)?.dispatchEvent(new Event('scroll'));
+    if (oneScroll) sideRef.current?.dispatchEvent(new Event('scroll'));
   }, [oneScroll, wide, tab, searchShown, results]);
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
@@ -1069,7 +1067,7 @@ export default function Editor() {
   }
   // Where the sidebar scrolls as one, a tab picked starts at its top (the tabs share it)
   React.useLayoutEffect(() => {
-    if (oneScroll) (wide ? sideColumnRef.current : sideRef.current)?.scrollTo({ top: 0 });
+    if (oneScroll) sideRef.current?.scrollTo({ top: 0 });
   }, [tab, wide, oneScroll]);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
@@ -2158,8 +2156,9 @@ export default function Editor() {
     setSearched(text.trim());
     setSearching(true);
     setImporting(false);
-    // Under b8, where the whole sidebar scrolls, a new search starts from its top
-    if (oneScroll) sidebarScroller()?.scrollTo({ top: 0 });
+    // Where the whole sidebar scrolls (under b8, and on touch screens beside the board), a
+    // new search starts from its top
+    if (oneScroll) sideRef.current?.scrollTo({ top: 0 });
     try {
       const found = await searchCards(text.trim(), options, abort.signal);
       if (count !== searchCount.current) return;
@@ -3398,7 +3397,7 @@ export default function Editor() {
             )}
           </div>
         )}
-        {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
+        {/* While the sidebar is hidden, the button that brings it back, at the bottom left */}
         {sidebarCollapsed && (
           <button
             ref={showSidebarRef}
@@ -3429,17 +3428,18 @@ export default function Editor() {
               id="sidebar-column"
               ref={sideColumnRef}
               className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
-              // Scrolling as one on touch screens beside the board (data-one-scroll)
-              data-one-scroll={(wide && touch) || undefined}
-              onScroll={onSideScroll}
               inert={viewing !== null}
             >
-              {wide && topBar}
+              {/* (on touch screens it's in the sidebar instead, scrolling away with it) */}
+              {wide && !touch && topBar}
               <SidebarHandle />
               <aside
                 id="sidebar"
                 ref={sideRef}
                 className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+                // On touch screens beside the board it scrolls as one too, the top bar in it
+                // (data-one-scroll), as it does under b8
+                data-one-scroll={(wide && touch) || undefined}
                 onScroll={onSideScroll}
                 style={
                   foldingSideHeight !== null
@@ -3447,6 +3447,7 @@ export default function Editor() {
                     : undefined
                 }
               >
+                {wide && touch && topBar}
                 <div
                   ref={sideHeadRef}
                   className={`${styles.sideHead} flex gap-2 items-center`}
@@ -3596,7 +3597,7 @@ export default function Editor() {
                               };
                               // Where the whole sidebar scrolls, it glides back to its top first,
                               // and the results go once it's there
-                              const side = sidebarScroller();
+                              const side = sideRef.current;
                               if (oneScroll && side) toTopThen(side, clear);
                               else clear();
                             }}

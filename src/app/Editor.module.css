@@ -277,13 +277,14 @@
   padding-left: calc(2 * var(--spacing-3) + var(--tb-icon));
 }
 
-/* The sidebar's foot: the credits, then the sidebar toggle at the other end */
+/* The sidebar's foot: the credits (under Save & Share only) */
 .foot {
   display: flex;
   align-items: center;
 
-  /* Under b8, where the whole sidebar scrolls, the credits' 44px touch target would hang
-     past the sidebar's foot and let it scroll by the overhang: cut to the foot there */
+  /* Under b8 (and on touch screens beside the board, .side[data-one-scroll]), where the
+     whole sidebar scrolls, the credits' 44px touch target would hang past the sidebar's
+     foot and let it scroll by the overhang: cut to the foot there */
   overflow-y: clip;
 
   @variant b8 {
@@ -1015,22 +1016,26 @@ img.poolCard:not([data-loaded]) {
 }
 
 /* On touch screens beside the board (a phone turned sideways, a tablet: data-one-scroll),
-   the column scrolls as one, its top bar and the main nav with it, as the sidebar does
-   under b8, so a short window doesn't lose its height to them: the sidebar and its tab
-   panels grow to their content, the results don't scroll on their own (nor are they
-   skipped while off screen, which iOS drew late), and the credits' touch target doesn't
-   hang past the foot. */
-.sideColumn[data-one-scroll] {
+   the sidebar scrolls as one, the top bar in it and the main nav with it, as it does under
+   b8, so a short window doesn't lose its height to them. It still fills the column (the
+   resize handle stays outside it, in the column), and the tab panel showing fills what's
+   left, so the credits keep to the foot; the results don't scroll on their own (nor are
+   they skipped while off screen, which iOS drew late), and the credits' touch target
+   doesn't hang past the foot. */
+.side[data-one-scroll] {
   overflow-y: auto;
 
-  & > .side,
-  & [role='tabpanel'],
+  & [role='tabpanel'] {
+    flex: 1 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
   & .resultsBox {
     flex: none;
     min-height: auto;
   }
 
-  & [role='tabpanel'],
   & [data-results] {
     overflow: visible;
   }
