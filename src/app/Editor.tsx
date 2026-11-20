@@ -2231,7 +2231,7 @@ export default function Editor() {
   // from then on, and with a card selected, the card moves to its end and stays selected.
   // The blank canvas's cards have no place in a target, so they only move into the tray.
   function pickTargetOnBoard(index: number, emptySpace: boolean) {
-    const id = emptySpace ? pressSelection.current : null;
+    const id = pressSelection.current;
     pressSelection.current = null;
     setTarget(index);
     const place = id ? placements.find((p) => p.item.id === id) : undefined;
@@ -2241,10 +2241,15 @@ export default function Editor() {
     const ownPlace = toTray
       ? inTrayNow
       : !inTrayNow && 'tierIndex' in place && place.tierIndex === index;
-    // A press on its own tier (or the tray it's in) only deselects it, as pressing the
-    // board's empty space does, so tapping a card and then beside it doesn't reorder it
-    if (ownPlace) return;
-    moveCardToTarget(id, index);
+    // A press on its own tier (its space or its label) or the tray it's in deselects it, as
+    // pressing the board's empty space does, with a mouse or a finger, so tapping a card
+    // and then beside it doesn't reorder it
+    if (ownPlace) {
+      setSelectedId(null);
+      return;
+    }
+    // Another tier's label only picks it as the Add to choice; its space moves the card
+    if (emptySpace) moveCardToTarget(id, index);
   }
 
   // Moves a card on the board or in the tray to the end of a target (the card tray last),

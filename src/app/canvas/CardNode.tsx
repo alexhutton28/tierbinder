@@ -176,6 +176,7 @@ export default function CardNode({
   borderColor,
   dividerColor,
   onSelect,
+  onDeselect,
   onMenu,
   onDragEnd,
   dragWidth,
@@ -196,6 +197,8 @@ export default function CardNode({
   // A split card's divider and backing
   dividerColor: string;
   onSelect: () => void;
+  // A second click or tap on it while it's selected (`raised`)
+  onDeselect?: () => void;
   // x, y are in the stage's on-screen pixels
   onMenu: (x: number, y: number) => void;
   // Where the card was dropped: its top-left corner, in design pixels, at the size it's
@@ -295,6 +298,8 @@ export default function CardNode({
   // own contextmenu for a long press, which is ignored once this one has opened the menu.
   const longPress = React.useRef<{ timer: number; stop: () => void } | null>(null);
   const longPressed = React.useRef(false);
+  // Whether the card was already selected when the mouse went down on it
+  const pressedSelected = React.useRef(false);
   const cancelLongPress = () => {
     longPress.current?.stop();
     longPress.current = null;
@@ -367,9 +372,23 @@ export default function CardNode({
         return cornerAt(stage, center, drag.current.scale);
       }}
       // A click or tap selects the card; its menu opens on a right-click (in place of the
-      // browser's) or a long press, so selecting a card to move or delete it doesn't
-      onMouseDown={onSelect}
-      onTap={onSelect}
+      // browser's) or a long press, so selecting a card to move or delete it doesn't. A press
+      // selects at once, so the card can be dragged straight away; a second click or tap on
+      // the selected card deselects it once it's over without a drag (Konva doesn't fire
+      // click or tap after one), and not the tap that ends a long press
+      onMouseDown={() => {
+        pressedSelected.current = raised;
+        if (!raised) onSelect();
+      }}
+      onClick={(e) => {
+        if (e.evt.button === 0 && pressedSelected.current) onDeselect?.();
+        pressedSelected.current = false;
+      }}
+      onTap={() => {
+        if (longPressed.current) return;
+        if (raised) onDeselect?.();
+        else onSelect();
+      }}
       onPointerDown={startLongPress}
       onContextMenu={(e) => {
         e.evt.preventDefault();
