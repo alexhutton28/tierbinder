@@ -294,10 +294,20 @@ function cardNews(graphic: Graphic, id: string) {
   return '';
 }
 
-// From b8 up, where the board has the room beside the sidebar
-function wideQuery() {
+// From b8 up, by width alone
+function b8Query() {
   const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
   return matchMedia(`(width >= ${b8.trim()})`);
+}
+
+// Where the sidebar goes beside the board: from b8 up, and on a short but wide enough window,
+// landscape from b6 (a phone turned sideways), as the `beside` variant in globals.css has it
+function wideQuery() {
+  const breakpoint = (name: string) =>
+    getComputedStyle(document.documentElement).getPropertyValue(`--breakpoint-${name}`).trim();
+  return matchMedia(
+    `(width >= ${breakpoint('b8')}), (width >= ${breakpoint('b6')}) and (orientation: landscape)`
+  );
 }
 
 function loadSaved() {
@@ -574,6 +584,24 @@ export default function Editor() {
   // Known from the first render (the editor only renders in the browser), so the board's
   // first fit already uses the wide layout
   const [wide, setWide] = React.useState(() => wideQuery().matches);
+  // From b8 up: room for the card tray at a 16:9 board's width. Under it (a phone turned
+  // sideways, beside the board, as well as every stacked layout) the tray is the phone's one
+  // swipeable row of full-size cards (`rowTray`), not two rows shrunk to a narrow workspace
+  const [pastB8, setPastB8] = React.useState(() => b8Query().matches);
+  const rowTray = !wide || !pastB8;
+  React.useEffect(() => {
+    const query = b8Query();
+    const update = () => setPastB8(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  // Touch screens (phones, tablets) scroll the sidebar as one even beside the board (a
+  // phone turned sideways, a tablet), top bar and nav with it, as every screen does under
+  // b8, so a short window doesn't lose its height to them; with a mouse beside the board,
+  // each tab panel scrolls on its own under them. (Known from the first render; a device's
+  // pointer doesn't change during a visit.)
+  const [touch] = React.useState(() => matchMedia('(pointer: coarse)').matches);
+  const oneScroll = !wide || touch;
   const [resultsLimit, setResultsLimit] = React.useState({ of: results, count: RESULTS_PAGE });
   const resultsCount = resultsLimit.of === results ? resultsLimit.count : RESULTS_PAGE;
   const visibleResults = shownResults.slice(0, resultsCount);
@@ -591,13 +619,13 @@ export default function Editor() {
       // the results' own scroll beside the board, or of the sidebar's under b8, where the
       // whole sidebar scrolls
       {
-        root: wide ? resultsRef.current : sideRef.current,
+        root: oneScroll ? sideRef.current : resultsRef.current,
         rootMargin: `0px 0px ${RESULTS_LOOKAHEAD}px`,
       }
     );
     observer.observe(more);
     return () => observer.disconnect();
-  }, [results, resultsCount, visibleResults.length, wide]);
+  }, [results, resultsCount, visibleResults.length, wide, oneScroll]);
   // What the last search was for; when nothing it found can be shown (none found, or every
   // thumbnail failed), that's said under the search
   const [searchedFor, setSearchedFor] = React.useState<{ query: string; sets: string[] } | null>(
@@ -880,9 +908,10 @@ export default function Editor() {
   // nav, so it follows the labels and the font; a width the user dragged still wins.
   const sideColumnRef = React.useRef<HTMLDivElement>(null);
   const fitSidebarToNav = React.useCallback((navWidth: number) => {
+    // (and the hide button beside it, 4px after it: the header's gap)
     sideColumnRef.current?.style.setProperty(
       '--tb-sidebar-default',
-      `calc(${navWidth}px + 2 * var(--spacing-3) + var(--tb-line-width))`
+      `calc(${navWidth}px + var(--spacing-2) + var(--tb-control-height) + 2 * var(--spacing-3) + var(--tb-line-width))`
     );
   }, []);
   const boardRef = React.useRef<HTMLDivElement>(null);
@@ -947,8 +976,9 @@ export default function Editor() {
       ?.querySelectorAll('[role=tabpanel], [data-results]')
       .forEach((el) => el.dispatchEvent(new Event('scroll')));
   }, [wide]);
-  // The sidebar column hidden with Ctrl+\ (Cmd+\ on a Mac, as in Notion and Figma) or the
-  // button at the sidebar's foot, sliding out to leave the window to the board; from b8 up
+  // The sidebar column hidden with Ctrl+\ (Cmd+\ on a Mac, as in Notion and Figma), sliding
+  // out to leave the window to the board, and shown again with it or the button at the
+  // window's bottom left; from b8 up
   // only, where it's beside the board. Not saved: a reload, or a narrower window, shows it.
   const [sidebarHidden, setSidebarHidden] = React.useState(false);
   // Under b8, the sidebar collapsed under a bigger board (and the top bar hidden), by the
@@ -1010,22 +1040,24 @@ export default function Editor() {
   const foldingSideHeight =
     fold > 0 && !folded ? foldHeights.open + (foldHeights.bar - foldHeights.open) * fold : null;
   // The header's line shows only while the tab panel under it is scrolled from its top
-  // (each tab keeping its own scroll, so its own flag). Beside the board only: under b8 the
-  // whole sidebar scrolls, the nav with it (see onSideScroll)
+  // (each tab keeping its own scroll, so its own flag). Only where the panels scroll on
+  // their own (beside the board, with a mouse): elsewhere the whole sidebar scrolls, the
+  // nav with it (see onSideScroll)
   const [scrolledTabs, setScrolledTabs] = React.useState<Partial<Record<Tab, boolean>>>({});
-  const panelScrolled = wide && !!scrolledTabs[tab];
+  const panelScrolled = !oneScroll && !!scrolledTabs[tab];
   const onPanelScroll = (panelTab: Tab) => (e: React.UIEvent<HTMLElement>) => {
     const scrolled = e.currentTarget.scrollTop > 0;
     setScrolledTabs((t) => (t[panelTab] === scrolled ? t : { ...t, [panelTab]: scrolled }));
   };
-  // Under b8 the whole sidebar scrolls as one, its main nav with it, so scrolling down moves
-  // the nav out of the way exactly as the finger does, with no animation of its own to fight
+  // Under b8, and on touch screens beside the board (where the top bar moves into it), the
+  // whole sidebar scrolls as one, its main nav with it, so scrolling down moves the nav out
+  // of the way exactly as the finger does, with no animation of its own to fight
   // the scroll. During a search the search sticks to the sidebar's top as the rest goes
   // under it, and once the row under it (Sets, Add to) is wholly under it too, it gets a
   // hairline and the Add to picker joins it as a swatch button (`searchStuck`)
   const [searchStuck, setSearchStuck] = React.useState(false);
   const onSideScroll = (e: React.UIEvent<HTMLElement>) => {
-    if (wide) return;
+    if (!oneScroll) return;
     const side = e.currentTarget;
     const stuck = tab === 'add' && searchShown && side.scrollTop >= stuckAt(side);
     setSearchStuck((was) => (was === stuck ? was : stuck));
@@ -1043,22 +1075,22 @@ export default function Editor() {
     const pinnedFoot = form.offsetHeight + parseFloat(getComputedStyle(form).top);
     return side.scrollTop + rowFoot - pinnedFoot;
   };
-  // Only while Add Cards shows a search under b8
-  const pinnedTarget = !wide && tab === 'add' && searchShown && searchStuck;
+  // Only while Add Cards shows a search where the sidebar scrolls as one
+  const pinnedTarget = oneScroll && tab === 'add' && searchShown && searchStuck;
   // Measured again when the results change without a scroll (a new search, results
   // arriving, the tab coming back), so the swatch button isn't left in or out
   React.useEffect(() => {
-    if (!wide) sideRef.current?.dispatchEvent(new Event('scroll'));
-  }, [wide, tab, searchShown, results]);
+    if (oneScroll) sideRef.current?.dispatchEvent(new Event('scroll'));
+  }, [oneScroll, wide, tab, searchShown, results]);
   const [foldedTab, setFoldedTab] = React.useState(tab);
   if (foldedTab !== tab) {
     setFoldedTab(tab);
     setSidebarFolded(false);
   }
-  // Under b8, a tab picked starts at the sidebar's top (the tabs share its scroll)
+  // Where the sidebar scrolls as one, a tab picked starts at its top (the tabs share it)
   React.useLayoutEffect(() => {
-    if (!wide) sideRef.current?.scrollTo({ top: 0 });
-  }, [tab, wide]);
+    if (oneScroll) sideRef.current?.scrollTo({ top: 0 });
+  }, [tab, wide, oneScroll]);
   const showSidebarRef = React.useRef<HTMLButtonElement>(null);
   const sidebarCollapsed = wide && sidebarHidden;
   // While the sidebar is hidden, the light binder mark fades in where the top bar's logo
@@ -1128,11 +1160,11 @@ export default function Editor() {
     return () => query.removeEventListener('change', update);
   }, []);
   const hideSidebarRef = React.useRef<HTMLButtonElement>(null);
-  // The sidebar's foot (the credits) shows under every tab from b8 up, and below it only
-  // under Save & Share. Hiding it with focus inside (the window narrowed, or a tab switched
-  // from the keyboard) would drop focus to the page, so it goes to the main nav's tab.
+  // The sidebar's foot (the credits) shows only under Save & Share, at every width, so the
+  // other tabs keep the height. Hiding it with focus inside (a tab switched from the
+  // keyboard) would drop focus to the page, so it goes to the main nav's tab.
   const footRef = React.useRef<HTMLElement>(null);
-  const footHidden = !wide && tab !== 'save';
+  const footHidden = tab !== 'save';
   React.useLayoutEffect(() => {
     const foot = footRef.current;
     if (!footHidden || !foot?.contains(document.activeElement)) return;
@@ -1191,7 +1223,7 @@ export default function Editor() {
   // narrow board isn't drawn smaller to fit a wider tray under it, and the tray still spans
   // the page (the image's tray is always the board's width)
   const [trayRoom, setTrayRoom] = React.useState(0);
-  const shownTrayWidth = wide ? TRAY_WIDTH : Math.max(width, scale > 0 ? trayRoom / scale : 0);
+  const shownTrayWidth = rowTray ? Math.max(width, scale > 0 ? trayRoom / scale : 0) : TRAY_WIDTH;
   const stageWidth = width + (Math.max(shownTrayWidth, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
   // The tray's left edge from the board's: centered on the stage, also while the stage
@@ -1241,7 +1273,7 @@ export default function Editor() {
     CARD_WIDTH,
     Math.min(Math.max(CARD_WIDTH * FOLDED_TRAY_SCALE, trayFill), FOLDED_TRAY_MAX / (scale || 1))
   );
-  const oneRowTray = wide ? false : CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold;
+  const oneRowTray = rowTray ? CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold : false;
   const trayCount = graphic.tray.items.length;
   const maxTrayPan = oneRowTray
     ? Math.max(0, trayRowWidth(trayCount, oneRowTray) - shownTrayWidth)
@@ -1847,9 +1879,10 @@ export default function Editor() {
       // The card tray and the gap above it, when it shows
       const tray = TRAY_GAP * trayOpen;
       const designHeight = BOARD_HEIGHT + shownTrayHeight;
-      // (under b8 the tray takes whatever width the board leaves, so only the board's counts)
+      // (with the one-row tray it takes whatever width the board leaves, so only the board's
+      // counts)
       const next = Math.min(
-        room / (wide ? stageWidth : width),
+        room / (rowTray ? width : stageWidth),
         (height - around - tray) / designHeight
       );
       setTrayRoom(Math.floor(room));
@@ -1872,7 +1905,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayOpen, shownTrayHeight, stageWidth, width, fold]);
+  }, [wide, rowTray, trayOpen, shownTrayHeight, stageWidth, width, fold]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -2143,8 +2176,9 @@ export default function Editor() {
     setSearched(text.trim());
     setSearching(true);
     setImporting(false);
-    // Under b8, where the whole sidebar scrolls, a new search starts from its top
-    if (!wide) sideRef.current?.scrollTo({ top: 0 });
+    // Where the whole sidebar scrolls (under b8, and on touch screens beside the board), a
+    // new search starts from its top
+    if (oneScroll) sideRef.current?.scrollTo({ top: 0 });
     try {
       const found = await searchCards(text.trim(), options, abort.signal);
       if (count !== searchCount.current) return;
@@ -3309,7 +3343,7 @@ export default function Editor() {
     <>
       <div
         ref={pageRef}
-        className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
+        className="tierbinder-page w-full h-full flex flex-col beside:flex-row text-body"
       >
         {/* The page's title for screen readers' heading list (the logo is an image, and hides
         with the sidebar): the panels and the board are its h2s, their sections h3s */}
@@ -3388,7 +3422,7 @@ export default function Editor() {
             )}
           </div>
         )}
-        {/* While the sidebar is hidden, the button that brings it back, where its foot was */}
+        {/* While the sidebar is hidden, the button that brings it back, at the bottom left */}
         {sidebarCollapsed && (
           <button
             ref={showSidebarRef}
@@ -3421,12 +3455,16 @@ export default function Editor() {
               className={`${styles.sideColumn} ${sidebarCollapsed ? styles.sideColumnHidden : ''}`}
               inert={viewing !== null}
             >
-              {wide && topBar}
+              {/* (on touch screens it's in the sidebar instead, scrolling away with it) */}
+              {wide && !touch && topBar}
               <SidebarHandle />
               <aside
                 id="sidebar"
                 ref={sideRef}
                 className={`${styles.side} ${folded ? styles.sideFolded : ''} flex flex-col flex-1 min-w-0 min-h-0`}
+                // On touch screens beside the board it scrolls as one too, the top bar in it
+                // (data-one-scroll), as it does under b8
+                data-one-scroll={(wide && touch) || undefined}
                 onScroll={onSideScroll}
                 style={
                   foldingSideHeight !== null
@@ -3434,6 +3472,7 @@ export default function Editor() {
                     : undefined
                 }
               >
+                {wide && touch && topBar}
                 <div
                   ref={sideHeadRef}
                   className={`${styles.sideHead} flex gap-2 items-center`}
@@ -3485,6 +3524,23 @@ export default function Editor() {
                       onFullWidth={fitSidebarToNav}
                     />
                   </div>
+                  {/* Beside the board, the button that hides the sidebar (as Ctrl+\ or Cmd+\
+              does), so touch screens without a keyboard can too */}
+                  {wide && (
+                    <Button
+                      ref={hideSidebarRef}
+                      type="button"
+                      variant="quiet"
+                      className={styles.foldButton}
+                      aria-label="Hide sidebar"
+                      title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
+                      aria-keyshortcuts="Control+\ Meta+\"
+                      aria-controls="sidebar-column"
+                      onClick={toggleSidebar}
+                    >
+                      <span aria-hidden className={styles.sidebarIcon} />
+                    </Button>
+                  )}
                   {/* On phones and tablets: the sidebar folds down to its nav under a bigger
               board, and back */}
                   {!wide && (
@@ -3524,12 +3580,12 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'add')}
                   hidden={tab !== 'add'}
                   onScroll={onPanelScroll('add')}
-                  className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+                  className="tierbinder-panel flex flex-col gap-4 min-w-0 beside:flex-1 beside:min-h-0 beside:overflow-y-auto"
                 >
                   <h2 className="sr-only">Add Cards</h2>
                   {/* Grows to fill the sidebar while it shows search results */}
                   <div
-                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
+                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'beside:flex-1 beside:min-h-0' : ''}`}
                   >
                     <h3 id="card-search-heading" className="tierbinder-heading">
                       Add a Card
@@ -3541,7 +3597,7 @@ export default function Editor() {
                       }}
                       className={`${styles.searchRow} flex gap-3`}
                       // Pinned to the panel's top on phones only during a search
-                      data-pinned={(!wide && searchShown) || undefined}
+                      data-pinned={(oneScroll && searchShown) || undefined}
                       data-stuck={pinnedTarget || undefined}
                     >
                       <label className={styles.search}>
@@ -3581,10 +3637,10 @@ export default function Editor() {
                                 setQuery('');
                                 search('');
                               };
-                              // Under b8, where the whole sidebar scrolls, it glides back to its top
-                              // first, and the results go once it's there
+                              // Where the whole sidebar scrolls, it glides back to its top first,
+                              // and the results go once it's there
                               const side = sideRef.current;
-                              if (!wide && side) toTopThen(side, clear);
+                              if (oneScroll && side) toTopThen(side, clear);
                               else clear();
                             }}
                           >
@@ -3595,7 +3651,7 @@ export default function Editor() {
                       {/* On phones, once the row under the pinned search has gone under it:
                           the Add to picker as a swatch button, sliding in beside Search, and out
                           again as that row comes back out */}
-                      {!wide && showAddTo && (
+                      {oneScroll && showAddTo && (
                         <div
                           className={styles.pinnedTarget}
                           data-shown={pinnedTarget || undefined}
@@ -3715,11 +3771,11 @@ export default function Editor() {
                           : ''}
                     </p>
                     {(showingResults || showingSkeleton) && (
-                      <div className={`${styles.resultsBox} b8:flex-1`} data-size={resultSize}>
+                      <div className={`${styles.resultsBox} beside:flex-1`} data-size={resultSize}>
                         <div
                           ref={resultsRef}
                           // Scrolling on their own beside the board; under b8 the panel scrolls
-                          className={`${styles.results} b8:overflow-y-auto b8:overflow-x-hidden`}
+                          className={`${styles.results} beside:overflow-y-auto beside:overflow-x-hidden`}
                           style={
                             {
                               '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
@@ -4014,7 +4070,7 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'customize')}
                   hidden={tab !== 'customize'}
                   onScroll={onPanelScroll('customize')}
-                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 beside:flex-1 beside:min-h-0 beside:overflow-y-auto"
                 >
                   <h2 className="sr-only">Customize</h2>
                   {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
@@ -4128,7 +4184,7 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'save')}
                   hidden={tab !== 'save'}
                   onScroll={onPanelScroll('save')}
-                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 beside:flex-1 beside:min-h-0 beside:overflow-y-auto"
                 >
                   <h2 className="sr-only">Save &amp; Share</h2>
                   {/* Sections as in Customize, a hairline between them: the image (its size and
@@ -4224,25 +4280,11 @@ export default function Editor() {
                   </div>
                 </section>
 
-                {/* The credits, and from b8 up the button that hides the sidebar at its other end:
-            at the sidebar's foot under every tab beside the board, and under b8 only in
-            Save & Share, where the sidebar's height is too short to spend on them */}
+                {/* The credits, at the sidebar's foot under Save & Share only, so the other
+            tabs keep the height. (The sidebar hides with Ctrl+\ or Cmd+\ from b8 up; the
+            button that did it here was taken out to keep the foot off the other tabs) */}
                 <footer ref={footRef} className={styles.foot} hidden={footHidden}>
                   <Credits />
-                  {wide && (
-                    <button
-                      ref={hideSidebarRef}
-                      type="button"
-                      className={styles.sidebarToggle}
-                      aria-label="Hide sidebar"
-                      title={`Hide sidebar (${SIDEBAR_SHORTCUT()})`}
-                      aria-keyshortcuts="Control+\ Meta+\"
-                      aria-controls="sidebar-column"
-                      onClick={toggleSidebar}
-                    >
-                      <span aria-hidden className={styles.sidebarIcon} />
-                    </button>
-                  )}
                 </footer>
               </aside>
             </div>
@@ -4252,7 +4294,7 @@ export default function Editor() {
               ref={workspaceRef}
               // With the sidebar hidden, more room at the left, so the board stays clear of the show
               // button at the bottom left
-              className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+              className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none beside:flex-1 min-w-0 beside:overflow-y-auto p-4 flex flex-col`}
               // Folding, it takes over the status bar's inset from the rising top bar
               style={
                 fold > 0
@@ -4266,7 +4308,7 @@ export default function Editor() {
           sidebar it's the board's width */}
               <div
                 ref={boardRef}
-                className="flex flex-col gap-4 self-stretch b8:self-auto"
+                className="flex flex-col gap-4 self-stretch beside:self-auto"
                 style={wide ? { width: stageWidth * scale } : undefined}
               >
                 {/* The board for screen readers, to whom the canvas is one image: each tier (or

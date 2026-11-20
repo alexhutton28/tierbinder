@@ -27,6 +27,9 @@ export const metadata: Metadata = {
 // Lets the page draw under the iOS status bar. Browser bar color matches the top bar.
 export const viewport: Viewport = {
   viewportFit: 'cover',
+  // An on-screen keyboard overlays the page rather than shortening it, so it can't turn a
+  // portrait tablet's page landscape and move the sidebar beside the board while typing
+  interactiveWidget: 'resizes-visual',
   themeColor: '#78A5BD', // storm-400
 };
 

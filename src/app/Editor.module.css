@@ -35,7 +35,7 @@
 .canvas {
   align-items: center;
 
-  @variant b8 {
+  @variant beside {
     justify-content: center;
   }
 }
@@ -46,7 +46,7 @@
 .sideColumn {
   display: contents;
 
-  @variant b8 {
+  @variant beside {
     --side-width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
@@ -70,7 +70,7 @@
    window's edge) as the workspace grows into its place, and once it's gone it's
    hidden, so nothing in it can be focused. Reduced motion: it goes at once. */
 .sideColumnHidden {
-  @variant b8 {
+  @variant beside {
     margin-inline-start: calc(-1 * var(--side-width));
     visibility: hidden;
     transition:
@@ -277,16 +277,17 @@
   padding-left: calc(2 * var(--spacing-3) + var(--tb-icon));
 }
 
-/* The sidebar's foot: the credits, then the sidebar toggle at the other end */
+/* The sidebar's foot: the credits (under Save & Share only) */
 .foot {
   display: flex;
   align-items: center;
 
-  /* Under b8, where the whole sidebar scrolls, the credits' 44px touch target would hang
-     past the sidebar's foot and let it scroll by the overhang: cut to the foot there */
+  /* Under b8 (and on touch screens beside the board, .side[data-one-scroll]), where the
+     whole sidebar scrolls, the credits' 44px touch target would hang past the sidebar's
+     foot and let it scroll by the overhang: cut to the foot there */
   overflow-y: clip;
 
-  @variant b8 {
+  @variant beside {
     overflow-y: visible;
   }
 
@@ -301,7 +302,6 @@
   display: grid;
   flex: none;
   place-items: center;
-  margin-inline-end: var(--spacing-3);
   color: var(--tb-muted);
   cursor: pointer;
   position: relative;
@@ -418,7 +418,7 @@
      scrolls on its own under the nav) */
   overflow-y: auto;
 
-  @variant b8 {
+  @variant beside {
     position: static;
     overflow-y: visible;
     border-top: 0;
@@ -501,9 +501,9 @@
   }
 }
 
-/* Under b8, where the whole sidebar scrolls, the search sticks to its top during a search
-   (data-pinned: results, placeholders or none found showing) as the rest goes under it, the
-   nav included, on the sidebar's color with 8px above and below (given back as negative
+/* Where the whole sidebar scrolls (under b8, and on touch screens beside the board), the
+   search sticks to its top during a search (data-pinned: results, placeholders or none
+   found showing) as the rest goes under it, the nav included, on the sidebar's color with 8px above and below (given back as negative
    margin, so the layout keeps its spacing), and a hairline once the row under it (Sets,
    Add to) is wholly under it too (data-stuck). It sticks a line's width above the sidebar's
    top (and is that much taller), so no sliver of what scrolls under it shows at a
@@ -531,13 +531,6 @@
 
   &[data-stuck] {
     border-bottom-color: var(--tb-line);
-  }
-
-  @variant b8 {
-    margin-block: 0;
-    padding-block: 0;
-    border-bottom: 0;
-    background: none;
   }
 }
 
@@ -754,7 +747,7 @@
   display: flex;
   flex-direction: column;
 
-  @variant b8 {
+  @variant beside {
     min-height: calc(min(var(--result-width), var(--tb-thumb-width)) * var(--tb-thumb-ratio));
   }
 }
@@ -791,7 +784,7 @@
 }
 
 /* Only beside the board, where the results scroll on their own */
-@variant b8 {
+@variant beside {
   .resultsShade {
     display: block;
   }
@@ -895,7 +888,7 @@
    tiles coming in a moment late, so they flashed at the edge being scrolled toward (a page
    is at most RESULTS_PAGE more tiles) */
 .resultTile {
-  @variant b8 {
+  @variant beside {
     content-visibility: auto;
     contain-intrinsic-size: auto var(--result-width) auto
       calc(var(--result-width) * var(--tb-thumb-ratio));
@@ -1018,5 +1011,43 @@ img.poolCard:not([data-loaded]) {
   /* Fades only */
   .reveal {
     transition: opacity var(--duration-fade) ease-out;
+  }
+}
+
+/* On touch screens beside the board (a phone turned sideways, a tablet: data-one-scroll),
+   the sidebar scrolls as one, the top bar in it and the main nav with it, as it does under
+   b8, so a short window doesn't lose its height to them. It still fills the column (the
+   resize handle stays outside it, in the column), and the tab panel showing fills what's
+   left, so the credits keep to the foot; the results don't scroll on their own (nor are
+   they skipped while off screen, which iOS drew late), and the credits' touch target
+   doesn't hang past the foot. */
+.side[data-one-scroll] {
+  overflow-y: auto;
+
+  & [role='tabpanel'] {
+    flex: 1 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  & .resultsBox {
+    flex: none;
+    min-height: auto;
+  }
+
+  & [data-results] {
+    overflow: visible;
+  }
+
+  & .resultTile {
+    content-visibility: visible;
+  }
+
+  & .resultsShade {
+    display: none;
+  }
+
+  & .foot {
+    overflow-y: clip;
   }
 }
