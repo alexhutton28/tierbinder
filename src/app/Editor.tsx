@@ -294,10 +294,14 @@ function cardNews(graphic: Graphic, id: string) {
   return '';
 }
 
-// From b8 up, where the board has the room beside the sidebar
+// Where the sidebar goes beside the board: from b8 up, and on a short but wide enough window,
+// landscape from b6 (a phone turned sideways), as the `beside` variant in globals.css has it
 function wideQuery() {
-  const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
-  return matchMedia(`(width >= ${b8.trim()})`);
+  const breakpoint = (name: string) =>
+    getComputedStyle(document.documentElement).getPropertyValue(`--breakpoint-${name}`).trim();
+  return matchMedia(
+    `(width >= ${breakpoint('b8')}), (width >= ${breakpoint('b6')}) and (orientation: landscape)`
+  );
 }
 
 function loadSaved() {
@@ -3316,7 +3320,7 @@ export default function Editor() {
     <>
       <div
         ref={pageRef}
-        className="tierbinder-page w-full h-full flex flex-col b8:flex-row text-body"
+        className="tierbinder-page w-full h-full flex flex-col beside:flex-row text-body"
       >
         {/* The page's title for screen readers' heading list (the logo is an image, and hides
         with the sidebar): the panels and the board are its h2s, their sections h3s */}
@@ -3553,12 +3557,12 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'add')}
                   hidden={tab !== 'add'}
                   onScroll={onPanelScroll('add')}
-                  className="tierbinder-panel flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+                  className="tierbinder-panel flex flex-col gap-4 min-w-0 beside:flex-1 beside:min-h-0 beside:overflow-y-auto"
                 >
                   <h2 className="sr-only">Add Cards</h2>
                   {/* Grows to fill the sidebar while it shows search results */}
                   <div
-                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'b8:flex-1 b8:min-h-0' : ''}`}
+                    className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'beside:flex-1 beside:min-h-0' : ''}`}
                   >
                     <h3 id="card-search-heading" className="tierbinder-heading">
                       Add a Card
@@ -3744,11 +3748,11 @@ export default function Editor() {
                           : ''}
                     </p>
                     {(showingResults || showingSkeleton) && (
-                      <div className={`${styles.resultsBox} b8:flex-1`} data-size={resultSize}>
+                      <div className={`${styles.resultsBox} beside:flex-1`} data-size={resultSize}>
                         <div
                           ref={resultsRef}
                           // Scrolling on their own beside the board; under b8 the panel scrolls
-                          className={`${styles.results} b8:overflow-y-auto b8:overflow-x-hidden`}
+                          className={`${styles.results} beside:overflow-y-auto beside:overflow-x-hidden`}
                           style={
                             {
                               '--card-ratio': `${CARD_WIDTH} / ${CARD_HEIGHT}`,
@@ -4043,7 +4047,7 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'customize')}
                   hidden={tab !== 'customize'}
                   onScroll={onPanelScroll('customize')}
-                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 beside:flex-1 beside:min-h-0 beside:overflow-y-auto"
                 >
                   <h2 className="sr-only">Customize</h2>
                   {/* Sections as in Add Cards: each a heading over its controls, 8px apart, with a
@@ -4157,7 +4161,7 @@ export default function Editor() {
                   aria-labelledby={tabId(TAB_PREFIX, 'save')}
                   hidden={tab !== 'save'}
                   onScroll={onPanelScroll('save')}
-                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 b8:flex-1 b8:min-h-0 b8:overflow-y-auto"
+                  className="tierbinder-panel tierbinder-sections flex flex-col gap-4 min-w-0 beside:flex-1 beside:min-h-0 beside:overflow-y-auto"
                 >
                   <h2 className="sr-only">Save &amp; Share</h2>
                   {/* Sections as in Customize, a hairline between them: the image (its size and
@@ -4267,7 +4271,7 @@ export default function Editor() {
               ref={workspaceRef}
               // With the sidebar hidden, more room at the left, so the board stays clear of the show
               // button at the bottom left
-              className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none b8:flex-1 min-w-0 b8:overflow-y-auto p-4 flex flex-col`}
+              className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none beside:flex-1 min-w-0 beside:overflow-y-auto p-4 flex flex-col`}
               // Folding, it takes over the status bar's inset from the rising top bar
               style={
                 fold > 0
@@ -4281,7 +4285,7 @@ export default function Editor() {
           sidebar it's the board's width */}
               <div
                 ref={boardRef}
-                className="flex flex-col gap-4 self-stretch b8:self-auto"
+                className="flex flex-col gap-4 self-stretch beside:self-auto"
                 style={wide ? { width: stageWidth * scale } : undefined}
               >
                 {/* The board for screen readers, to whom the canvas is one image: each tier (or

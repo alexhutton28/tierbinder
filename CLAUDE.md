@@ -21,6 +21,7 @@ deployed on Vercel's Hobby plan.
 
 ## Gotchas
 
+- **The layout switch isn't `b8` alone.** The sidebar goes beside the board from `b8` up and on a landscape window from `b6` (a phone turned sideways): use the `beside` variant (`beside:`, `@variant beside`, defined in `globals.css` from the breakpoint tokens) for anything about that layout, never `b8`, and `wideQuery` in `Editor.tsx` is the same query (`wide`). Where these notes say "from `b8` up" or "under `b8`", they mean that layout.
 - **Custom spacing scale** (`design/hutton-design-system.md`): Tailwind's numbered spacing doesn't mean the default sizes here, e.g. `p-4` is 16px, but `px-6` (64px) and `gap-5` (32px) are much bigger than usual. Round to the nearest step rather than writing arbitrary spacing like `mt-[12px]`.
 - **No magic numbers** (`design/hutton-design-system.md`, section 12): let flex, grid, `aspect-ratio`, `clamp()` and container queries size things; name each fixed size once (a `--tb-*` size in `globals.css` or a TS constant); and ask Alex when a layout has a real choice.
 - **`html` and `body` don't scroll** (`overflow: hidden` in `globals.css`). The page has its own scroll container (`<main>`), though the editor fits the window at every width and only its panels scroll.

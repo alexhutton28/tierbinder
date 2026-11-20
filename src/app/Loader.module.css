@@ -13,7 +13,7 @@
   height: 100%;
   background: var(--tb-page);
 
-  @variant b8 {
+  @variant beside {
     grid-template:
       'top workspace' auto
       'side workspace' 1fr / var(--tb-sidebar-default) 1fr;
@@ -34,7 +34,7 @@
   grid-area: side;
   background: var(--tb-bar);
 
-  @variant b8 {
+  @variant beside {
     border-right: var(--tb-line-width) solid var(--tb-line);
   }
 }
@@ -46,7 +46,7 @@
   min-height: 0;
   padding: var(--spacing-4);
 
-  @variant b8 {
+  @variant beside {
     container-type: size;
   }
 }
@@ -72,7 +72,7 @@
   background-size: 300% 100%;
   animation: shimmer var(--tb-shimmer) linear infinite;
 
-  @variant b8 {
+  @variant beside {
     width: min(100cqw, 100cqh * 16 / 9);
   }
 }

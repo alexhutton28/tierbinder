@@ -6,7 +6,7 @@
 .handle {
   display: none;
 
-  @variant b8 {
+  @variant beside {
     position: absolute;
     inset-block: 0;
     right: calc(var(--tb-handle-hit) / -2);

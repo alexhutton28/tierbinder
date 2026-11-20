@@ -4,6 +4,22 @@
    hand. */
 @import '../../design/theme.css';
 
+/* The main layout change: the sidebar beside the board (`beside:`, `@variant beside`). From
+   b8 up, and on a short but wide enough window, landscape from b6 (a phone turned sideways),
+   where stacking the board over the sidebar would leave the board a strip. Editor.tsx's
+   besideQuery is the same query. */
+@custom-variant beside {
+  /* stylelint-disable-next-line media-query-no-invalid -- Tailwind fills in --theme() */
+  @media (width >= --theme(--breakpoint-b8)) {
+    @slot;
+  }
+
+  /* stylelint-disable-next-line media-query-no-invalid -- Tailwind fills in --theme() */
+  @media (width >= --theme(--breakpoint-b6)) and (orientation: landscape) {
+    @slot;
+  }
+}
+
 /* The type scale, from design/hutton-design-system.md. Written here because the token
    generator has no type scale yet. */
 @theme static {
@@ -176,7 +192,7 @@ body {
     )
     var(--tb-bar);
 
-  @variant b8 {
+  @variant beside {
     background: var(--tb-page);
   }
 }
@@ -195,7 +211,7 @@ body {
   background: var(--tb-top);
   pointer-events: none;
 
-  @variant b8 {
+  @variant beside {
     display: none;
   }
 }

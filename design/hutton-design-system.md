@@ -7,7 +7,7 @@
 
 This system records the tool as it is today. Where the code differs, it is tracked in issues and changes when that work is done: existing code is not rewritten to match.
 
-**Version 1.37 · November 18, 2026 · Design owner: Alex Hutton · Size: small**
+**Version 1.38 · November 19, 2026 · Design owner: Alex Hutton · Size: small**
 
 ## 1. Rule tiers
 
@@ -199,20 +199,20 @@ Seven steps, from 2px to 128px, the HuttonDesign default. Tailwind's numbered sp
 
 ### Breakpoints
 
-Code uses the `b` names: `b8:` in classes and `@variant b8` in CSS, never a raw width. The rest of the grid is available but unused.
+Code uses the `b` names, never a raw width. The main layout change (the sidebar beside the board) isn't one breakpoint but the `beside` variant (`beside:` in classes, `@variant beside` in CSS, defined in `globals.css` from the breakpoint tokens): from `b8` up, and on a short but wide enough window, landscape from `b6` (a phone turned sideways), where stacking the board over the sidebar would leave the board a strip. Elsewhere in this document, "from `b8` up" and "under `b8`" mean that layout. The rest of the grid is available but unused.
 
-| Breakpoint | Name          | Width  | Purpose                                                 |
-| ---------- | ------------- | ------ | ------------------------------------------------------- |
-| `b3`       | Phone         | 384px  | Standard and larger phones                              |
-| `b5`       | Large phone   | 512px  | Large phones                                            |
-| `b6`       | Small tablet  | 640px  | Same as `sm`                                            |
-| `b7`       | Tablet        | 768px  | Fields drop to 14px text; below it, touch rows are 44px |
-| `b8`       | Large tablet  | 896px  | The main layout change: sidebar beside the board        |
-| `b10`      | Desktop       | 1024px | Standard desktop                                        |
-| `b11`      | Laptop        | 1152px | Small laptops                                           |
-| `b12`      | Wide          | 1280px | Larger displays                                         |
-| `b14`      | Large desktop | 1408px | Large desktop displays                                  |
-| `b15`      | Extra wide    | 1536px | Very large displays                                     |
+| Breakpoint | Name          | Width  | Purpose                                                                                |
+| ---------- | ------------- | ------ | -------------------------------------------------------------------------------------- |
+| `b3`       | Phone         | 384px  | Standard and larger phones                                                             |
+| `b5`       | Large phone   | 512px  | Large phones                                                                           |
+| `b6`       | Small tablet  | 640px  | Same as `sm`; from here, landscape windows put the sidebar beside the board (`beside`) |
+| `b7`       | Tablet        | 768px  | Fields drop to 14px text; below it, touch rows are 44px                                |
+| `b8`       | Large tablet  | 896px  | The main layout change: sidebar beside the board (`beside`)                            |
+| `b10`      | Desktop       | 1024px | Standard desktop                                                                       |
+| `b11`      | Laptop        | 1152px | Small laptops                                                                          |
+| `b12`      | Wide          | 1280px | Larger displays                                                                        |
+| `b14`      | Large desktop | 1408px | Large desktop displays                                                                 |
+| `b15`      | Extra wide    | 1536px | Very large displays                                                                    |
 
 ### Layout
 
@@ -340,6 +340,7 @@ Places where the token rules do not apply. Keep raw values in named constants, m
 
 ## 15. Changelog
 
+- **November 19, 2026 · v1.38:** Short but wide windows go side by side: the sidebar sits beside the board from `b8` up and also on a landscape window from `b6` (a phone turned sideways), where stacking left the board about 100 to 150px tall. Code uses the new `beside` variant in place of `b8` for the layout. The hide-sidebar button sits at the right of the main nav.
 - **November 18, 2026 · v1.37:** For short screens. The credits show only under Save & Share, at every width, and the button that hides the sidebar moves from its foot to the right of the main nav, where touch screens without a keyboard can still reach it. On touch screens beside the board (a phone turned sideways, a tablet), the sidebar column scrolls as one, its top bar and nav with it, as the sidebar does under `b8`, with the search pinned during a search.
 - **November 18, 2026 · v1.36:** From phone testing. Below `b8` the whole sidebar scrolls as one, its nav with it, in place of the nav sliding away on a timed animation, which fought iOS's momentum scrolling. The Add to swatch button and the pinned search's hairline appear once the Sets row is under the pinned search; the swatch button has 8px at its sides (44px wide on touch screens). The pinned search no longer covers the row under it. iOS Safari's bars take the header's color at the top (a fixed strip under the status bar) and the sidebar's at the foot and around the keyboard. A long press on the card tray opens its menu. Result tiles are always drawn below `b8`.
 - **November 18, 2026 · v1.35:** On phones the search pins only during a search; with the pools and Advanced showing, the panel just scrolls.

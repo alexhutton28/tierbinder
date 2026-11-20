@@ -35,7 +35,7 @@
 .canvas {
   align-items: center;
 
-  @variant b8 {
+  @variant beside {
     justify-content: center;
   }
 }
@@ -46,7 +46,7 @@
 .sideColumn {
   display: contents;
 
-  @variant b8 {
+  @variant beside {
     --side-width: clamp(
       var(--tb-sidebar-min),
       var(--tb-sidebar-width, var(--tb-sidebar-default)),
@@ -70,7 +70,7 @@
    window's edge) as the workspace grows into its place, and once it's gone it's
    hidden, so nothing in it can be focused. Reduced motion: it goes at once. */
 .sideColumnHidden {
-  @variant b8 {
+  @variant beside {
     margin-inline-start: calc(-1 * var(--side-width));
     visibility: hidden;
     transition:
@@ -287,7 +287,7 @@
      foot and let it scroll by the overhang: cut to the foot there */
   overflow-y: clip;
 
-  @variant b8 {
+  @variant beside {
     overflow-y: visible;
   }
 
@@ -419,7 +419,7 @@
      scrolls on its own under the nav) */
   overflow-y: auto;
 
-  @variant b8 {
+  @variant beside {
     position: static;
     overflow-y: visible;
     border-top: 0;
@@ -748,7 +748,7 @@
   display: flex;
   flex-direction: column;
 
-  @variant b8 {
+  @variant beside {
     min-height: calc(min(var(--result-width), var(--tb-thumb-width)) * var(--tb-thumb-ratio));
   }
 }
@@ -785,7 +785,7 @@
 }
 
 /* Only beside the board, where the results scroll on their own */
-@variant b8 {
+@variant beside {
   .resultsShade {
     display: block;
   }
@@ -889,7 +889,7 @@
    tiles coming in a moment late, so they flashed at the edge being scrolled toward (a page
    is at most RESULTS_PAGE more tiles) */
 .resultTile {
-  @variant b8 {
+  @variant beside {
     content-visibility: auto;
     contain-intrinsic-size: auto var(--result-width) auto
       calc(var(--result-width) * var(--tb-thumb-ratio));
