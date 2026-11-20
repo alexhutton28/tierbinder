@@ -302,7 +302,6 @@
   display: grid;
   flex: none;
   place-items: center;
-  margin-inline-end: var(--spacing-3);
   color: var(--tb-muted);
   cursor: pointer;
   position: relative;

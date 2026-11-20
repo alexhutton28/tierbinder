@@ -16,7 +16,12 @@
   @variant beside {
     grid-template:
       'top workspace' auto
-      'side workspace' 1fr / var(--tb-sidebar-default) 1fr;
+      'side workspace' 1fr / clamp(
+        var(--tb-sidebar-min),
+        var(--tb-sidebar-default),
+        100vw - env(safe-area-inset-left) - env(safe-area-inset-right) - var(--tb-workspace-min)
+      )
+      1fr;
   }
 }
 

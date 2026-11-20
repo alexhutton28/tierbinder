@@ -7,7 +7,7 @@
 /* The main layout change: the sidebar beside the board (`beside:`, `@variant beside`). From
    b8 up, and on a short but wide enough window, landscape from b6 (a phone turned sideways),
    where stacking the board over the sidebar would leave the board a strip. Editor.tsx's
-   besideQuery is the same query. */
+   wideQuery is the same query. */
 @custom-variant beside {
   /* stylelint-disable-next-line media-query-no-invalid -- Tailwind fills in --theme() */
   @media (width >= --theme(--breakpoint-b8)) {
