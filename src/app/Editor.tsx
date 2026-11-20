@@ -294,6 +294,12 @@ function cardNews(graphic: Graphic, id: string) {
   return '';
 }
 
+// From b8 up, by width alone
+function b8Query() {
+  const b8 = getComputedStyle(document.documentElement).getPropertyValue('--breakpoint-b8');
+  return matchMedia(`(width >= ${b8.trim()})`);
+}
+
 // Where the sidebar goes beside the board: from b8 up, and on a short but wide enough window,
 // landscape from b6 (a phone turned sideways), as the `beside` variant in globals.css has it
 function wideQuery() {
@@ -578,6 +584,17 @@ export default function Editor() {
   // Known from the first render (the editor only renders in the browser), so the board's
   // first fit already uses the wide layout
   const [wide, setWide] = React.useState(() => wideQuery().matches);
+  // From b8 up: room for the card tray at a 16:9 board's width. Under it (a phone turned
+  // sideways, beside the board, as well as every stacked layout) the tray is the phone's one
+  // swipeable row of full-size cards (`rowTray`), not two rows shrunk to a narrow workspace
+  const [pastB8, setPastB8] = React.useState(() => b8Query().matches);
+  const rowTray = !wide || !pastB8;
+  React.useEffect(() => {
+    const query = b8Query();
+    const update = () => setPastB8(query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
   // Touch screens (phones, tablets) scroll the sidebar as one even beside the board (a
   // phone turned sideways, a tablet), top bar and nav with it, as every screen does under
   // b8, so a short window doesn't lose its height to them; with a mouse beside the board,
@@ -1206,7 +1223,7 @@ export default function Editor() {
   // narrow board isn't drawn smaller to fit a wider tray under it, and the tray still spans
   // the page (the image's tray is always the board's width)
   const [trayRoom, setTrayRoom] = React.useState(0);
-  const shownTrayWidth = wide ? TRAY_WIDTH : Math.max(width, scale > 0 ? trayRoom / scale : 0);
+  const shownTrayWidth = rowTray ? Math.max(width, scale > 0 ? trayRoom / scale : 0) : TRAY_WIDTH;
   const stageWidth = width + (Math.max(shownTrayWidth, width) - width) * trayOpen;
   const boardLeft = (stageWidth - width) / 2;
   // The tray's left edge from the board's: centered on the stage, also while the stage
@@ -1256,7 +1273,7 @@ export default function Editor() {
     CARD_WIDTH,
     Math.min(Math.max(CARD_WIDTH * FOLDED_TRAY_SCALE, trayFill), FOLDED_TRAY_MAX / (scale || 1))
   );
-  const oneRowTray = wide ? false : CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold;
+  const oneRowTray = rowTray ? CARD_WIDTH + (foldedTrayCard - CARD_WIDTH) * fold : false;
   const trayCount = graphic.tray.items.length;
   const maxTrayPan = oneRowTray
     ? Math.max(0, trayRowWidth(trayCount, oneRowTray) - shownTrayWidth)
@@ -1862,9 +1879,10 @@ export default function Editor() {
       // The card tray and the gap above it, when it shows
       const tray = TRAY_GAP * trayOpen;
       const designHeight = BOARD_HEIGHT + shownTrayHeight;
-      // (under b8 the tray takes whatever width the board leaves, so only the board's counts)
+      // (with the one-row tray it takes whatever width the board leaves, so only the board's
+      // counts)
       const next = Math.min(
-        room / (wide ? stageWidth : width),
+        room / (rowTray ? width : stageWidth),
         (height - around - tray) / designHeight
       );
       setTrayRoom(Math.floor(room));
@@ -1887,7 +1905,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, trayOpen, shownTrayHeight, stageWidth, width, fold]);
+  }, [wide, rowTray, trayOpen, shownTrayHeight, stageWidth, width, fold]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
