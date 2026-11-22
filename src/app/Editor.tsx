@@ -1014,6 +1014,12 @@ export default function Editor() {
   // on the fold's slide (useReveal, 0 off to 1 on). Kept while folded, so opening the
   // sidebar again in the middle of a search doesn't bring the top bar back halfway.
   const [searchFocused, setSearchFocused] = React.useState(false);
+  const searchSectionRef = React.useRef<HTMLDivElement>(null);
+  // Focus can leave without a blur (its tab hidden, or crossing b8, which moves the sidebar
+  // in the page), so it's read again then
+  React.useEffect(() => {
+    setSearchFocused(!!searchSectionRef.current?.contains(document.activeElement));
+  }, [tab, wide]);
   const searchRoom = useReveal(!wide && tab === 'add' && (searchShown || searchFocused), wide);
   const searchMode = wide ? 0 : searchRoom.value;
   // How far the top bar has risen away: with the fold or the search, whichever is further
@@ -3600,7 +3606,15 @@ export default function Editor() {
                   <h2 className="sr-only">Add Cards</h2>
                   {/* Grows to fill the sidebar while it shows search results */}
                   <div
+                    ref={searchSectionRef}
                     className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'beside:flex-1 beside:min-h-0' : ''}`}
+                    // Focus anywhere in the search (the field, Search, Sets, Add to, a result)
+                    // keeps search mode; only leaving it ends it, so moving between its
+                    // controls doesn't bounce the board
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget)) setSearchFocused(false);
+                    }}
                   >
                     <h3 id="card-search-heading" className="tierbinder-heading">
                       Add a Card
@@ -3634,8 +3648,6 @@ export default function Editor() {
                           enterKeyHint="search"
                           placeholder="Card name"
                           value={query}
-                          onFocus={() => setSearchFocused(true)}
-                          onBlur={() => setSearchFocused(false)}
                           onChange={(e) => {
                             setQuery(e.target.value);
                             // Emptying the field clears the results, bringing the other sections
