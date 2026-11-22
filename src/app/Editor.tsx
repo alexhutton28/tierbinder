@@ -156,6 +156,10 @@ const MENU_WIDTH = 160;
 // its own: they take at most this share of the page's height (top bar included), leaving
 // the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
 const BOARD_SHARE = 0.6;
+// While a search shows (or someone is at the search: `searchEngaged`) on a phone, the board gives up more of the
+// page to the results, and the top bar rises away: this share, chosen by eye (about three
+// rows of results on a phone, with the board still big enough to see cards land)
+const SEARCH_BOARD_SHARE = 0.4;
 
 // The search's sort button (newest or oldest first), hidden for now to keep the search row
 // clear on phones; results stay newest first
@@ -1004,6 +1008,44 @@ export default function Editor() {
     setWasPresenting(presenting);
     if (cardMenu) setCardMenu(null);
   }
+  // Search mode on a phone: while Add Cards shows a search, or someone is at the search
+  // (`searchEngaged`), the board's share eases down to SEARCH_BOARD_SHARE and the top bar
+  // rises away, on the fold's slide (useReveal, 0 off to 1 on).
+  // Being at the search starts with focus on its field, and lasts while presses and focus
+  // stay in its section (Search, Sets, Add to, the results, the clear button), so clearing
+  // one search and typing the next, or moving between its controls, doesn't bounce the
+  // board. It ends with a press or focus anywhere else. Presses count as well as focus, since
+  // Safari doesn't focus a button that's pressed. The fold button doesn't end it.
+  const [searchEngaged, setSearchEngaged] = React.useState(false);
+  const searchSectionRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (wide) return;
+    const engage = (e: Event) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target || target.closest(`.${styles.foldButton}`)) return;
+      if (!searchSectionRef.current?.contains(target)) setSearchEngaged(false);
+      // (from focus, never the press: iOS finishes a tap where the finger is once it lifts,
+      // so moving the field from under it on the press would land the tap on what slid
+      // there)
+      else if (e.type === 'focusin' && target === searchInputRef.current) setSearchEngaged(true);
+    };
+    document.addEventListener('pointerdown', engage, true);
+    document.addEventListener('focusin', engage, true);
+    return () => {
+      document.removeEventListener('pointerdown', engage, true);
+      document.removeEventListener('focusin', engage, true);
+    };
+  }, [wide]);
+  const searchOn = !wide && tab === 'add' && (searchShown || searchEngaged);
+  // Held while the sidebar folds, is folded or opens, so it changes only with the sidebar
+  // open: folding mid-search keeps the top bar away and the board where it was, and opening
+  // again comes back to the same layout rather than jumping once the slide ends
+  const [searchHeld, setSearchHeld] = React.useState(searchOn);
+  if (!sidebarFolded && fold === 0 && searchHeld !== searchOn) setSearchHeld(searchOn);
+  const searchRoom = useReveal(searchHeld, wide);
+  const searchMode = wide ? 0 : searchRoom.value;
+  // How far the top bar has risen away: with the fold or the search, whichever is further
+  const topRise = Math.max(fold, searchMode);
   const [foldHeights, setFoldHeights] = React.useState({ open: 0, bar: 0, shift: 0 });
   const foldSidebar = () => {
     const side = sideRef.current;
@@ -1873,7 +1915,8 @@ export default function Editor() {
         : fold > 0
           ? // Folded, or on the way: everything but the sidebar as it is
             page.clientHeight - (sideRef.current?.offsetHeight ?? 0) - above
-          : page.clientHeight * BOARD_SHARE - above;
+          : page.clientHeight * (BOARD_SHARE + (SEARCH_BOARD_SHARE - BOARD_SHARE) * searchMode) -
+            above;
       const height = outer - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
       const around = board.offsetHeight - box.offsetHeight;
       // The card tray and the gap above it, when it shows
@@ -1905,7 +1948,7 @@ export default function Editor() {
     return () => {
       observer.disconnect();
     };
-  }, [wide, rowTray, trayOpen, shownTrayHeight, stageWidth, width, fold]);
+  }, [wide, rowTray, trayOpen, shownTrayHeight, stageWidth, width, fold, searchMode]);
 
   // The floating logo's size: the biggest that clears the board (and its toolbar) by
   // LOGO_CLEARANCE. Measured whenever the workspace or the board changes size: as the
@@ -3319,12 +3362,12 @@ export default function Editor() {
     <header
       // (inert while viewing a card, as the sidebar column is)
       inert={viewing !== null}
-      className={`${styles.top} ${folded ? styles.topFolded : ''}`}
-      // Rising away as the sidebar folds
+      className={`${styles.top} ${topRise === 1 ? styles.topFolded : ''}`}
+      // Rising away as the sidebar folds, or a search starts on a phone
       style={
-        fold > 0 && !folded
+        topRise > 0 && topRise < 1
           ? {
-              marginTop: `calc((var(--tb-top-height) + env(safe-area-inset-top)) * ${-fold})`,
+              marginTop: `calc((var(--tb-top-height) + env(safe-area-inset-top)) * ${-topRise})`,
             }
           : undefined
       }
@@ -3585,6 +3628,7 @@ export default function Editor() {
                   <h2 className="sr-only">Add Cards</h2>
                   {/* Grows to fill the sidebar while it shows search results */}
                   <div
+                    ref={searchSectionRef}
                     className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'beside:flex-1 beside:min-h-0' : ''}`}
                   >
                     <h3 id="card-search-heading" className="tierbinder-heading">
@@ -3594,6 +3638,9 @@ export default function Editor() {
                       onSubmit={(e) => {
                         e.preventDefault();
                         search(query);
+                        // On touch screens the keyboard would stay up over the results
+                        // (on phones only: beside the board it doesn't cover them)
+                        if (touch && !wide) searchInputRef.current?.blur();
                       }}
                       className={`${styles.searchRow} flex gap-3`}
                       // Pinned to the panel's top on phones only during a search
@@ -3619,6 +3666,8 @@ export default function Editor() {
                           value={query}
                           onChange={(e) => {
                             setQuery(e.target.value);
+                            // Typing after a clear starts search mode again
+                            if (e.target.value) setSearchEngaged(true);
                             // Emptying the field clears the results, bringing the other sections
                             // back, or goes back to listing the filter's sets
                             if (!e.target.value.trim()) search('');
@@ -3633,6 +3682,10 @@ export default function Editor() {
                             onClick={() => {
                               // Focused in the click, so a phone brings up its keyboard
                               searchInputRef.current?.focus({ preventScroll: true });
+                              // Clearing ends search mode (after the focus, which would start
+                              // it): the top bar and the board come back as the results go,
+                              // until typing starts the next search
+                              setSearchEngaged(false);
                               const clear = () => {
                                 setQuery('');
                                 search('');
@@ -4295,10 +4348,13 @@ export default function Editor() {
               // With the sidebar hidden, more room at the left, so the board stays clear of the show
               // button at the bottom left
               className={`${styles.canvas} ${sidebarCollapsed ? styles.canvasCollapsed : ''} ${fold > 0 ? styles.canvasFolded : ''} flex-none beside:flex-1 min-w-0 beside:overflow-y-auto p-4 flex flex-col`}
-              // Folding, it takes over the status bar's inset from the rising top bar
+              // As the top bar rises away (folding, or a search), it takes over the status
+              // bar's inset
               style={
-                fold > 0
-                  ? { paddingTop: `calc(var(--spacing-4) + env(safe-area-inset-top) * ${fold})` }
+                topRise > 0
+                  ? {
+                      paddingTop: `calc(var(--spacing-4) + env(safe-area-inset-top) * ${topRise})`,
+                    }
                   : undefined
               }
               inert={viewing !== null}
