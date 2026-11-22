@@ -3666,6 +3666,8 @@ export default function Editor() {
                           value={query}
                           onChange={(e) => {
                             setQuery(e.target.value);
+                            // Typing after a clear starts search mode again
+                            if (e.target.value) setSearchEngaged(true);
                             // Emptying the field clears the results, bringing the other sections
                             // back, or goes back to listing the filter's sets
                             if (!e.target.value.trim()) search('');
@@ -3680,6 +3682,10 @@ export default function Editor() {
                             onClick={() => {
                               // Focused in the click, so a phone brings up its keyboard
                               searchInputRef.current?.focus({ preventScroll: true });
+                              // Clearing ends search mode (after the focus, which would start
+                              // it): the top bar and the board come back as the results go,
+                              // until typing starts the next search
+                              setSearchEngaged(false);
                               const clear = () => {
                                 setQuery('');
                                 search('');
