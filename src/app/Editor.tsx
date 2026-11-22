@@ -1024,7 +1024,10 @@ export default function Editor() {
       const target = e.target instanceof Element ? e.target : null;
       if (!target || target.closest(`.${styles.foldButton}`)) return;
       if (!searchSectionRef.current?.contains(target)) setSearchEngaged(false);
-      else if (target === searchInputRef.current) setSearchEngaged(true);
+      // (from focus, never the press: iOS finishes a tap where the finger is once it lifts,
+      // so moving the field from under it on the press would land the tap on what slid
+      // there)
+      else if (e.type === 'focusin' && target === searchInputRef.current) setSearchEngaged(true);
     };
     document.addEventListener('pointerdown', engage, true);
     document.addEventListener('focusin', engage, true);
