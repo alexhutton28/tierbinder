@@ -156,7 +156,7 @@ const MENU_WIDTH = 160;
 // its own: they take at most this share of the page's height (top bar included), leaving
 // the rest to the sidebar, so a tall shape (9:16) or a landscape phone still has room for it
 const BOARD_SHARE = 0.6;
-// While a search shows (or its field has focus) on a phone, the board gives up more of the
+// While a search shows (or someone is at the search: `searchEngaged`) on a phone, the board gives up more of the
 // page to the results, and the top bar rises away: this share, chosen by eye (about three
 // rows of results on a phone, with the board still big enough to see cards land)
 const SEARCH_BOARD_SHARE = 0.4;
@@ -1008,19 +1008,38 @@ export default function Editor() {
     setWasPresenting(presenting);
     if (cardMenu) setCardMenu(null);
   }
-  // Search mode on a phone: while Add Cards shows a search, or its field has focus (so
-  // clearing a search and typing the next keeps it, rather than the board growing back in
-  // between), the board's share eases down to SEARCH_BOARD_SHARE and the top bar rises away,
-  // on the fold's slide (useReveal, 0 off to 1 on). Kept while folded, so opening the
-  // sidebar again in the middle of a search doesn't bring the top bar back halfway.
-  const [searchFocused, setSearchFocused] = React.useState(false);
+  // Search mode on a phone: while Add Cards shows a search, or someone is at the search
+  // (`searchEngaged`), the board's share eases down to SEARCH_BOARD_SHARE and the top bar
+  // rises away, on the fold's slide (useReveal, 0 off to 1 on).
+  // Being at the search starts with focus on its field, and lasts while presses and focus
+  // stay in its section (Search, Sets, Add to, the results, the clear button), so clearing
+  // one search and typing the next, or moving between its controls, doesn't bounce the
+  // board. It ends with a press or focus anywhere else. Presses count as well as focus, since
+  // Safari doesn't focus a button that's pressed. The fold button doesn't end it.
+  const [searchEngaged, setSearchEngaged] = React.useState(false);
   const searchSectionRef = React.useRef<HTMLDivElement>(null);
-  // Focus can leave without a blur (its tab hidden, or crossing b8, which moves the sidebar
-  // in the page), so it's read again then
   React.useEffect(() => {
-    setSearchFocused(!!searchSectionRef.current?.contains(document.activeElement));
-  }, [tab, wide]);
-  const searchRoom = useReveal(!wide && tab === 'add' && (searchShown || searchFocused), wide);
+    if (wide) return;
+    const engage = (e: Event) => {
+      const target = e.target instanceof Element ? e.target : null;
+      if (!target || target.closest(`.${styles.foldButton}`)) return;
+      if (!searchSectionRef.current?.contains(target)) setSearchEngaged(false);
+      else if (target === searchInputRef.current) setSearchEngaged(true);
+    };
+    document.addEventListener('pointerdown', engage, true);
+    document.addEventListener('focusin', engage, true);
+    return () => {
+      document.removeEventListener('pointerdown', engage, true);
+      document.removeEventListener('focusin', engage, true);
+    };
+  }, [wide]);
+  const searchOn = !wide && tab === 'add' && (searchShown || searchEngaged);
+  // Held while the sidebar folds, is folded or opens, so it changes only with the sidebar
+  // open: folding mid-search keeps the top bar away and the board where it was, and opening
+  // again comes back to the same layout rather than jumping once the slide ends
+  const [searchHeld, setSearchHeld] = React.useState(searchOn);
+  if (!sidebarFolded && fold === 0 && searchHeld !== searchOn) setSearchHeld(searchOn);
+  const searchRoom = useReveal(searchHeld, wide);
   const searchMode = wide ? 0 : searchRoom.value;
   // How far the top bar has risen away: with the fold or the search, whichever is further
   const topRise = Math.max(fold, searchMode);
@@ -3608,13 +3627,6 @@ export default function Editor() {
                   <div
                     ref={searchSectionRef}
                     className={`flex flex-col gap-3 min-w-0 ${showingResults ? 'beside:flex-1 beside:min-h-0' : ''}`}
-                    // Focus anywhere in the search (the field, Search, Sets, Add to, a result)
-                    // keeps search mode; only leaving it ends it, so moving between its
-                    // controls doesn't bounce the board
-                    onFocus={() => setSearchFocused(true)}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget)) setSearchFocused(false);
-                    }}
                   >
                     <h3 id="card-search-heading" className="tierbinder-heading">
                       Add a Card
@@ -3624,7 +3636,8 @@ export default function Editor() {
                         e.preventDefault();
                         search(query);
                         // On touch screens the keyboard would stay up over the results
-                        if (touch) searchInputRef.current?.blur();
+                        // (on phones only: beside the board it doesn't cover them)
+                        if (touch && !wide) searchInputRef.current?.blur();
                       }}
                       className={`${styles.searchRow} flex gap-3`}
                       // Pinned to the panel's top on phones only during a search
