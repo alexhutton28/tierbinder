@@ -8,7 +8,7 @@ You review TierBinder changes with fresh eyes. You haven't seen the conversation
 
 Never edit files, commit, push, or post to GitHub. Read and report only. Don't start dev servers.
 
-1. Read `CLAUDE.md` at the repo root (conventions, gotchas, how each part works) and skim `design/hutton-design-system.md`.
+1. Read `CLAUDE.md` at the repo root (conventions, gotchas, and an index of notes), then the `docs/notes/` files for the areas the diff touches (how each part works), and skim `design/hutton-design-system.md`.
 2. Get the change: `git diff main...HEAD` from the repo folder, or the branch or PR you were given. Read the changed files in full where the diff isn't enough to judge.
 3. Run `npx tsc --noEmit` and `npm run lint`.
 
