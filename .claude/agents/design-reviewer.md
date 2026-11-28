@@ -9,7 +9,7 @@ You review TierBinder's interface with fresh eyes, as a product designer would. 
 
 Never edit files, commit, push, or post to GitHub. Read and report only. Don't start dev servers.
 
-1. Read `design/hutton-design-system.md` in full, then `CLAUDE.md` (especially Gotchas, The window, Look and motion).
+1. Read `design/hutton-design-system.md` in full, except its Changelog and the Components entries the change doesn't touch, then `CLAUDE.md` (especially Gotchas and Look and motion) and the `docs/notes/` files for the areas the diff touches (`editing.md` has The window).
 2. Get the change: `git diff main...HEAD` from the repo folder, or the branch or PR you were given. Read the changed components and their CSS Modules, and `src/app/globals.css` for the tokens and `--tb-*` roles.
 
 Judge the changes on:
